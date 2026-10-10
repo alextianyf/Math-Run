@@ -1,204 +1,240 @@
-// yokai.js — low-poly yokai built from primitives. Geometries and most materials
-// are shared per type; each call returns a fresh scene graph plus an animation hook.
+// yokai.js — the parade. Each factory returns the same small interface:
+//   { type, root, info, update(dt,t), center(out), labelAnchor(out), flash(), dispose() }
 //
-//   onibi   鬼火     will-o'-wisp            (common)
-//   chochin 提灯お化け paper-lantern ghost      (common)
-//   kasa    唐傘お化け one-legged umbrella ghost (from wave 3)
-//   oni     大鬼      boss — needs several answers
+//   onibi   鬼火      will-o'-wisp with a shader flame        (common)
+//   chochin 提灯お化け  glowing paper-lantern ghost             (common)
+//   kasa    唐傘お化け  one-legged umbrella ghost, hops         (from wave 3)
+//   oni     大鬼       boss — the full jointed oni, walking     (every 4 waves)
 import * as THREE from 'three';
-import { glowTex, flameTex, shadowTex } from './textures.js';
+import { toon, glow, bake, joint, lathe, taperedTube } from './toon.js';
+import { glowTex, shadowTex, lanternPaperTex, wagasaTex } from './textures.js';
+import { createOni } from './oni.js';
 
-const G = {};
-const M = {};
-const geo = (key, make) => G[key] || (G[key] = make());
-const mat = (key, make) => M[key] || (M[key] = make());
+export const YOKAI_INFO = {
+  onibi:   { baseY: 1.35, labelY: 1.05, centerY: 0, color: 0x6fd0ff, radius: 0.5 },
+  chochin: { baseY: 1.5,  labelY: 0.9,  centerY: 0, color: 0xffa04a, radius: 0.55 },
+  kasa:    { baseY: 1.2,  labelY: 0.85, centerY: 0, color: 0xff5f9a, radius: 0.6 },
+  oni:     { baseY: 0,    labelY: 3.7,  centerY: 2.1, color: 0xff4a3a, radius: 1.3 },
+};
+const ONI_SCALE = 0.92;
 
-const ink = () => mat('ink', () => new THREE.MeshBasicMaterial({ color: 0x0b0a14 }));
-const eyeWhite = () => mat('eyeWhite', () => new THREE.MeshBasicMaterial({ color: 0xfdf8ec }));
-const tongueMat = () => mat('tongue', () => new THREE.MeshStandardMaterial({ color: 0xe0405a, roughness: 0.5, emissive: 0x400010 }));
+const shared = {};
+const once = (k, make) => shared[k] || (shared[k] = make());
+const white = () => once('white', () => toon(0xfffaf0));
+const ink = () => once('ink', () => new THREE.MeshBasicMaterial({ color: 0x0d0812 }));
+const tongue = () => once('tongue', () => toon(0xe84a64, { emissive: 0x3a0010 }));
+const darkWood = () => once('darkWood', () => toon(0x1d1418));
 
 function glowSprite(color, scale, opacity) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: glowTex(), color, transparent: true, opacity,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+    map: glowTex(), color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false,
   }));
   s.scale.setScalar(scale);
   return s;
 }
 
-function mesh(g, m, parent, x = 0, y = 0, z = 0) {
-  const o = new THREE.Mesh(g, m);
-  o.position.set(x, y, z);
-  parent.add(o);
-  return o;
-}
-
-export const YOKAI_INFO = {
-  onibi:   { baseY: 1.35, labelY: 0.85, color: 0x6fd0ff, radius: 0.5 },
-  chochin: { baseY: 1.45, labelY: 1.05, color: 0xffa04a, radius: 0.55 },
-  kasa:    { baseY: 1.15, labelY: 1.15, color: 0xff5f9a, radius: 0.6 },
-  oni:     { baseY: 2.05, labelY: 1.75, color: 0xff4a3a, radius: 1.1 },
-};
-
-function buildOnibi(body) {
-  mesh(geo('orb', () => new THREE.SphereGeometry(0.24, 20, 14)),
-    mat('orb', () => new THREE.MeshBasicMaterial({ color: 0xd8f6ff })), body);
-  for (const sx of [-1, 1]) mesh(geo('dot', () => new THREE.SphereGeometry(0.045, 10, 8)), ink(), body, sx * 0.085, 0.03, 0.215);
-  const glow = glowSprite(0x47b8ff, 1.9, 0.85);
-  body.add(glow);
-  const flames = [0, 1, 2].map((i) => {
-    const f = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: flameTex(), color: 0x7fdcff, transparent: true, opacity: 0.85,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    }));
-    f.position.set((i - 1) * 0.13, 0.3, -0.05);
-    body.add(f);
-    return f;
+/* ---------- billboard flame shader (onibi) ---------- */
+function flameMaterial(seed) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      time: { value: 0 }, seed: { value: seed },
+      cCore: { value: glow(0xd8f6ff, 1.5) }, cMid: { value: glow(0x3fb2ff, 1.05) }, cEdge: { value: glow(0x2443ff, 0.7) },
+    },
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        mv.xy += position.xy * vec2(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      uniform float time; uniform float seed;
+      uniform vec3 cCore; uniform vec3 cMid; uniform vec3 cEdge;
+      varying vec2 vUv;
+      float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      float noise(vec2 p) {
+        vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+      }
+      float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; } return v; }
+      void main() {
+        float y = vUv.y;
+        float sway = (fbm(vec2(y * 2.0 - time * 1.3, seed)) - 0.5) * 0.4 * y;
+        vec2 q = vec2(vUv.x - 0.5 - sway, y - 0.3);
+        float width = q.y < 0.0 ? 0.25 : mix(0.25, 0.015, smoothstep(0.0, 0.66, q.y));
+        float d = length(vec2(abs(q.x) / max(width, 0.001), q.y < 0.0 ? -q.y / 0.24 : 0.0));
+        float n = fbm(vec2(vUv.x * 5.0 + seed, y * 4.0 - time * 3.4));
+        float a = smoothstep(1.0, 0.3, d + (n - 0.5) * 0.8 * smoothstep(0.05, 0.55, y));
+        a *= smoothstep(1.0, 0.72, y);
+        vec3 col = mix(cEdge, cMid, smoothstep(0.1, 0.55, a));
+        col = mix(col, cCore, smoothstep(0.62, 1.0, a) * (1.0 - smoothstep(0.32, 0.62, y)));
+        gl_FragColor = vec4(col, a);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
-  return (t, seed) => {
-    flames.forEach((f, i) => {
-      const k = 0.85 + 0.2 * Math.sin(t * 13 + i * 2.1 + seed);
-      f.scale.set(0.5 * k, (i === 1 ? 1.05 : 0.8) * k * (1 + 0.15 * Math.sin(t * 9 + i)), 1);
-    });
-    glow.material.opacity = 0.7 + 0.2 * Math.sin(t * 6 + seed);
-    body.rotation.z = Math.sin(t * 2.3 + seed) * 0.08;
-  };
 }
 
-function buildChochin(body) {
-  const profile = [[0.2, -0.48], [0.34, -0.38], [0.42, -0.16], [0.44, 0.04], [0.41, 0.24], [0.31, 0.41], [0.2, 0.48]]
-    .map(([x, y]) => new THREE.Vector2(x, y));
-  mesh(geo('lantern', () => new THREE.LatheGeometry(profile, 18)),
-    mat('paper', () => new THREE.MeshStandardMaterial({
-      color: 0xf2a65a, emissive: 0xff7b22, emissiveIntensity: 0.9, roughness: 0.9, side: THREE.DoubleSide,
-    })), body);
-  const rib = mat('rib', () => new THREE.MeshBasicMaterial({ color: 0x6a2c10 }));
-  for (const [y, r] of [[-0.28, 0.4], [-0.05, 0.44], [0.2, 0.42]]) {
-    const ring = mesh(new THREE.TorusGeometry(r, 0.012, 4, 28), rib, body, 0, y, 0);
-    ring.rotation.x = Math.PI / 2;
+/* ===================== onibi ===================== */
+function buildOnibi(body, seed) {
+  const flame = new THREE.Mesh(once('flamePlane', () => new THREE.PlaneGeometry(1.25, 1.8)), flameMaterial(seed));
+  flame.position.y = 0.36;
+  body.add(flame);
+  body.add(new THREE.Mesh(once('orb', () => new THREE.SphereGeometry(0.19, 20, 14)),
+    once('orbMat', () => new THREE.MeshBasicMaterial({ color: glow(0xbfeaff, 1.1) }))));
+  for (const sx of [-1, 1]) {
+    const e = new THREE.Mesh(once('dotEye', () => new THREE.SphereGeometry(0.034, 10, 8)), ink());
+    e.position.set(sx * 0.065, 0.02, 0.18); e.scale.set(0.85, 1.4, 0.5);
+    body.add(e);
   }
-  const cap = geo('cap', () => new THREE.CylinderGeometry(0.21, 0.21, 0.07, 14));
-  const dark = mat('dark', () => new THREE.MeshStandardMaterial({ color: 0x1a1218, roughness: 0.7 }));
-  mesh(cap, dark, body, 0, 0.5, 0);
-  mesh(cap, dark, body, 0, -0.5, 0);
-  const handle = mesh(geo('handle', () => new THREE.TorusGeometry(0.08, 0.015, 6, 16)), dark, body, 0, 0.62, 0);
-  handle.rotation.y = Math.PI / 2;
-  const eye = mesh(geo('eyeL', () => new THREE.SphereGeometry(0.13, 16, 12)), eyeWhite(), body, 0.1, 0.12, 0.37);
-  eye.scale.z = 0.6;
-  mesh(geo('pupil', () => new THREE.SphereGeometry(0.055, 10, 8)), ink(), body, 0.12, 0.11, 0.45);
-  mesh(geo('mouth', () => new THREE.BoxGeometry(0.34, 0.05, 0.06)), ink(), body, 0, -0.13, 0.42);
-  const tongue = mesh(geo('tongue', () => new THREE.CapsuleGeometry(0.055, 0.24, 4, 8)), tongueMat(), body, 0.06, -0.32, 0.45);
-  tongue.rotation.x = 0.35;
-  body.add(glowSprite(0xff8a3a, 2.3, 0.7));
-  return (t, seed) => {
-    body.rotation.z = Math.sin(t * 1.8 + seed) * 0.18;
-    tongue.rotation.z = Math.sin(t * 5 + seed) * 0.3;
+  const halo = glowSprite(0x2f8dff, 1.8, 0.35);
+  body.add(halo);
+  const sparks = [0, 1].map(() => { const s = glowSprite(glow(0x9fe4ff, 1.4), 0.2, 1); body.add(s); return s; });
+  return (t) => {
+    flame.material.uniforms.time.value = t;
+    halo.material.opacity = 0.3 + 0.08 * Math.sin(t * 6 + seed);
+    sparks.forEach((s, i) => {
+      const a = t * 2.2 + i * Math.PI + seed;
+      s.position.set(Math.cos(a) * 0.42, 0.1 + Math.sin(a * 1.3) * 0.2, Math.sin(a) * 0.42);
+    });
   };
 }
 
+/* ===================== chōchin-obake ===================== */
+function buildChochin(body) {
+  const paperTex = lanternPaperTex();
+  const paper = once('lanternMat', () => toon(0xffffff, {
+    map: paperTex, emissive: new THREE.Color(0xff7a2a), emissiveMap: paperTex, emissiveIntensity: 0.85, side: THREE.DoubleSide,
+  }));
+  const lantern = new THREE.Group();
+  body.add(lantern);
+  lantern.add(bake([
+    { geo: lathe([[0.17, -0.5], [0.33, -0.42], [0.42, -0.2], [0.445, 0.02], [0.415, 0.24], [0.32, 0.42], [0.17, 0.5]], 24), mat: paper },
+  ], { outline: 0.016 }));
+  lantern.add(bake([
+    { geo: lathe([[0.2, 0.47], [0.225, 0.51], [0.2, 0.56], [0.06, 0.58]], 18), mat: darkWood() },
+    { geo: lathe([[0.06, -0.58], [0.2, -0.56], [0.225, -0.51], [0.2, -0.47]], 18), mat: darkWood() },
+    { geo: new THREE.TorusGeometry(0.07, 0.016, 6, 14), mat: darkWood(), p: [0, 0.66, 0] },
+    // one huge eye, slit pupil
+    { geo: new THREE.SphereGeometry(0.16, 18, 14), mat: white(), p: [0.07, 0.13, 0.4], s: [1, 1.05, 0.5] },
+    { geo: new THREE.SphereGeometry(0.085, 14, 10), mat: once('iris', () => toon(0x8a1414)), p: [0.08, 0.12, 0.465], s: [1, 1, 0.45] },
+    { geo: new THREE.SphereGeometry(0.05, 10, 8), mat: ink(), p: [0.08, 0.12, 0.495], s: [0.35, 1.3, 0.4] },
+    // torn-paper grin with fangs
+    { geo: new THREE.SphereGeometry(0.2, 16, 8), mat: once('maw', () => toon(0x2a0610)), p: [0, -0.17, 0.4], s: [1.15, 0.32, 0.25] },
+    { geo: new THREE.ConeGeometry(0.03, 0.08, 6), mat: white(), p: [-0.1, -0.14, 0.44], r: [Math.PI, 0, 0] },
+    { geo: new THREE.ConeGeometry(0.03, 0.08, 6), mat: white(), p: [0.12, -0.14, 0.44], r: [Math.PI, 0, 0] },
+  ], { outline: 0.012 }));
+  const tongueJ = joint(lantern, 0.05, -0.19, 0.44);
+  tongueJ.add(bake([{ geo: taperedTube([[0, 0, 0], [0.02, -0.12, 0.1], [0.06, -0.3, 0.09], [0.03, -0.48, -0.02]], 0.06, { tip: 0.5 }), mat: tongue() }], { outline: 0.01 }));
+  body.add(glowSprite(0xff8a3a, 2.2, 0.4));
+  return (t, seed) => {
+    lantern.rotation.z = Math.sin(t * 1.8 + seed) * 0.16;
+    lantern.rotation.y = Math.sin(t * 0.9 + seed) * 0.2;
+    tongueJ.rotation.z = Math.sin(t * 5 + seed) * 0.35;
+    tongueJ.rotation.x = Math.sin(t * 3.3 + seed) * 0.15;
+  };
+}
+
+/* ===================== kasa-obake ===================== */
 function buildKasa(body) {
-  mesh(geo('canopy', () => new THREE.ConeGeometry(0.82, 0.8, 12, 1, true)),
-    mat('canopy', () => new THREE.MeshStandardMaterial({
-      color: 0xa8326a, roughness: 0.75, side: THREE.DoubleSide, flatShading: true, emissive: 0x2e0618,
-    })), body, 0, 0.15, 0);
-  const dark = mat('dark', () => new THREE.MeshStandardMaterial({ color: 0x1a1218, roughness: 0.7 }));
-  mesh(geo('tip', () => new THREE.CylinderGeometry(0.035, 0.035, 0.25, 6)), dark, body, 0, 0.62, 0);
-  const eye = mesh(geo('eyeK', () => new THREE.SphereGeometry(0.16, 16, 12)), eyeWhite(), body, 0, 0.02, 0.46);
-  eye.scale.z = 0.5;
-  mesh(geo('pupilK', () => new THREE.SphereGeometry(0.07, 10, 8)), ink(), body, 0, 0.02, 0.53);
-  const tongue = mesh(geo('tongueK', () => new THREE.CapsuleGeometry(0.06, 0.3, 4, 8)), tongueMat(), body, 0, -0.24, 0.5);
-  tongue.rotation.x = 0.55;
-  mesh(geo('leg', () => new THREE.CylinderGeometry(0.045, 0.05, 0.55, 8)),
-    mat('legSkin', () => new THREE.MeshStandardMaterial({ color: 0xe9dcc8, roughness: 0.8 })), body, 0, -0.47, 0);
-  const wood = mat('wood', () => new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: 0.9 }));
-  mesh(geo('geta', () => new THREE.BoxGeometry(0.22, 0.06, 0.34)), wood, body, 0, -0.76, 0);
-  for (const z of [-0.1, 0.1]) mesh(geo('teeth', () => new THREE.BoxGeometry(0.2, 0.07, 0.04)), wood, body, 0, -0.82, z);
-  body.add(glowSprite(0xff4f8a, 1.7, 0.4));
+  const canopyMat = once('wagasa', () => toon(0xffffff, { map: wagasaTex(), side: THREE.DoubleSide }));
+  const top = new THREE.Group();
+  body.add(top);
+  top.add(bake([
+    { geo: new THREE.ConeGeometry(0.85, 0.72, 16, 1, true), mat: canopyMat },
+    { geo: new THREE.CylinderGeometry(0.03, 0.03, 0.22, 6), mat: darkWood(), p: [0, 0.44, 0] },
+    { geo: new THREE.ConeGeometry(0.09, 0.1, 10), mat: darkWood(), p: [0, 0.38, 0] },
+  ], { outline: 0.016 }));
+  const face = joint(top, 0, -0.02, 0.43);
+  face.rotation.x = -0.86;                       // follow the canopy's slope
+  face.add(bake([
+    { geo: new THREE.SphereGeometry(0.16, 18, 14), mat: white(), s: [1, 1, 0.45] },
+    { geo: new THREE.SphereGeometry(0.085, 14, 10), mat: once('iris2', () => toon(0x2a1a6a)), p: [0, 0, 0.06], s: [1, 1, 0.45] },
+    { geo: new THREE.SphereGeometry(0.045, 10, 8), mat: ink(), p: [0, 0, 0.085], s: [1, 1, 0.4] },
+  ], { outline: 0.01 }));
+  const tongueJ = joint(top, 0, -0.2, 0.6);
+  tongueJ.add(bake([
+    { geo: new THREE.SphereGeometry(0.11, 12, 8), mat: once('maw', () => toon(0x2a0610)), s: [1.2, 0.5, 0.4], r: [-0.86, 0, 0] },
+    { geo: taperedTube([[0, 0, 0.02], [0.04, -0.14, 0.17], [0.0, -0.36, 0.2], [-0.05, -0.56, 0.1]], 0.065, { tip: 0.5 }), mat: tongue() },
+  ], { outline: 0.01 }));
+  const legJ = joint(body, 0, -0.36, 0);
+  legJ.add(bake([
+    { geo: new THREE.CapsuleGeometry(0.05, 0.42, 4, 8), mat: once('legSkin', () => toon(0xe9dcc8)), p: [0, -0.26, 0] },
+    { geo: new THREE.BoxGeometry(0.22, 0.06, 0.34), mat: once('wood', () => toon(0x7a4e2c)), p: [0, -0.56, 0.02] },
+    { geo: new THREE.BoxGeometry(0.2, 0.07, 0.04), mat: once('wood', () => toon(0x7a4e2c)), p: [0, -0.62, -0.08] },
+    { geo: new THREE.BoxGeometry(0.2, 0.07, 0.04), mat: once('wood', () => toon(0x7a4e2c)), p: [0, -0.62, 0.12] },
+  ], { outline: 0.012 }));
+  body.add(glowSprite(glow(0xff4f8a, 1), 1.6, 0.35));
   return (t, seed, self) => {
     const hop = Math.abs(Math.sin(t * 3.2 + seed));
     self.hop = hop * 0.55;
-    body.scale.set(1 + (1 - hop) * 0.06, 1 - (1 - hop) * 0.08, 1);
-    tongue.rotation.z = Math.sin(t * 6 + seed) * 0.25;
+    const squash = 1 - hop;
+    top.scale.set(1 + squash * 0.08, 1 - squash * 0.1, 1 + squash * 0.08);
+    top.rotation.z = Math.sin(t * 3.2 + seed) * 0.12;
+    legJ.scale.y = 0.85 + hop * 0.15;
+    tongueJ.rotation.z = Math.sin(t * 6 + seed) * 0.3;
   };
 }
 
-function buildOni(body) {
-  // Boss: per-instance skin material so it can flash when hit
-  const skin = new THREE.MeshStandardMaterial({ color: 0xc8302b, roughness: 0.55, emissive: 0x3a0505 });
-  const head = mesh(new THREE.SphereGeometry(0.85, 30, 22), skin, body);
-  head.scale.set(1, 1.08, 0.88);
-  const ivory = new THREE.MeshStandardMaterial({ color: 0xf3e6c4, roughness: 0.5 });
-  for (const sx of [-1, 1]) {
-    const horn = mesh(new THREE.ConeGeometry(0.15, 0.62, 10), ivory, body, sx * 0.42, 0.9, 0.05);
-    horn.rotation.z = -sx * 0.38;
-    const brow = mesh(new THREE.BoxGeometry(0.42, 0.1, 0.12), ink(), body, sx * 0.3, 0.34, 0.69);
-    brow.rotation.z = sx * 0.4;
-    const eye = mesh(new THREE.SphereGeometry(0.14, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffd84a }), body, sx * 0.3, 0.13, 0.69);
-    eye.scale.z = 0.6;
-    mesh(new THREE.SphereGeometry(0.06, 10, 8), ink(), body, sx * 0.3, 0.12, 0.77);
-    const fang = mesh(new THREE.ConeGeometry(0.06, 0.2, 8), ivory, body, sx * 0.24, -0.39, 0.73);
-    fang.rotation.x = Math.PI;
-    mesh(new THREE.ConeGeometry(0.05, 0.16, 8), ivory, body, sx * 0.12, -0.42, 0.73);
-  }
-  mesh(new THREE.SphereGeometry(0.15, 12, 10), new THREE.MeshStandardMaterial({ color: 0xa3221f, roughness: 0.5 }), body, 0, -0.06, 0.78);
-  mesh(new THREE.BoxGeometry(0.72, 0.18, 0.12), new THREE.MeshBasicMaterial({ color: 0x2a0808 }), body, 0, -0.4, 0.67);
-  // wild hair tufts on the back of the head
-  const hair = new THREE.MeshStandardMaterial({ color: 0x17101a, roughness: 0.9 });
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 6 - 0.5) * 2.2;
-    const tuft = mesh(new THREE.ConeGeometry(0.16, 0.5, 6), hair, body, Math.sin(a) * 0.62, 0.62 - Math.abs(a) * 0.12, -0.35 + Math.cos(a) * 0.05);
-    tuft.rotation.set(-0.6, 0, -a * 0.5);
-  }
-  const glow = glowSprite(0xff3b2f, 4.2, 0.45);
-  body.add(glow);
-  let flashT = 0;
-  return Object.assign((t, seed, self, dt) => {
-    body.rotation.y = Math.sin(t * 0.8 + seed) * 0.15;
-    flashT = Math.max(0, flashT - dt * 4);
-    skin.emissive.setRGB(0.23 + flashT * 0.9, 0.02 + flashT * 0.8, 0.02 + flashT * 0.6);
-    glow.material.opacity = 0.4 + 0.15 * Math.sin(t * 3) + flashT * 0.4;
-  }, { flash: () => { flashT = 1; } });
-}
-
-const BUILDERS = { onibi: buildOnibi, chochin: buildChochin, kasa: buildKasa, oni: buildOni };
-
+/* ===================== factory ===================== */
 export function createYokai(type) {
   const info = YOKAI_INFO[type];
   const root = new THREE.Group();
-  const body = new THREE.Group();
-  root.add(body);
-  if (type === 'oni') body.scale.setScalar(1.05);
-  const animate = BUILDERS[type](body);
+  const seed = Math.random() * 10;
 
   const shadow = new THREE.Mesh(
-    geo('shadowPlane', () => new THREE.PlaneGeometry(1, 1)),
+    once('shadowPlane', () => new THREE.PlaneGeometry(1, 1)),
     new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthWrite: false }),
   );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.05;
-  shadow.scale.setScalar(info.radius * 2.4);
+  shadow.scale.setScalar(info.radius * (type === 'oni' ? 3 : 2.4));
   root.add(shadow);
 
-  const seed = Math.random() * 10;
+  if (type === 'oni') {
+    const oni = createOni();
+    oni.root.scale.setScalar(ONI_SCALE);
+    oni.setMode('walk');
+    oni.roar();
+    root.add(oni.root);
+    return {
+      type, root, info, oni,
+      update(dt, t) { oni.update(dt, t, 1); },
+      center(out) { return out.set(root.position.x, info.centerY, root.position.z); },
+      labelAnchor(out) { return out.set(root.position.x, info.labelY, root.position.z); },
+      flash() { oni.flash(); },
+      dispose() { oni.dispose(); shadow.material.dispose(); },
+    };
+  }
+
+  const body = new THREE.Group();
+  root.add(body);
+  const animate = { onibi: buildOnibi, chochin: buildChochin, kasa: buildKasa }[type](body, seed);
+  let flashT = 0;
   const self = {
-    type, root, body, info, hop: 0,
-    flash: animate.flash || (() => {}),
+    type, root, info, hop: 0,
     update(dt, t) {
       self.hop = 0;
-      animate(t, seed, self, dt);
-      body.position.y = info.baseY + Math.sin(t * 2.4 + seed) * 0.16 + self.hop;
+      animate(t, seed, self);
+      body.position.y = info.baseY + Math.sin(t * 2.4 + seed) * 0.15 + self.hop;
+      flashT = Math.max(0, flashT - dt * 5);
+      body.scale.setScalar(1 + flashT * 0.25);
       shadow.material.opacity = 0.9 - Math.min(0.6, self.hop);
     },
-    // Where the equation tag should float (world space)
-    labelAnchor(out) {
-      return out.set(root.position.x, body.position.y + info.labelY * body.scale.y, root.position.z);
-    },
+    center(out) { return out.set(root.position.x, body.position.y, root.position.z); },
+    labelAnchor(out) { return out.set(root.position.x, body.position.y + info.labelY, root.position.z); },
+    flash() { flashT = 1; },
     dispose() {
-      // Sprites and shadows own their materials; the boss owns everything it built
-      const shared = new Set([...Object.values(G), ...Object.values(M)]);
+      // shared materials/geometries and the cached outline shader stay alive;
+      // baked meshes may carry an array of materials
+      const keep = new Set(Object.values(shared));
       root.traverse((o) => {
-        if (o.geometry && !shared.has(o.geometry) && !o.isSprite) o.geometry.dispose();
-        if (o.material && !shared.has(o.material)) o.material.dispose();
+        for (const m of [].concat(o.material || [])) {
+          if (keep.has(m)) continue;
+          if (m.isShaderMaterial && !m.uniforms?.seed) continue;
+          m.dispose();
+        }
+        if (o.geometry && !keep.has(o.geometry) && !o.isSprite) o.geometry.dispose();
       });
     },
   };

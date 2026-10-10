@@ -40,7 +40,7 @@ const DICT = {
     paused: '暂停',
     resume: '继续',
     quit: '回到标题',
-    overTitle: '被妖怪抓住了',
+    overTitle: '被大鬼抓住了！',
     newBest: '新纪录！',
     retry: '再跑一次',
     statBanished: '降服妖怪',
@@ -55,6 +55,7 @@ const DICT = {
     aiUnsure: '不确定（{d} · {p}%）',
     ready: 'AI 就绪 · {b}',
     go: '出发！',
+    skip: '点击跳过',
     lang: 'EN',
   },
   en: {
@@ -81,7 +82,7 @@ const DICT = {
     paused: 'Paused',
     resume: 'Resume',
     quit: 'Title screen',
-    overTitle: 'Caught by the yokai',
+    overTitle: 'Caught by the oni!',
     newBest: 'New best!',
     retry: 'Run again',
     statBanished: 'Yokai banished',
@@ -96,6 +97,7 @@ const DICT = {
     aiUnsure: 'Unsure ({d} · {p}%)',
     ready: 'AI ready · {b}',
     go: 'Go!',
+    skip: 'Tap to skip',
     lang: '中',
   },
 };

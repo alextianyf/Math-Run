@@ -338,7 +338,8 @@ body.ai-open #ai-panel { display: block; }
 .kicker span { font-size: 14px; color: var(--dim); vertical-align: middle; margin: 0 4px; }
 .logo {
   margin: 6px 0 0;
-  font: 900 clamp(46px, 7.5vw, 92px)/0.95 var(--font-display);
+  font: 900 clamp(44px, 6.2vw, 84px)/0.95 var(--font-display);
+  white-space: nowrap;
   letter-spacing: 0.03em;
   background: linear-gradient(180deg, #ffffff 30%, var(--gold));
   -webkit-background-clip: text; background-clip: text;
@@ -424,7 +425,8 @@ body.ai-open #ai-panel { display: block; }
     background: linear-gradient(180deg, #1b1440, var(--night-2));
     border-top: 1px solid var(--line);
   }
-  body:not(.in-game) #dock { height: 0; padding: 0; overflow: hidden; transform: none; }
+  body:not(.in-game) #dock, body.cinematic #dock { height: 0; padding: 0; overflow: hidden; transform: none; border: 0; }
+  body.cinematic #app { grid-template-rows: 1fr 0; }
   .talisman { width: auto; height: 100%; }
   #ai-panel { width: 128px; padding: 8px 10px 10px; }
   .ai-body { flex-direction: column; align-items: stretch; }
@@ -456,4 +458,37 @@ body.ai-open #ai-panel { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
   .pad-hint.show, .tag.urgent .tag-in { animation: none; }
+}
+
+/* ===================== capture cinematic ===================== */
+body.cinematic #hud,
+body.cinematic #dock { opacity: 0; visibility: hidden; transition: opacity 0.5s, visibility 0s 0.5s; }
+.skip-hint {
+  position: absolute; left: 50%; bottom: calc(18px + var(--safe-b));
+  transform: translateX(-50%);
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(10, 6, 26, 0.55); border: 1px solid var(--line);
+  color: var(--dim); font-size: 13px; letter-spacing: 0.06em;
+  opacity: 0; pointer-events: none; transition: opacity 0.4s;
+}
+body.cinematic .skip-hint { opacity: 1; animation: hintPulse 1.6s ease-in-out infinite; }
+body:has(#ov-over:not([hidden])) .skip-hint { opacity: 0; animation: none; }
+@keyframes hintPulse { 50% { opacity: 0.45; } }
+
+/* game over sits beside the capture scene instead of covering it */
+.overlay.over {
+  justify-items: start;
+  padding-left: calc(5vw + var(--safe-l));
+  background: linear-gradient(90deg, rgba(10, 6, 26, 0.8) 0%, rgba(10, 6, 26, 0.35) 40%, rgba(10, 6, 26, 0) 62%);
+}
+.overlay.over .small-card { max-width: 380px; }
+.overlay.over h2 { color: #ff6a55; }
+@media (max-aspect-ratio: 4/5) {
+  .overlay.over {
+    justify-items: center; align-items: end;
+    padding: 20px 18px calc(20px + var(--safe-b));
+    background: linear-gradient(0deg, rgba(10, 6, 26, 0.92) 0%, rgba(10, 6, 26, 0.6) 45%, rgba(10, 6, 26, 0) 70%);
+  }
+  .overlay.over .small-card { padding: 18px 18px 16px; gap: 8px; }
+  .overlay.over .big-score { font-size: 44px; }
 }

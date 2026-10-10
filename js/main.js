@@ -3,9 +3,12 @@
 // Yokai drift down the shrine path, each carrying an equation. The player
 // handwrites a digit on the talisman; the MNIST model reads it and a talisman
 // flies at EVERY yokai whose answer matches — so spotting shared answers pays.
+// Losing the last heart plays a capture cinematic: the parade circles the hero
+// and the great oni rises from a portal to grab him.
 import * as THREE from 'three';
 import { createWorld, LANES } from './world.js';
 import { createYokai } from './yokai.js';
+import { createOni } from './oni.js';
 import { createFx } from './fx.js';
 import { makeProblem } from './problems.js';
 import { createPad, MODEL_SIZE } from './pad.js';
@@ -18,14 +21,20 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 
 /* ===================== tuning ===================== */
 const SPAWN_Z = -58;          // where yokai appear
-const HIT_Z = -0.6;           // where they reach the runner
+const HIT_Z = -0.6;           // where they reach the hero
 const MAX_HEARTS = 3;
 const KILLS_PER_WAVE = 6;
 const TYPE_PACE = { onibi: 1, chochin: 1.08, kasa: 0.94, oni: 2.3 };   // × travel time
+const AURA = [                // combo aura tiers: [min combo, colour]
+  [20, 0xc77dff],
+  [10, 0x6fd8ff],
+  [5, 0xffc84a],
+];
+const CAPTOR_SCALE = 1.45;
 
 function waveParams(wave) {
   return {
-    travel: Math.max(5.2, 12.5 - (wave - 1) * 0.65),   // seconds from spawn to the runner
+    travel: Math.max(5.2, 12.5 - (wave - 1) * 0.65),   // seconds from spawn to the hero
     interval: Math.max(1.4, 5 - (wave - 1) * 0.36),     // seconds between spawns
     maxAlive: Math.min(5, 1 + Math.floor(wave / 2)),
     tier: wave <= 2 ? 1 : wave <= 4 ? 2 : wave <= 7 ? 3 : 4,
@@ -35,8 +44,8 @@ function waveParams(wave) {
 
 /* ===================== state ===================== */
 const S = {
-  mode: 'loading',            // loading | title | intro | playing | paused | dying | over
-  t: 0, introT: 0, dieT: 0,
+  mode: 'loading',            // loading | title | intro | playing | paused | caught | over
+  t: 0, introT: 0, caughtT: 0, timeScale: 1,
   speed: 3,
   hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0,
   combo: 0, maxCombo: 0, wave: 1,
@@ -47,15 +56,17 @@ const S = {
   best: ui.store.get('best', 0),
   tutorial: !ui.store.get('tutorialDone', false),
 };
+const captor = { oni: null, step: 0 };
 
 /* ===================== setup ===================== */
 const stage = $('stage');
 const world = createWorld($('scene'));
+const hero = world.hero;
 const fx = createFx(world.scene, world.camera);
 
 function onResize() {
   world.resize(stage.clientWidth, stage.clientHeight);
-  fx.setScale(world.pxScale * world.renderer.getPixelRatio());
+  fx.setScale(world.pxScale);
 }
 new ResizeObserver(onResize).observe(stage);
 onResize();
@@ -95,12 +106,12 @@ initRecognizer()
 const tmpV = new THREE.Vector3();
 const scr = { x: 0, y: 0, visible: true };
 const rand = (a, b) => a + Math.random() * (b - a);
+const easeOut = (k) => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
+const easeOutBack = (k) => { k = Math.min(1, k); const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
 
-function bodyPos(e, out) {
-  return out.set(e.yokai.root.position.x, e.yokai.body.position.y, e.yokai.root.position.z);
-}
-const targets = () => S.enemies.filter((e) => !e.dying && !e.locked);
+const targets = () => S.enemies.filter((e) => !e.dying && !e.locked && !e.swarm);
 const comboMult = () => 1 + Math.min(2, Math.max(0, S.combo - 1) * 0.1);
+const auraColor = () => (AURA.find(([min]) => S.combo >= min) || [0, 0xffc84a])[1];
 
 function addScore(n) {
   S.score += n;
@@ -137,6 +148,7 @@ function spawn(boss = false) {
   const x0 = boss ? 0 : LANES[lane] + side * rand(3, 4.5);
   const yokai = createYokai(type);
   yokai.root.position.set(x0, 0, SPAWN_Z);
+  yokai.root.scale.setScalar(0.01);
   world.scene.add(yokai.root);
 
   const hpTotal = boss ? 2 + Math.floor(S.wave / 4) : 1;
@@ -151,6 +163,7 @@ function spawn(boss = false) {
   };
   measureTag(e);
   S.enemies.push(e);
+  fx.emit(yokai.center(tmpV), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
     ui.banner(ui.t('boss'), 'boss');
@@ -166,9 +179,11 @@ function measureTag(e) {
 }
 
 function removeEnemy(e) {
+  const i = S.enemies.indexOf(e);
+  if (i >= 0) S.enemies.splice(i, 1);     // first, so a failure below can't wedge the loop
   world.scene.remove(e.yokai.root);
+  if (e.tag) ui.removeTag(e.tag);
   e.yokai.dispose();
-  S.enemies.splice(S.enemies.indexOf(e), 1);
 }
 
 /* ===================== handwriting → decision ===================== */
@@ -254,18 +269,26 @@ function paperTexture(canvas) {
   return tex;
 }
 
+function castCircle(color) {
+  const from = world.handPosition(new THREE.Vector3());
+  hero.cast();
+  fx.magicCircle(from.clone().add(new THREE.Vector3(0, 0.05, -0.25)), { color, scale: 1.3, dur: 0.55 });
+  fx.emit(from, { count: 14, color, color2: 0xffffff, speed: 2.2, life: 0.4, size: 0.14, gravity: 0, up: 0.2 });
+  return from;
+}
+
 function cast(digit, paper) {
   const victims = targets().filter((e) => e.answer === digit);
   if (!victims.length) return fizzle(digit, paper, true);
 
-  const tex = paperTexture(paper);
-  const from = world.handPosition(new THREE.Vector3());
-  world.runner.cast();
-  ui.talismanState('cast');
-  sfx.cast();
   S.combo++;
   S.maxCombo = Math.max(S.maxCombo, S.combo);
   ui.setCombo(S.combo);
+  const color = auraColor();
+  const tex = paperTexture(paper);
+  const from = castCircle(color);
+  ui.talismanState('cast');
+  sfx.cast();
   if (S.tutorial) {
     S.tutorial = false;
     ui.store.set('tutorialDone', true);
@@ -280,9 +303,10 @@ function cast(digit, paper) {
   victims.forEach((e, i) => {
     e.locked = true;
     ui.setTagState(e.tag, 'locked');
-    fx.talisman(tex, from, (out) => bodyPos(e, out), {
-      dur: 0.28 + i * 0.06,
-      side: (i - (n - 1) / 2) * 1.4,
+    fx.talisman(tex, from, (out) => e.yokai.center(out), {
+      dur: 0.3 + i * 0.06,
+      side: (i - (n - 1) / 2) * 1.6,
+      color,
       onHit: () => impact(e, n),
     });
   });
@@ -290,13 +314,12 @@ function cast(digit, paper) {
 
 function fizzle(digit, paper, penalize) {
   const tex = paperTexture(paper);
-  const from = world.handPosition(new THREE.Vector3());
-  world.runner.cast();
+  const from = castCircle(0xff7a3a);
   ui.talismanState('fizzle');
   fx.talisman(tex, from, (out) => out.set(0, 2.4, -9), {
-    dur: 0.42,
+    dur: 0.42, color: 0xff7a3a,
     onHit: (p) => {
-      fx.emit(p, { count: 30, color: 0xff8a2a, color2: 0x55505a, speed: 2.2, life: 1, size: 0.3, gravity: 1.5, up: 0.2 });
+      fx.emit(p, { count: 30, color: 0xff8a2a, color2: 0x55505a, bright: 1.2, speed: 2.2, life: 1, size: 0.3, gravity: 1.5, up: 0.2 });
     },
   });
   if (penalize) {
@@ -313,21 +336,22 @@ function fizzle(digit, paper, penalize) {
 
 function impact(e, n) {
   if (!S.enemies.includes(e) || e.dying) return;
-  const p = bodyPos(e, new THREE.Vector3());
+  const p = e.yokai.center(new THREE.Vector3());
   const color = e.yokai.info.color;
-  fx.emit(p, { count: e.boss ? 70 : 42, color: 0xffe28a, color2: color, speed: e.boss ? 8 : 6, life: 0.8, size: 0.32 });
-  fx.emit(p, { count: 14, color: 0xf6d670, color2: 0xd09a30, speed: 3, life: 1.3, size: 0.2, gravity: -5 });
+  fx.emit(p, { count: e.boss ? 70 : 40, color: 0xffe28a, color2: color, bright: 2, speed: e.boss ? 8 : 6, life: 0.8, size: 0.3 });
+  fx.emit(p, { count: 14, color: 0xf6d670, color2: 0xd09a30, bright: 1, speed: 3, life: 1.3, size: 0.2, gravity: -5 });
+  fx.emit(p, { count: 16, color: 0x8fe8ff, color2: 0xb47dff, bright: 1.8, speed: 1.2, life: 1.4, size: 0.22, gravity: 2.2, up: 0.4, dragK: 2.5 });
   fx.ring(p, { color: 0xffd36b, scale: e.boss ? 6.5 : 3.4 });
   sfx.hit(S.combo);
 
-  const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the runner
+  const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
 
   if (e.boss && e.hpDone + 1 < e.hpTotal) {
-    // boss takes a hit: new equation, knocked back
+    // boss takes a hit: staggers, gets a new equation and is knocked back
     e.hpDone++;
     e.yokai.flash();
-    world.shake(0.2);
+    world.shake(0.25);
     const prob = makeProblem(e.tier, undefined, new Set(targets().map((o) => o.text)));
     e.answer = prob.answer; e.text = prob.text;
     ui.setTagText(e.tag, prob.text);
@@ -342,12 +366,14 @@ function impact(e, n) {
     return;
   }
 
+  fx.seal(p);
   const base = e.boss ? 1000 : 100;
   const pts = Math.round((base + 60 * far) * (1 + multiBonus) * comboMult());
   addScore(pts);
   ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 ? 'gold big' : 'gold');
   if (e.boss) {
     ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
+    world.shake(0.4);
     if (S.hearts < MAX_HEARTS) {
       S.hearts++;
       ui.setHearts(S.hearts, MAX_HEARTS);
@@ -355,9 +381,11 @@ function impact(e, n) {
       sfx.heal();
     }
   }
+  e.yokai.flash();
   e.dying = 0.0001;
   ui.setTagState(e.tag, 'hit');
   ui.removeTag(e.tag, 600);
+  e.tag = null;
   advance(e.boss ? 3 : 1);
 }
 
@@ -376,9 +404,9 @@ function advance(kills) {
 
 /* ===================== damage ===================== */
 function playerHit(e) {
-  const p = bodyPos(e, new THREE.Vector3());
-  fx.emit(p, { count: 40, color: 0x9a5cff, color2: 0x2a1840, speed: 4, life: 0.9, size: 0.4, gravity: 0.5 });
-  ui.removeTag(e.tag);
+  const p = e.yokai.center(new THREE.Vector3());
+  fx.emit(p, { count: 46, color: 0x9a5cff, color2: 0x2a1840, bright: 1.4, speed: 4, life: 0.9, size: 0.45, gravity: 0.5 });
+  fx.ring(p, { color: 0x9a5cff, scale: 3 });
   removeEnemy(e);
   if (S.invuln > 0) return;
 
@@ -389,20 +417,133 @@ function playerHit(e) {
   ui.setHearts(S.hearts, MAX_HEARTS);
   ui.damageFlash();
   world.shake(0.5);
-  world.runner.hurt();
+  hero.hurt();
   sfx.hurt();
-  if (S.hearts <= 0) die();
+  if (S.hearts <= 0) beginCapture();
 }
 
-function die() {
-  S.mode = 'dying';
-  S.dieT = 0;
-  world.runner.fall();
+/* ===================== capture cinematic ===================== */
+// timeline (seconds of real time since the last heart was lost)
+const CAPTURE = { kneel: 0.3, camera: 0.45, portal: 1.0, risen: 2.3, reach: 3.2, grab: 3.9, attach: 4.05, lift: 4.35, laugh: 5.1, over: 5.6 };
+const portalPos = new THREE.Vector3(0, 0.06, -3);
+
+function beginCapture() {
+  S.mode = 'caught';
+  S.caughtT = 0;
+  captor.step = 0;
   stopMusic();
-  sfx.over();
   pad.clear();
   pad.setEnabled(false);
   ui.showPadHint(false);
+  ui.clearTags();
+  document.body.classList.add('cinematic');
+
+  // the parade gathers: survivors circle the hero, bosses vanish into smoke,
+  // and a few more yokai materialise so the circle is always full
+  for (const e of [...S.enemies]) {
+    if (e.boss || e.dying) { fx.emit(e.yokai.center(tmpV), { count: 40, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: 3, life: 1, size: 0.8, gravity: 0.5 }); removeEnemy(e); continue; }
+    e.tag = null;
+    e.swarm = true;
+  }
+  const types = ['onibi', 'chochin', 'kasa', 'onibi', 'chochin', 'onibi'];
+  while (S.enemies.length < 6) {
+    const type = types[S.enemies.length];
+    const a = Math.random() * Math.PI * 2;
+    const yokai = createYokai(type);
+    yokai.root.position.set(Math.cos(a) * 6, 0, Math.sin(a) * 6 - 1);
+    yokai.root.scale.setScalar(0.01);
+    world.scene.add(yokai.root);
+    S.enemies.push({ yokai, swarm: true, locked: true, dying: 0, age: 0, z: 0, tag: null });
+  }
+  S.enemies.forEach((e, i) => { e.swarmA = (i / S.enemies.length) * Math.PI * 2; });
+}
+
+function spawnCaptor() {
+  const oni = createOni();
+  captor.oni = oni;
+  oni.root.scale.setScalar(CAPTOR_SCALE);
+  world.scene.add(oni.root);
+  // place the oni so that its grabbing hand lands right on the kneeling hero
+  oni.setMode('grab');
+  oni.snap(S.t);
+  oni.root.position.set(0, 0, -3);
+  oni.root.updateMatrixWorld(true);
+  const palm = oni.handR.localToWorld(new THREE.Vector3(0, -0.2, 0));
+  oni.root.position.x -= palm.x;
+  oni.root.position.z -= palm.z - 0.05;
+  captor.homeY = 0;
+  oni.setMode('idle');
+  oni.snap(S.t);
+}
+
+// once grabbed, the hero follows the oni's fist but stays upright, legs kicking
+const palm = new THREE.Vector3();
+function grabHero() {
+  captor.holding = true;
+  hero.setMode('grabbed');
+}
+function followFist() {
+  captor.oni.handR.localToWorld(palm.set(0, -0.16, 0));
+  hero.root.position.set(palm.x, palm.y - 1.0, palm.z + 0.12);
+  hero.root.rotation.set(0, 0, Math.sin(S.t * 3.1) * 0.12);
+}
+
+function updateCapture(dt) {
+  const T = S.caughtT += dt;
+  const at = (key) => captor.step < CAPTURE_ORDER.indexOf(key) + 1 && T >= CAPTURE[key];
+  if (at('kneel')) { captor.step++; hero.setMode('kneel'); }
+  if (at('camera')) { captor.step++; world.setCameraMode('caught'); }
+  if (at('portal')) {
+    captor.step++;
+    spawnCaptor();
+    portalPos.set(captor.oni.root.position.x, 0.06, captor.oni.root.position.z);
+    fx.magicCircle(portalPos, { color: 0x9a4dff, scale: 7, dur: 4.2, ground: true, spin: 1.2, bright: 2.4 });
+    world.shake(0.35);
+    sfx.portal();
+  }
+  if (at('risen')) { captor.step++; captor.oni.roar(); world.shake(0.7); sfx.roar(); }
+  if (at('reach')) { captor.step++; captor.oni.setMode('reach'); }
+  if (at('grab')) { captor.step++; captor.oni.setMode('grab'); }
+  if (at('attach')) { captor.step++; grabHero(); world.shake(0.3); sfx.grab(); }
+  if (at('lift')) { captor.step++; captor.oni.setMode('lift'); world.setCameraMode('held'); }
+  if (at('laugh')) { captor.step++; captor.oni.setMode('laugh'); sfx.laugh(); }
+  if (at('over')) { captor.step++; showGameOver(); }
+
+  // the oni rising out of the portal in a column of smoke
+  if (captor.oni) {
+    const k = easeOut((T - CAPTURE.portal) / (CAPTURE.risen - CAPTURE.portal));
+    captor.oni.root.position.y = -7 * (1 - k);
+    if (k < 1) fx.emit(portalPos, { count: 4, color: 0x8a4dff, color2: 0x200c40, bright: 1.2, speed: 1.6, life: 1.2, size: 0.9, gravity: 1.6, up: 0.6, spread: 12 });
+  }
+}
+const CAPTURE_ORDER = ['kneel', 'camera', 'portal', 'risen', 'reach', 'grab', 'attach', 'lift', 'laugh', 'over'];
+
+// tap / key during the cinematic: jump straight to the oni holding the hero
+function skipCapture() {
+  if (S.mode !== 'caught' || S.caughtT < 0.4) return;
+  if (!captor.oni) spawnCaptor();
+  captor.oni.root.position.y = 0;
+  hero.setMode('kneel');
+  captor.oni.setMode('grab');
+  captor.oni.snap(S.t);
+  grabHero();
+  captor.oni.setMode('laugh');
+  captor.oni.snap(S.t);
+  world.setCameraMode('held', true);
+  S.caughtT = CAPTURE.over;
+  captor.step = CAPTURE_ORDER.length;
+  showGameOver();
+}
+
+function endCapture() {
+  captor.holding = false;
+  if (captor.oni) {
+    world.scene.remove(captor.oni.root);
+    captor.oni.dispose();
+    captor.oni = null;
+  }
+  hero.reset();
+  document.body.classList.remove('cinematic');
 }
 
 function showGameOver() {
@@ -420,6 +561,7 @@ function showGameOver() {
   $('st-dist').textContent = `${Math.floor(S.distance)} m`;
   $('st-ai').textContent = ui.t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
   ui.show('ov-over');
+  sfx.over();
   $('btn-retry').focus();
 }
 
@@ -432,9 +574,10 @@ function clearEnemies() {
 
 function resetRun() {
   clearEnemies();
+  endCapture();
   Object.assign(S, {
     hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, wave: 1,
-    spawnTimer: 1.2, pendingBoss: false, cooldown: 0, invuln: 0,
+    spawnTimer: 1.2, pendingBoss: false, cooldown: 0, invuln: 0, timeScale: 1,
     ai: { reads: 0, fixed: 0, unclear: 0 },
   });
   ui.setHearts(S.hearts, MAX_HEARTS);
@@ -445,7 +588,6 @@ function resetRun() {
   ui.resetAI();
   ui.showPadHint(false);
   pad.clear();
-  world.runner.reset();
   setTempo(1);
 }
 
@@ -510,6 +652,14 @@ function updatePlaying(dt) {
     if (S.cooldown <= 0) pad.setEnabled(true);
   }
 
+  // combo aura: spirit sparks rising around the hero, colour by tier
+  if (S.combo >= 5) {
+    const tier = S.combo >= 20 ? 3 : S.combo >= 10 ? 2 : 1;
+    fx.emit(tmpV.set(rand(-0.35, 0.35), rand(0.3, 1.6), rand(-0.2, 0.35)), {
+      count: tier, color: auraColor(), color2: 0xffffff, bright: 1.8, speed: 0.5, life: 0.6, size: 0.12, gravity: 2, up: 0.4, dragK: 3,
+    });
+  }
+
   const bossAlive = S.enemies.some((e) => e.boss && !e.dying);
   const alive = S.enemies.filter((e) => !e.dying).length;
   if (alive === 0) S.spawnTimer = Math.min(S.spawnTimer, 0.8);
@@ -531,25 +681,39 @@ function updateEnemies(dt) {
   const shown = [];
   for (const e of [...S.enemies]) {
     e.yokai.update(dt, S.t);
+    const root = e.yokai.root;
     if (e.dying) {
       e.dying += dt / 0.35;
       const k = Math.min(1, e.dying);
-      e.yokai.root.scale.setScalar((1 + 0.4 * Math.sin(Math.PI * k)) * (1 - k * k));
-      e.yokai.root.rotation.y += dt * 14;
+      root.scale.setScalar((1 + 0.4 * Math.sin(Math.PI * k)) * (1 - k * k));
+      root.rotation.y += dt * 14;
       if (k >= 1) removeEnemy(e);
       continue;
     }
     e.age += dt;
+    root.scale.setScalar(Math.max(0.01, easeOutBack(e.age / 0.45)));
+
+    if (e.swarm) {
+      // capture: a half-ring around the hero's sides and back (never between him
+      // and the camera), drifting back and forth and facing him
+      const a = Math.PI * 1.08 + e.swarmA * 0.84 / (2 * Math.PI) * Math.PI + Math.sin(S.t * 0.8 + e.swarmA * 3) * 0.12;
+      const r = 2.8 + Math.sin(S.t * 1.7 + e.swarmA) * 0.25;
+      const k = 1 - Math.exp(-dt * 2.2);
+      root.position.x += (Math.cos(a) * r - root.position.x) * k;
+      root.position.z += (Math.sin(a) * r * 0.8 - 0.4 - root.position.z) * k;
+      root.rotation.y = Math.atan2(-root.position.x, -root.position.z);
+      continue;
+    }
     if (moving) {
       e.z += e.speed * dt;
       if (!e.locked && e.z >= HIT_Z) { playerHit(e); continue; }
     }
-    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the runner
-    const pos = e.yokai.root.position;
-    pos.z = e.z;
-    pos.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
+    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
+    root.position.z = e.z;
+    root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
+    if (!e.tag) continue;
     world.project(e.yokai.labelAnchor(tmpV), scr);
-    shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible, near });
+    shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible });
   }
 
   // Keep equation tags readable: nearest yokai keep their spot, farther tags
@@ -580,24 +744,27 @@ function updateEnemies(dt) {
   }
 }
 
-function step(dt) {
+function step(dt, realDt) {
   const P = waveParams(S.wave);
   let target = 3.2;
   if (S.mode === 'intro' || S.mode === 'playing') target = P.runSpeed;
-  else if (S.mode === 'dying' || S.mode === 'over') target = 0;
-  S.speed += (target - S.speed) * Math.min(1, dt * 2);
+  else if (S.mode === 'caught' || S.mode === 'over') target = 0;
+  S.speed += (target - S.speed) * Math.min(1, dt * (S.mode === 'caught' ? 5 : 2));
 
   world.update(dt, S.speed, S.t);
+  fx.setScale(world.pxScale);
   fx.update(dt);
+  captor.oni?.update(dt, S.t);
+  if (captor.holding) followFist();
 
   if (S.mode === 'intro') {
     S.introT += dt;
     if (S.introT > 1.45) beginPlay();
   } else if (S.mode === 'playing') {
     updatePlaying(dt);
-  } else if (S.mode === 'dying') {
-    S.dieT += dt;
-    if (S.dieT > 1.6) showGameOver();
+    world.sampleFrame(realDt);
+  } else if (S.mode === 'caught') {
+    updateCapture(realDt);
   }
   updateEnemies(dt);
 }
@@ -605,11 +772,14 @@ function step(dt) {
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const realDt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (S.mode !== 'paused') {
+    // brief slow motion as the last heart is lost
+    const slow = S.mode === 'caught' && S.caughtT < 0.7 ? 0.25 + 0.75 * smooth01((S.caughtT - 0.3) / 0.4) : 1;
+    const dt = realDt * slow;
     S.t += dt;
-    step(dt);
+    step(dt, realDt);
   }
   world.render();
 }
@@ -620,6 +790,7 @@ $('btn-start').addEventListener('click', startGame);
 $('btn-retry').addEventListener('click', startGame);
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
+$('btn-over-title').addEventListener('click', toTitle);
 $('btn-pause').addEventListener('click', () => (S.mode === 'paused' ? resume() : pause()));
 $('btn-mute').addEventListener('click', () => {
   muted = !muted;
@@ -643,8 +814,10 @@ $('btn-lang').addEventListener('click', () => {
     $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
   }
 });
+stage.addEventListener('pointerdown', skipCapture);
 
 document.addEventListener('keydown', (e) => {
+  if (S.mode === 'caught') { skipCapture(); return; }
   if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
     if (S.mode === 'playing') pause(); else if (S.mode === 'paused') resume();
   } else if ((e.key === 'Enter' || e.key === ' ') && (S.mode === 'title' || S.mode === 'over') && document.activeElement?.tagName !== 'BUTTON') {
@@ -663,4 +836,4 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
-if (DEBUG) window.__mathrun = { S, world, fx, spawn, decide, waveParams };
+if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, waveParams, beginCapture, skipCapture };

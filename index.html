@@ -33,6 +33,7 @@
       <div id="popups" aria-hidden="true"></div>
       <div id="vignette" aria-hidden="true"></div>
       <div id="banner" class="banner" aria-live="polite"></div>
+      <div id="skip-hint" class="skip-hint" data-i18n="skip"></div>
 
       <header id="hud">
         <div class="hud-left">
@@ -108,7 +109,7 @@
     </section>
 
     <!-- Game over -->
-    <section id="ov-over" class="overlay" hidden>
+    <section id="ov-over" class="overlay over" hidden>
       <div class="card small-card">
         <h2 data-i18n="overTitle"></h2>
         <div id="over-newbest" class="newbest" data-i18n="newBest" hidden></div>
@@ -120,6 +121,7 @@
           <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
         </dl>
         <button id="btn-retry" class="btn primary" data-i18n="retry"></button>
+        <button id="btn-over-title" class="btn ghost" data-i18n="quit"></button>
       </div>
     </section>
   </div>

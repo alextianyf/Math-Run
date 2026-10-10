@@ -114,6 +114,43 @@ export const sfx = {
   heal() { if (ok()) [4, 5, 7].forEach((k, i) => bell(SCALE[k], now() + i * 0.1, 0.18, 1.2)); },
   over() { if (ok()) [5, 4, 2, 0].forEach((k, i) => pluck(SCALE[k], now() + i * 0.22, 0.25, sfxBus)); },
   click() { if (ok()) pluck(880, now(), 0.08, sfxBus); },
+  // capture cinematic
+  portal() {
+    if (!ok()) return;
+    const t = now();
+    noiseBurst(t, 1.6, { f0: 120, f1: 1400, q: 3, vol: 0.25 });
+    drum(t, { f0: 70, f1: 30, vol: 0.7, dur: 1.4 });
+  },
+  roar() {
+    if (!ok()) return;
+    const t = now();
+    for (const f of [72, 75.5, 108]) {
+      const o = ctx.createOscillator(), gn = ctx.createGain(), lp = ctx.createBiquadFilter();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, t);
+      o.frequency.linearRampToValueAtTime(f * 0.7, t + 1.3);
+      lp.type = 'lowpass'; lp.frequency.value = 650;
+      env(gn, t, 0.22, 0.12, 1.3);
+      o.connect(lp).connect(gn).connect(sfxBus);
+      o.start(t); o.stop(t + 1.5);
+    }
+    noiseBurst(t, 1.2, { type: 'lowpass', f0: 900, f1: 250, vol: 0.3 });
+  },
+  grab() { if (ok()) drum(now(), { f0: 160, f1: 60, vol: 0.8, dur: 0.3 }); },
+  laugh() {
+    if (!ok()) return;
+    for (let i = 0; i < 6; i++) {
+      const t = now() + i * 0.17;
+      const o = ctx.createOscillator(), gn = ctx.createGain(), bp = ctx.createBiquadFilter();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(115 - i * 4, t);
+      o.frequency.exponentialRampToValueAtTime(80 - i * 3, t + 0.14);
+      bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 2.5;
+      env(gn, t, 0.35, 0.015, 0.14);
+      o.connect(bp).connect(gn).connect(sfxBus);
+      o.start(t); o.stop(t + 0.2);
+    }
+  },
 };
 
 /* ---------- background loop ---------- */
