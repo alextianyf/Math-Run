@@ -89,6 +89,22 @@ export function largestCC(bin, w, h){
   return best;
 }
 
+// ===== Foreground Bounding Box =====
+// Input: bin (Uint8Array, values 0/1), width w, height h
+// Output: bounding box {x0,y0,x1,y1} of ALL foreground pixels, or null if none
+// (keeps every stroke of multi-stroke digits like 4 or 5 when the input is clean)
+export function foregroundBBox(bin, w, h){
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < w; x++){
+      if (!bin[y * w + x]) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
 // ===== Intensity Centroid =====
 // Input: img (Float32Array), width w, height h
 // Output: { cx, cy, mass }, centroid in pixel coords (float), mass = sum of intensity

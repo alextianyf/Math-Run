@@ -1,110 +1,129 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Math Challenge — MNIST Handwriting</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <!-- TFJS + WASM -->
-    <!-- Load TensorFlow.js core library (machine learning in the browser). This gives you the global "tf" object. -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-    <!-- Load the WebAssembly (WASM) backend for TensorFlow.js. 
-    This allows computations to run faster using WebAssembly if you call
-    tf.setBackend('wasm'). -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Math Run · Night Parade</title>
+  <meta name="description" content="A 3D handwriting math game: write answers on a talisman to banish yokai. Digit recognition runs in your browser with TensorFlow.js." />
+  <meta name="theme-color" content="#140f2e" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>😎</text></svg>" />
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- TensorFlow.js (+ WASM backend) for in-browser digit recognition -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/tf-backend-wasm.min.js"></script>
+
+  <!-- Three.js via import map: no build step, GitHub Pages serves these files as-is -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 
-<body class="math-run">
-    <!-- Parallax world background -->
-    <div class="world" aria-hidden="true">
-      <div class="layer sky"></div>
-      <div class="layer clouds"></div>
+<body>
+  <div id="app">
+    <!-- 3D stage -->
+    <div id="stage">
+      <canvas id="scene" aria-label="3D game view"></canvas>
+      <div id="labels" aria-live="off"></div>
+      <div id="popups" aria-hidden="true"></div>
+      <div id="vignette" aria-hidden="true"></div>
+      <div id="banner" class="banner" aria-live="polite"></div>
+
+      <header id="hud">
+        <div class="hud-left">
+          <div id="hearts" class="hearts"></div>
+          <div id="wave" class="chip"></div>
+          <div id="combo" class="combo"></div>
+        </div>
+        <div class="hud-right">
+          <div class="score-box">
+            <div id="score" class="score">0</div>
+            <div class="score-sub"><span id="dist">0</span> m · <span data-i18n="best"></span> <span id="best">0</span></div>
+          </div>
+          <div class="hud-btns">
+            <button id="btn-ai" class="icon-btn" aria-label="AI view">AI</button>
+            <button id="btn-lang" class="icon-btn" aria-label="Language" data-i18n="lang"></button>
+            <button id="btn-mute" class="icon-btn" aria-label="Sound">
+              <svg class="i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg class="i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9.5l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button id="btn-pause" class="icon-btn" aria-label="Pause">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+            </button>
+          </div>
+        </div>
+      </header>
     </div>
 
-    <!-- Tiny HUD -->
-    <div class="hud-mini">
-      <span id="backend">Backend: —</span>
-      <span id="modelStatus">Model: Loading</span>
-      <span id="latency">Latency: — ms</span>
+    <!-- Writing dock: AI panel + talisman -->
+    <div id="dock">
+      <aside id="ai-panel" class="panel" aria-label="AI view">
+        <div class="ai-head"><span data-i18n="aiTitle"></span><span id="ai-meta" class="ai-meta"></span></div>
+        <div class="ai-body">
+          <canvas id="ai-input" width="28" height="28" aria-label="28×28 model input"></canvas>
+          <ol id="ai-top" class="ai-top"></ol>
+        </div>
+        <div id="ai-verdict" class="ai-verdict"></div>
+      </aside>
+
+      <div id="talisman" class="talisman">
+        <div class="tal-head" aria-hidden="true">敕令</div>
+        <canvas id="pad" aria-label="Handwrite your answer here"></canvas>
+        <div class="tal-foot" aria-hidden="true">急急如律令</div>
+        <div id="guess" class="guess" aria-hidden="true"></div>
+        <div id="pad-hint" class="pad-hint" data-i18n="padHint"></div>
+        <div id="pad-toast" class="pad-toast" role="status"></div>
+      </div>
     </div>
 
-    <!-- Header -->
-    <header class="hero">
-      <h1 class="brand">Math Run</h1>
-      <div class="hero-hud">
-        <span id="gameLevel" class="chip">Level 1(more coming soon)</span>
-        <div class="timer hero-timer"><div id="timerBar"></div></div>
-        <span id="gameScore" class="chip">0/10</span>
-      </div>
-    </header>
-
-    <!-- Stage -->
-    <main class="stage">
-      <div class="equation">
-        <div class="expr">
-          <span id="problemText">Click "Start"</span>
-          <span id="eqSign" aria-hidden="true">=</span>
-          <span id="answerSlots" class="answer-slots">
-            <span class="slot" id="slot">_</span>
-          </span>
-        </div>
-      </div>
-      <!-- Handwriting canvas -->
-      <div class="answer-box">
-        <canvas id="pad" width="280" height="280" aria-label="Handwrite your answer"></canvas>
-      </div>
-    </main>
-
-    <!-- Status message (game hints / results) -->
-    <section id="statusWrap" aria-live="polite" aria-atomic="true">
-      <div id="statusMessage" class="status" role="status"></div>
-    </section>
-
-    <!-- Controls -->
-    <section class="controls">
-      <button id="btnStartGame" class="btn primary">Start</button>
-      <button id="btnSubmit" class="btn accent" disabled>Submit</button>
-      <button id="btnGameClear" class="btn">Clear Canvas</button>
-    </section>
-
-    <!-- Track -->
-    <section class="track-wrap">
-      <div class="track">
-        <div id="hero" class="actor">😎</div>
-        <div id="monster" class="actor">👹</div>
-        <div class="track-meter">
-          <div class="meter-bg"></div>
-          <div id="gapFill" class="meter-fill"></div>
-          <div id="gapText" class="meter-text"></div>
-        </div>
+    <!-- Title -->
+    <section id="ov-title" class="overlay title">
+      <div class="card title-card">
+        <div class="kicker">😎 <span>vs</span> 👹</div>
+        <h1 class="logo">MATH RUN</h1>
+        <div class="sub-logo" data-i18n="subtitle"></div>
+        <p class="tagline" data-i18n="tagline"></p>
+        <ol class="how">
+          <li><b>1</b><span data-i18n="how1"></span></li>
+          <li><b>2</b><span data-i18n="how2"></span></li>
+          <li><b>3</b><span data-i18n="how3"></span></li>
+        </ol>
+        <button id="btn-start" class="btn primary" disabled data-i18n="loading"></button>
+        <div class="title-meta"><span id="title-best"></span> <span id="ai-status" data-i18n="loading"></span></div>
       </div>
     </section>
 
-    <!-- ===== Help / Onboarding (moved inside body + updated ID/class + only “Got it” button) ===== -->
-    <button id="btnHelp" class="help-fab" aria-label="Help">?</button>
-
-    <div id="helpOverlay" class="help-overlay" hidden aria-modal="true" role="dialog">
-      <div class="help-dialog" role="document" aria-labelledby="helpTitle">
-        <h2 id="helpTitle">How to Play</h2>
-        <ul class="help-list">
-          <li>This is <b>Math Run</b> — like Temple Run, but with numbers!</li>
-          <li>You are the runner 😎. Escape the chasing monster 👹.</li>
-          <li>Write your answer (0–9) in the canvas and hit <b>Submit</b>.</li>
-          <li>You only have <b>10 seconds</b> for each problem!</li>
-          <li>Correct answers make 😎 dash forward.</li>
-          <li>Wrong, unclear, or late answers let 👹 catch up.</li>
-          <li>Survive 10 questions to win the run!</li>
-        </ul>
-        <div class="help-actions">
-          <button id="helpGotIt" class="btn accent">Got it</button>
-        </div>
+    <!-- Pause -->
+    <section id="ov-pause" class="overlay" hidden>
+      <div class="card small-card">
+        <h2 data-i18n="paused"></h2>
+        <button id="btn-resume" class="btn primary" data-i18n="resume"></button>
+        <button id="btn-quit" class="btn ghost" data-i18n="quit"></button>
       </div>
-    </div>
-    <!-- ===== End of Help ===== -->
+    </section>
 
-    <!-- Scripts: make sure help.js is loaded after the markup -->
-    <script type="module" src="./js/app.js?v=status-a"></script>
-    <script type="module" src="./js/game.js?v=status-a"></script>
-    <script type="module" src="./js/help.js?v=garden-v2"></script>
+    <!-- Game over -->
+    <section id="ov-over" class="overlay" hidden>
+      <div class="card small-card">
+        <h2 data-i18n="overTitle"></h2>
+        <div id="over-newbest" class="newbest" data-i18n="newBest" hidden></div>
+        <div id="over-score" class="big-score">0</div>
+        <dl class="stats">
+          <div><dt data-i18n="statBanished"></dt><dd id="st-banished"></dd></div>
+          <div><dt data-i18n="statCombo"></dt><dd id="st-combo"></dd></div>
+          <div><dt data-i18n="statDist"></dt><dd id="st-dist"></dd></div>
+          <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
+        </dl>
+        <button id="btn-retry" class="btn primary" data-i18n="retry"></button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
 </body>
 </html>

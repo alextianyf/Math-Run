@@ -7,9 +7,11 @@ Note:
   However, I would like to try without relying on external software packages.
 */
 
-import { otsu, largestCC, computeCentroid, gaussianBlur1D } from './utils.js';
+import { otsu, largestCC, foregroundBBox, computeCentroid, gaussianBlur1D } from './utils.js';
 
-export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = true }) {
+// roi: 'lcc' = largest connected component (robust to noisy input)
+//      'all' = bounding box of all foreground pixels (clean, multi-stroke input)
+export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = true, roi: roiMode = 'lcc' }) {
   // 1) RGBA → Grayscale in [0,1]
   const gray = new Float32Array(srcW * srcH);
   for (let i = 0; i < srcW * srcH; i++) {
@@ -27,8 +29,9 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
     bin[i] = invert ? (isFg ? 0 : 1) : (isFg ? 1 : 0); // 1 = foreground (stroke), 0 = background
   }
 
-  // 3) Largest Connected Component (LCC) → Region of Interest (ROI)
-  const roi = largestCC(bin, srcW, srcH) ?? { x0: 0, y0: 0, x1: srcW - 1, y1: srcH - 1 };
+  // 3) Largest Connected Component (LCC) or all-foreground box → Region of Interest (ROI)
+  const found = roiMode === 'all' ? foregroundBBox(bin, srcW, srcH) : largestCC(bin, srcW, srcH);
+  const roi = found ?? { x0: 0, y0: 0, x1: srcW - 1, y1: srcH - 1 };
   let { x0, y0, x1, y1 } = roi;
   const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1);
 
