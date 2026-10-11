@@ -4,6 +4,11 @@
   "description": "Math Run: Night Parade — a 3D handwriting math game. No build step: open index.html through any static server.",
   "type": "module",
   "scripts": {
-    "test": "node tests/problems.test.mjs && node tests/director.test.mjs"
+    "test": "node tests/problems.test.mjs && node tests/director.test.mjs",
+    "media:hero": "node docs/demo/hero.cjs",
+    "media:demo": "node docs/demo/record.cjs && python docs/demo/encode.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }

@@ -1,18 +1,69 @@
-# Math Run!
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.png">
+    <img src="docs/media/hero.png" width="1500" alt="百鬼夜行 · Math Run — Handwrite the answer. Banish the yokai. An AI reads your pen, right in the browser.">
+  </picture>
+</p>
 
-<div align="center">
-  <img src="images/math-run.png" alt="result demo" height="400"/>
-</div>
+<p align="center">
+  <a href="https://alextianyf.github.io/Math-Run/"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/badges/play-dark.svg"><img src="docs/media/badges/play.svg" width="200" height="44" alt="Play in your browser"></picture></a>&nbsp;&nbsp;<a href="#quick-start-local-run"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/badges/quick-start-dark.svg"><img src="docs/media/badges/quick-start.svg" width="122" height="44" alt="Quick start"></picture></a>
+</p>
 
-Have you ever tried playing [**Temple Run**](https://play.google.com/store/apps/details?id=com.imangi.templerun&hl=en_CA&pli=1) before? Now imagine the same thrill, but with math!
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/badges/runs-in-dark.svg"><img src="docs/media/badges/runs-in.svg" width="186" height="28" alt="Runs in any modern browser"></picture>&nbsp;&nbsp;<a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/media/badges/free-dark.svg"><img src="docs/media/badges/free.svg" width="154" height="28" alt="Free for personal, noncommercial use"></picture></a>
+</p>
 
-Welcome to **Math Run** — a fun browser game where you play as a cool runner 😎 escaping from a chasing monster 👹 by solving quick math problems. Every correct answer pushes you forward, while wrong or late answers let the monster catch up!  
+<p align="center">
+  <sub>by <a href="https://github.com/alextianyf"><strong>Alex Tian</strong></a> &nbsp;·&nbsp; <a href="https://alextianyf.github.io/Math-Run/">Play online</a> &nbsp;·&nbsp; <a href="#how-to-play">How to play</a> &nbsp;·&nbsp; <a href="https://github.com/alextianyf/Math-Run/issues">Feedback</a></sub>
+</p>
 
-> [**Play the Game Here**](https://alextianyf.github.io/Math-Run/)
+## Banish yokai with your handwriting
 
-But here’s the twist: instead of typing answers, you **handwrite digits (0–9) directly on the canvas**. Behind the scenes, a deep learning model trained with **TensorFlow** is running in your browser. I used a simple **MLP (Multi-Layer Perceptron)** trained on the classic **MNIST dataset** to recognize handwritten digits. The trained model was then deployed to the web, where it runs seamlessly inside the game.
+Yokai pour out of the night along a shrine path, each carrying a math problem. You are a young onmyōji: **handwrite the answer (0–9) on your talisman**, a neural network running in your browser reads it, and the talisman flies at **every** yokai whose answer matches.
 
-It’s not just a game — it’s an interactive demo of how a **simple neural network** can blend with web technologies to create playful, and unique project.
+Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on the classic **MNIST dataset** with **TensorFlow** recognizes your handwriting. It is deployed with **TensorFlow.js**, so it runs entirely on your device. Around it is a 3D game built with **Three.js** and an **adaptive difficulty system** that keeps every player challenged but not overwhelmed — no server, no build step, just static files on GitHub Pages.
+
+[![Yokai bring equations, a 7 is handwritten on the talisman, the AI reads it, and one talisman banishes both yokai whose answer is 7](docs/media/demo.webp)](docs/media/demo.png)
+
+<p align="center"><sub>Recorded in the real game, in the browser: the 7 is written with the mouse and read by the model. <a href="docs/media/demo.png">View a still image</a>.</sub></p>
+
+> The original 2D version (a runner 😎 escaping a monster 👹) is archived on the [`archive/v1-classic`](https://github.com/alextianyf/Math-Run/tree/archive/v1-classic) branch.
+
+---
+
+## How to Play
+
+- Every yokai carries an equation. Its answer is always a single digit, 0–9.
+- Write the answer on the talisman. When you lift the pen, the AI reads it.
+- One talisman hits **every** yokai with that answer — spot the shared answers for bonus points.
+- A yokai that reaches you costs a heart. Lose all three and the great oni catches you.
+- Right answers raise your hidden **rating**. When it is high enough, a **rank-trial boss** appears; beat it to be promoted, from 阴阳生 *Apprentice* up to 晴明 *Seimei*. Each rank unlocks new kinds of problems.
+- Every run started from the title opens with a short playable tutorial. Works with mouse, touch or pen, in Chinese or English.
+
+---
+
+## Highlights
+
+### Handwriting recognition in the browser
+
+- An MLP trained on MNIST (**98.28%** test accuracy), converted to TensorFlow.js and run on the **WASM** backend, which keeps the GPU free for the 3D scene.
+- **My own preprocessing pipeline**, written without OpenCV: grayscale → Otsu threshold → crop → resize → centroid alignment (see [Model Pipeline Workflow](#model-pipeline-workflow)).
+- **Context-aware decoding**: the model's probabilities are combined with the answers currently on screen. A sloppy 3 that looks a bit like an 8 still counts when a "3" yokai is present, while a clearly written wrong digit is a miss. The game-over card shows how often this corrected the model.
+- A live guess while you write, and an **"AI view"** panel showing the 28×28 image the model actually sees and its top predictions.
+
+### Adaptive difficulty
+
+- **Procedural problems**: each one is built backwards from its answer (7 → 12 − 5 → 3 × 4 − 5 → √16 × 3 − 5), mixing + − × ÷, brackets, powers and roots. Every step is a whole number, so it can be solved in your head, and there is no fixed question bank to repeat.
+- Every problem gets a **difficulty score on the same scale as the player's Elo-style rating**, so the game can simply ask for "a problem around 950".
+- Problems are aimed at about **85% success**, following the "Eighty Five Percent Rule" for optimal learning ([Wilson et al., 2019, *Nature Communications*](https://www.nature.com/articles/s41467-019-12552-4)). After three right answers in a row comes a slightly harder *challenge* problem; after two wrong ones, an easier one.
+- Difficulty climbs **smoothly** (only a small step per problem, however fast the rating moves), and **ranks unlock problem types**: × and ÷, then brackets, then squares and roots, then cubes and powers.
+- **Pacing follows the player**: the time from pen down to the model's reading is measured, and yokai never arrive faster than the player can physically write.
+
+### A 3D game that stays static
+
+- **Three.js** with toon shading, outlines and bloom; a **VRM** character as the hero; every sound synthesized with the **Web Audio API** (no audio files).
+- No backend, no API keys, **no build step**: libraries load from a CDN through an import map, so GitHub Pages hosts it for free.
+- Smooth on modest PCs: every shader is compiled and every model uploaded while the page loads, and the graphics quality steps down automatically if frames get slow.
 
 ---
 
@@ -20,37 +71,30 @@ It’s not just a game — it’s an interactive demo of how a **simple neural n
 
 The motivation behind **Math Run** was to combine my interests in deep learning and practical application deployment into one interactive project.
 
-By training a simple neural network on the MNIST dataset and deploying it with TensorFlow.js, I wanted to demonstrate how deep learning models can move beyond research environments and power real-time applications directly in the browser.  
+By training a simple neural network on the MNIST dataset and deploying it with TensorFlow.js, I wanted to demonstrate how deep learning models can move beyond research environments and power real-time applications directly in the browser.
 
 This project showcases both the end-to-end deep learning workflow (data → training → deployment) and my ability to build engaging, interactive web application.
+
+With **Night Parade**, the second version, I wanted to go further: wrap the model in a complete game, with a 3D world, a story and a difficulty system grounded in research on how people learn — while still running entirely in the browser.
 
 ---
 
 ## Table of Contents
 
-- [Math Run!](#math-run)
-  - [Project Motivation](#project-motivation)
-  - [Table of Contents](#table-of-contents)
-  - [File Structure](#file-structure)
-  - [Quick Start (Local Run)](#quick-start-local-run)
-  - [Development Environment Setup (with Virtual Environment)](#development-environment-setup-with-virtual-environment)
-    - [Recommended Configuration](#recommended-configuration)
-    - [1. Creating Virtual Environment](#1-creating-virtual-environment)
-    - [2. Active the Virtual Environment(On Windows, the activation command may differ)](#2-active-the-virtual-environmenton-windows-the-activation-command-may-differ)
-    - [3. Select the Python Interpreter in VS Code](#3-select-the-python-interpreter-in-vs-code)
-    - [4. Install `ipykernel` (Recommended Version: 6.29.5)](#4-install-ipykernel-recommended-version-6295)
-    - [5. Install Project Dependencies](#5-install-project-dependencies)
-  - [Tech Stack](#tech-stack)
-  - [Model Pipeline Workflow](#model-pipeline-workflow)
-  - [Model Performance](#model-performance)
-    - [Classification Report](#classification-report)
-    - [Training Curves](#training-curves)
-    - [Confusion Matrix](#confusion-matrix)
-    - [Sample Predictions](#sample-predictions)
-  - [Broader Impact \& Applications](#broader-impact--applications)
-  - [Future Improvements](#future-improvements)
-  - [Acknowledgments](#acknowledgments)
-  - [License](#license)
+- [Banish yokai with your handwriting](#banish-yokai-with-your-handwriting)
+- [How to Play](#how-to-play)
+- [Highlights](#highlights)
+- [Project Motivation](#project-motivation)
+- [File Structure](#file-structure)
+- [Quick Start (Local Run)](#quick-start-local-run)
+- [Training Environment Setup (Python)](#training-environment-setup-python)
+- [Tech Stack](#tech-stack)
+- [Model Pipeline Workflow](#model-pipeline-workflow)
+- [Model Performance](#model-performance)
+- [Broader Impact \& Applications](#broader-impact--applications)
+- [Future Improvements](#future-improvements)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
 
 ---
 
@@ -96,11 +140,13 @@ This section provides a detailed overview of the project directory structure to 
 │       ├── coach.js            # The tutorial's spotlight and speech bubble
 │       └── audio.js            # Synthesized sound effects and music
 ├── tests/                      # `npm test`: problem generator & difficulty checks (Node 18+)
+├── docs/
+│   ├── media/                  # README banner, badges and demo, link-preview card, training figures
+│   └── demo/                   # Scripts that rebuild the README media from the real game
 ├── models/hero.vrm             # The hero's 3D model
 ├── mnist_tfjs_model/           # Deployed TensorFlow.js model (model.json + weights)
 ├── mlp_training/               # Python training notebook, logs, SavedModel
 ├── data/MNIST.zip              # Original MNIST dataset (for training)
-├── images/                     # Screenshots for this README
 ├── requirements.txt            # Python dependencies (training)
 └── LICENSE
 ```
@@ -109,32 +155,27 @@ This section provides a detailed overview of the project directory structure to 
 
 ## Quick Start (Local Run)
 
-Follow the steps below to set up and run the project locally:
+The game is plain static files — all it needs is a local web server:
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/alextianyf/Math-Run.git
 cd Math-Run
-
-# 2. (Optional) Create and activate a virtual environment
-python -m venv .venv
-# On macOS/Linux:
-source .venv/bin/activate
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
-# 3. Install Python dependencies (for training / preprocessing)
-pip install -r requirements.txt
-
-# 4. Start a local HTTP server
 python -m http.server 8000
 ```
 
-Once the server is running, open the game in your browser at: `http://localhost:8000/` (recommended: Google Chrome)
+Then open `http://localhost:8000/` in your browser (recommended: Google Chrome). Any static server works; opening `index.html` straight from the file system does not, because browsers block JavaScript modules and model files on `file://`.
+
+For development:
+
+- `http://localhost:8000/?debug` — number keys cast directly (skipping the handwriting), and the game state is reachable from the console as `window.__mathrun`.
+- `npm test` (Node.js 18+, nothing to install) — checks that every generated problem is correct and solvable, that each rank only gets the problem types it has unlocked, and that the difficulty keeps players near the success target.
+- The banner, badges, demo animation and link-preview card are generated from the real game — see [docs/demo/README.md](docs/demo/README.md).
 
 ---
 
-## Development Environment Setup (with Virtual Environment)
+## Training Environment Setup (Python)
+
+This is only needed to retrain the model in `mlp_training/` — the game itself runs without Python.
 
 The `.venv` folder (local Python virtual environment) is **not** included in this repository.  
 
@@ -217,10 +258,12 @@ pip install -r requirements.txt
 
 | Layer         | Technologies |
 |---------------|--------------|
-| **Frontend**  | HTML, CSS, JavaScript, TensorFlow.js |
+| **Game**      | HTML, CSS, JavaScript (ES modules, no build step), Three.js, three-vrm, Web Audio API |
+| **In-browser AI** | TensorFlow.js (WASM backend) |
 | **ML Training** | Python, TensorFlow/Keras, NumPy, Pandas |
 | **Visualization** | Matplotlib, Seaborn |
-| **Deployment** | GitHub Pages |
+| **Testing**   | Node.js (`npm test`) |
+| **Deployment** | GitHub Pages (static files only) |
 
 ---
 
@@ -229,7 +272,7 @@ pip install -r requirements.txt
 The diagram below summarizes the workflow:
 
 <div align="center">
-  <img src="images/pipeline.png" alt="pic" height="100"/>
+  <img src="docs/media/pipeline.png" alt="pic" height="100"/>
 </div>
 
 The project consists of two major parts:
@@ -247,22 +290,22 @@ The project consists of two major parts:
    - Evaluate on test set with **confusion matrix** and **classification report**.  
    - Export model as TensorFlow `SavedModel` and convert to **TensorFlow.js** for web deployment.  
 
-2. **Inference Pipeline**
-   - Capture user handwriting from the **canvas** in the browser.  
-   - Apply preprocessing steps:  
-     - Convert RGBA → grayscale  
-     - Otsu thresholding (binarization, adaptive inversion)  
-     - Extract largest connected component (digit region)  
-     - Resize longest side to 20px, paste into 28×28 canvas  
-     - Align digit to centroid  
-     - (Optional) Gaussian blur  
-     - Normalize to [0,1]  
-   - Feed the 28×28 image into the deployed **MLP (TensorFlow.js)** model.  
-   - Obtain digit prediction (softmax probabilities).  
-   - Update game logic:  
-     - Show predicted digit  
-     - If correct → runner 😎 moves forward  
-     - If wrong/timeout → monster 👹 catches up
+2. **Inference Pipeline** (`js/ai/` and `js/game/handwriting.js`)
+   - Capture handwriting on the talisman (mouse, touch or pen). The pad waits a moment after the pen lifts — longer for a mouse — so digits drawn in several strokes, like 4, aren't read half-written.
+   - Apply preprocessing steps:
+     - Convert RGBA → grayscale
+     - Otsu thresholding (binarization, adaptive inversion)
+     - Crop to the bounding box of all strokes (a largest-connected-component mode is also implemented)
+     - Resize longest side to 20px, paste into 28×28 canvas
+     - Align digit to centroid
+     - (Optional) Gaussian blur
+     - Normalize to [0,1]
+   - Feed the 28×28 image into the deployed **MLP (TensorFlow.js)** model.
+   - Obtain digit prediction (softmax probabilities).
+   - Decide in context, using the answers currently on screen:
+     - **Hit** → a talisman flies at every yokai with that answer
+     - **Miss** (a clearly written digit no yokai has) → the talisman fizzles and counts as a wrong answer
+     - **Unclear** → the player is asked to write again
 
 ---
 
@@ -296,19 +339,19 @@ The trained MLP model achieved high performance on the MNIST dataset:
 ### Training Curves
 
 <div align="center">
-  <img src="images/training-curve.png" alt="pic" height="400"/>
+  <img src="docs/media/training-curve.png" alt="pic" height="400"/>
 </div>
 
 ### Confusion Matrix
 
 <div align="center">
-  <img src="images/confusion-matrix.png" alt="pic" height="500"/>
+  <img src="docs/media/confusion-matrix.png" alt="pic" height="500"/>
 </div>
 
 ### Sample Predictions
 
 <div align="center">
-  <img src="images/sample-predictions.png" alt="pic" height="150"/>
+  <img src="docs/media/sample-predictions.png" alt="pic" height="150"/>
 </div>
 
 The model shows consistent performance across all digit classes with minimal misclassification.
@@ -329,6 +372,7 @@ Although **Math Run** is presented as a playful demo, the underlying concepts ar
 
 - **Gamification in Education & Training**  
   - Combining interactive gameplay with ML showcases how gamification can enhance learning.  
+  - The adaptive director shows how a simple learner model (an Elo-style rating) and research on optimal challenge can keep practice in the sweet spot — not too easy, not too hard.
   - Similar methods could be used to teach math, language, or even industrial training scenarios.  
 
 - **Edge & Browser-Based AI**  
@@ -341,23 +385,20 @@ In short, while **Math Run** is a simple demo, the techniques behind it—data p
 
 ## Future Improvements
 
-While **Math Run** already demonstrates how a neural network can be deployed directly in the browser, there are several areas where the project could be expanded:
+While **Math Run** already shows a neural network working inside a complete game, there are several directions it could grow:
 
-1. **Responsive Web Design**  
-   - Currently, the game is optimized for desktop browsers only.  
-   - Future iterations can introduce responsive layouts for mobile and tablet devices, improving accessibility and playability on different platforms.  
+1. **Multi-digit Answers**
+   - Recognize a sequence of digits (by splitting the strokes, or with a sequence model), so answers can go beyond 9.
 
-2. **Dynamic Model Integration**  
-   - The current version uses a pre-trained MLP model hosted statically via TensorFlow.js.  
-   - A potential improvement is to set up a lightweight backend (e.g., Flask, FastAPI, or Node.js) that allows dynamic model training, online fine-tuning, or serving multiple models for comparison in real-time.  
+2. **Model Enhancements**
+   - Experiment with CNNs (Convolutional Neural Networks) for better accuracy on hurried handwriting.
+   - Explore quantization to deploy a lighter and faster model.
 
-3. **Extended Game Mechanics**  
-   - Introduce difficulty levels (e.g., larger numbers, multiple-digit answers, timed challenges).  
-   - Add gamification elements such as leaderboards or score tracking to make the experience more engaging.  
+3. **Personalization**
+   - Fine-tune the model on the player's own handwriting, right in the browser (TensorFlow.js can train on-device).
 
-4. **Model Enhancements**  
-   - Experiment with CNNs (Convolutional Neural Networks) for improved digit recognition accuracy.  
-   - Explore transfer learning or quantization to deploy lighter and faster models for the web.  
+4. **Leaderboards**
+   - Share scores and ranks with other players — this would need a small backend, which the project deliberately avoids so far.
 
 ---
 
@@ -366,6 +407,8 @@ While **Math Run** already demonstrates how a neural network can be deployed dir
 - The **MNIST dataset**: a classic benchmark dataset of handwritten digits, which has enabled decades of progress in computer vision research.  
 
 - **TensorFlow.js**: for providing the tools to run deep learning models directly in the browser, making this interactive demo possible.  
+- **Three.js**: the 3D engine behind the shrine path, the yokai and the spell effects.
+- **Wilson et al. (2019)**, *The Eighty Five Percent Rule for optimal learning*: the success rate the adaptive difficulty aims for.
 - **VRoid Project / pixiv**: the hero is the CC0 VRoid Studio sample character "Sakurada Fumiriya" (`models/hero.vrm`, restyled in-game), rendered with [three-vrm](https://github.com/pixiv/three-vrm).  
 
 - The open-source community: whose libraries, documentation, and shared knowledge make projects like this achievable.  
@@ -377,7 +420,7 @@ While **Math Run** already demonstrates how a neural network can be deployed dir
 This project is released under a custom license:
 
 - The **MNIST dataset** used in this project is publicly available and free to use for research and educational purposes (Yann LeCun et al.).  
-- All **code, game logic, and assets** in this repository were independently created by **Alex Tian**.  
+- All **code, game logic, and assets** in this repository were independently created by **Alex Tian**, except the hero's base 3D model (CC0, credited in Acknowledgments).  
 - You are free to use, copy, or modify the code **for personal, research, or educational purposes only**.  
 - **Commercial use is strictly prohibited** without prior written permission from the author.  
 
