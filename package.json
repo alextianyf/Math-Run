@@ -1,0 +1,9 @@
+{
+  "name": "math-run",
+  "private": true,
+  "description": "Math Run: Night Parade — a 3D handwriting math game. No build step: open index.html through any static server.",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/problems.test.mjs && node tests/director.test.mjs"
+  }
+}

@@ -8,9 +8,9 @@
 import * as THREE from 'three';
 import { toon, glow, bake, joint, lathe, taperedTube } from './toon.js';
 import { glowTex, shadowTex, lanternPaperTex, wagasaTex } from './textures.js';
-import { createOni } from './oni.js';
+import { takeOni, releaseOni } from './oni.js';
 
-export const YOKAI_INFO = {
+const YOKAI_INFO = {
   onibi:   { baseY: 1.35, labelY: 1.05, centerY: 0, color: 0x6fd0ff, radius: 0.5 },
   chochin: { baseY: 1.5,  labelY: 0.9,  centerY: 0, color: 0xffa04a, radius: 0.55 },
   kasa:    { baseY: 1.2,  labelY: 0.85, centerY: 0, color: 0xff5f9a, radius: 0.6 },
@@ -192,7 +192,7 @@ export function createYokai(type) {
   root.add(shadow);
 
   if (type === 'oni') {
-    const oni = createOni();
+    const oni = takeOni();
     oni.root.scale.setScalar(ONI_SCALE);
     oni.setMode('walk');
     oni.roar();
@@ -203,7 +203,7 @@ export function createYokai(type) {
       center(out) { return out.set(root.position.x, info.centerY, root.position.z); },
       labelAnchor(out) { return out.set(root.position.x, info.labelY, root.position.z); },
       flash() { oni.flash(); },
-      dispose() { oni.dispose(); shadow.material.dispose(); },
+      dispose() { releaseOni(oni); shadow.material.dispose(); },
     };
   }
 

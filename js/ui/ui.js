@@ -1,5 +1,7 @@
-// ui.js — DOM side of the game: i18n, HUD, equation tags that follow the yokai,
-// popups/banners, the "AI view" panel and the overlay screens.
+// ui.js — everything on screen that isn't 3D: the HUD, the equation tags that
+// follow the yokai, popups and banners, the "AI view" panel and the overlay
+// screens — plus saved settings and the language switch (texts are in strings.js).
+import { STRINGS } from './strings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -14,176 +16,11 @@ export const store = {
   },
 };
 
-/* ===================== i18n ===================== */
-const DICT = {
-  zh: {
-    kicker: '少年阴阳师 × 手写 AI',
-    subtitle: '百鬼夜行',
-    tagline: '妖怪们带着算式从夜色里涌来。在符纸上写下答案，降妖除魔！',
-    how1: '每只妖怪头上都有一道算式',
-    how2: '在符纸上手写答案（0–9），浏览器里的神经网络会认出你的字',
-    how3: '一张符能同时打中所有答案相同的妖怪',
-    loading: 'AI 模型加载中…',
-    loadFail: 'AI 模型加载失败，请刷新重试',
-    start: '开始奔跑',
-    best: '最高',
-    rank0: '阴阳生',
-    rank1: '阴阳师',
-    rank2: '阴阳博士',
-    rank3: '阴阳头',
-    rank4: '晴明',
-    wave: '第 {n} 波',
-    trial: '晋升考核！',
-    stretch: '挑战',
-    promoted: '晋升 · {r}',
-    statRank: '阶位 · 实力分',
-    bestRank: '最高阶位',
-    nearTrial: '考核将至',
-    inTrial: '考核中',
-    oneTrial: '只差一场考核就是{r}！',
-    nearNext: '差一点就能挑战{r}！',
-    nextRank: '下一阶：{r}',
-    topReached: '已达最高阶 · 晴明！',
-    unlock1: '解锁：乘法与除法',
-    unlock2: '解锁：括号与多步运算',
-    unlock3: '解锁：平方与开方',
-    unlock4: '解锁：立方、乘方与开立方',
-    rankLine: '{r} · {v}（{d}）',
-    combo: '连击',
-    tutSkip: '跳过教程',
-    tutNext: '知道了',
-    tutYokaiT: '妖怪来了！',
-    tutYokai: '百鬼夜行的妖怪会从参道深处朝你飘过来——千万别让它碰到你。',
-    tutEqT: '看它头上的算式',
-    tutEq: '每只妖怪都挂着一道算式，算出答案就能降服它。这一只是 1 + 2。',
-    tutWriteT: '在符纸上写答案',
-    tutWrite: '用手指或鼠标在符纸上写出答案，写完停一下，符咒就会自己飞出去。',
-    tutWrong: '{d} 不对哦——1 + 2 等于几？再写一次。',
-    tutHint: '提示：写一个大大的 3。',
-    tutUnclear: 'AI 没看清，写大一点、清楚一点。',
-    tutNiceT: '降妖成功！',
-    tutNice: '答对了，符咒会自动追上妖怪。答案相同的妖怪，一张符就能一起打中。',
-    tutDangerT: '小心被抓',
-    tutDanger: '答错或者太慢，妖怪碰到你就会掉一颗心。三颗心都没了，大鬼就会把你抓走！',
-    tutReadyT: '听懂了吗？',
-    tutReady: '真正的百鬼夜行就要开始了。',
-    tutReplay: '再听一遍',
-    tutGo: '继续奔跑',
-    unclear: '看不清，再写一次',
-    miss: '没有妖怪等于 {d}',
-    idle: '还没有妖怪',
-    multi2: '一符双妖！',
-    multi3: '一符三妖！',
-    multi4: '百鬼退散！',
-    heal: '+1 生命',
-    paused: '暂停',
-    resume: '继续',
-    quit: '回到标题',
-    overTitle: '被大鬼抓住了！',
-    newBest: '新纪录！',
-    retry: '再跑一次',
-    statBanished: '降服妖怪',
-    statCombo: '最高连击',
-    statDist: '奔跑距离',
-    statAI: 'AI 读字',
-    aiStat: '{n} 次 · 修正 {c} · 看不清 {u}',
-    aiTitle: 'AI 视角',
-    aiIdle: '写个数字试试',
-    aiRead: '读到 {d} · {p}%',
-    aiFix: '结合场上答案：{a} → {b}',
-    aiUnsure: '不确定（{d} · {p}%）',
-    ready: 'AI 就绪',
-    go: '出发！',
-    skip: '点击跳过',
-    lang: 'EN',
-  },
-  en: {
-    kicker: 'Onmyōji × Handwriting AI',
-    subtitle: 'Night Parade',
-    tagline: 'Yokai pour out of the night, each carrying a math riddle. Write the answer on your talisman to banish them!',
-    how1: 'Every yokai carries an equation',
-    how2: 'Handwrite the answer (0–9) — a neural net in your browser reads it',
-    how3: 'One talisman hits every yokai with that answer',
-    loading: 'Loading AI model…',
-    loadFail: 'AI model failed to load — please refresh',
-    start: 'Start running',
-    best: 'Best',
-    rank0: 'Apprentice',
-    rank1: 'Onmyōji',
-    rank2: 'Master',
-    rank3: 'Grand Master',
-    rank4: 'Seimei',
-    wave: 'Wave {n}',
-    trial: 'Rank trial!',
-    stretch: 'Challenge',
-    promoted: 'Promoted · {r}',
-    statRank: 'Rank · rating',
-    bestRank: 'Best rank',
-    nearTrial: 'Trial soon',
-    inTrial: 'Trial!',
-    oneTrial: 'One trial away from {r}!',
-    nearNext: 'So close to the {r} trial!',
-    nextRank: 'Next: {r}',
-    topReached: 'Top rank reached: Seimei!',
-    unlock1: 'Unlocked: × and ÷',
-    unlock2: 'Unlocked: brackets, multi-step',
-    unlock3: 'Unlocked: squares and roots',
-    unlock4: 'Unlocked: cubes, powers, cube roots',
-    rankLine: '{r} · {v} ({d})',
-    combo: 'Combo',
-    tutSkip: 'Skip tutorial',
-    tutNext: 'Got it',
-    tutYokaiT: 'A yokai!',
-    tutYokai: 'The Night Parade drifts down the shrine path toward you — don’t let it touch you.',
-    tutEqT: 'Read its equation',
-    tutEq: 'Every yokai carries an equation. Solve it to banish it — this one says 1 + 2.',
-    tutWriteT: 'Write the answer',
-    tutWrite: 'Write the answer on the talisman with your finger or mouse, then pause — it flies by itself.',
-    tutWrong: '{d} isn’t right — what’s 1 + 2? Try again.',
-    tutHint: 'Hint: write a big 3.',
-    tutUnclear: 'The AI couldn’t read that — write it bigger and clearer.',
-    tutNiceT: 'Banished!',
-    tutNice: 'Right answer — the talisman homes in. Yokai that share an answer are all hit by one talisman.',
-    tutDangerT: 'Don’t get caught',
-    tutDanger: 'Too slow or wrong, and a yokai that reaches you takes a heart. Lose all three and the great oni carries you off!',
-    tutReadyT: 'Got it?',
-    tutReady: 'The real Night Parade is about to begin.',
-    tutReplay: 'Once more',
-    tutGo: 'Keep running',
-    unclear: "Can't read that — try again",
-    miss: 'No yokai equals {d}',
-    idle: 'No yokai yet',
-    multi2: 'Double banish!',
-    multi3: 'Triple banish!',
-    multi4: 'Parade scattered!',
-    heal: '+1 life',
-    paused: 'Paused',
-    resume: 'Resume',
-    quit: 'Title screen',
-    overTitle: 'Caught by the oni!',
-    newBest: 'New best!',
-    retry: 'Run again',
-    statBanished: 'Yokai banished',
-    statCombo: 'Best combo',
-    statDist: 'Distance',
-    statAI: 'AI reads',
-    aiStat: '{n} · fixed {c} · unclear {u}',
-    aiTitle: 'AI view',
-    aiIdle: 'Write a digit',
-    aiRead: 'Read {d} · {p}%',
-    aiFix: 'Context fix: {a} → {b}',
-    aiUnsure: 'Unsure ({d} · {p}%)',
-    ready: 'AI ready',
-    go: 'Go!',
-    skip: 'Tap to skip',
-    lang: '中',
-  },
-};
-
+/* ===================== language ===================== */
 let lang = store.get('lang', (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en');
 
 export function t(key, vars = {}) {
-  const s = DICT[lang][key] ?? DICT.en[key] ?? key;
+  const s = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
   return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
 }
 export function getLang() { return lang; }
@@ -224,7 +61,7 @@ export function setBest(n) {
 }
 /* ===================== ranks ===================== */
 // one seal character per rank: 阴阳生 · 阴阳师 · 阴阳博士 · 阴阳头 · 晴明
-export const SEALS = ['生', '师', '博', '头', '明'];
+const SEALS = ['生', '师', '博', '头', '明'];
 
 // HUD: the rank's seal and title, a thin bar toward the next trial (no numbers;
 // the rating waits for the game-over card) and a hint.
@@ -407,7 +244,7 @@ export function showAI(img28, probs, verdict) {
     `<li class="${i === 0 ? 'lead' : ''}"><b>${d}</b><span class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></span><em>${Math.round(p * 100)}%</em></li>`).join('');
   if (verdict) setAIVerdict(verdict.text, verdict.cls);
 }
-export function setAIVerdict(text, cls = '') {
+function setAIVerdict(text, cls = '') {
   const el = $('ai-verdict');
   el.textContent = text;
   el.className = 'ai-verdict ' + cls;

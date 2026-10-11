@@ -3,7 +3,7 @@
 import { preprocessToMNIST, tensorFrom28x28 } from './processing.js';
 import { softmax } from './utils.js';
 
-const MODEL_URL = new URL('../mnist_tfjs_model/model.json', import.meta.url).href;
+const MODEL_URL = new URL('../../mnist_tfjs_model/model.json', import.meta.url).href;
 
 let model = null;
 export const aiInfo = { backend: '—', ready: false, latency: 0 };
@@ -32,8 +32,11 @@ async function run(x) {
 export async function initRecognizer() {
   await setupBackend();
   model = await tf.loadGraphModel(MODEL_URL);
-  const warm = tf.zeros([1, 784]);
-  tf.dispose([warm, await run(warm)]);
+  // one full reading (preprocessing + model) of a made-up stroke, so the first
+  // real one is as quick as all the others
+  const size = 280, stroke = new Uint8ClampedArray(size * size * 4);
+  for (let y = 60; y < 220; y++) for (let x = 130; x < 150; x++) stroke.fill(255, (y * size + x) * 4, (y * size + x) * 4 + 4);
+  await classify(stroke, size);
   aiInfo.ready = true;
 }
 

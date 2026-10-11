@@ -60,30 +60,49 @@ This section provides a detailed overview of the project directory structure to 
 
 ```text
 .
-├── .venv/                                # (Not provided) Local Python virtual environment
-├── data/
-│   └── MNIST.zip                         # Original MNIST dataset (for training)
-├── images/                               # Screenshots and visual assets
-├── js/                                   # Frontend game logic & utilities
-│   ├── app.js                            # Main app entry point (load model, predictions)
-│   ├── drawing.js                        # Canvas drawing & handwriting input handling
-│   ├── game.js                           # Core game mechanics (runner, monster, scoring)
-│   ├── help.js                           # Help / onboarding modal interactions
-│   ├── processing.js                     # Preprocessing pipeline for MNIST input
-│   └── utils.js                          # Utility functions (Otsu, blur, centroid, etc.)
-├── mlp_training/                         # Python training scripts & experiments
-│   ├── logs/                             # Training logs
-│   ├── notebook.ipynb                    # Jupyter notebook (training & evaluation demo)
-│   └── saved_model/                      # TensorFlow SavedModel format (before conversion)
-├── mnist_tfjs_model/                     # Deployed TensorFlow.js model
-│   ├── group1-shard1of1.bin              # Model weights shard
-│   └── model.json                        # Model architecture and weight manifest               
-├── index.html                            # Webpage entry point (game UI + scripts)
-├── styles.css                            # Styling for the game UI
-├── LICENSE                               # Custom license (non-commercial, MNIST open use)
-├── README.md                             # Project documentation (you are here)
-├── requirements.txt                      # Python dependencies (training & preprocessing)
-└── .gitignore                            # Ignore virtual env, cache, model artifacts
+├── index.html                  # The page: HUD, talisman, title / pause / game-over screens
+├── styles.css                  # All styling
+├── js/
+│   ├── main.js                 # Entry point: sets the stage, frame loop, buttons & keys
+│   ├── game/                   # The rules of the game
+│   │   ├── state.js            # Shared game state (S) and core numbers
+│   │   ├── stage.js            # Shared 3D world, effects and difficulty director (+ shader prewarm)
+│   │   ├── enemies.js          # Yokai: spawning, moving, equation tags
+│   │   ├── handwriting.js      # Talisman pad → AI reading → decision
+│   │   ├── combat.js           # Casting talismans, hits, misses, damage
+│   │   ├── progress.js         # Score, hearts, waves, ranks, saved records
+│   │   ├── tutorial.js         # The opening tutorial
+│   │   ├── capture.js          # The "caught by the oni" cinematic
+│   │   ├── flow.js             # Start / pause / game over / back to title
+│   │   └── helpers.js          # Small shared helpers
+│   ├── difficulty/             # Adaptive difficulty
+│   │   ├── adaptive.js         # The director: Elo-style rating, pacing, ranks & unlocks
+│   │   └── problems.js         # Procedural problem generator (answers are always 0–9)
+│   ├── ai/                     # Handwritten-digit recognition (TensorFlow.js)
+│   │   ├── recognizer.js       # Loads the model, classifies the talisman
+│   │   ├── processing.js       # MNIST-style preprocessing pipeline
+│   │   └── utils.js            # Image helpers (Otsu, connected components, centroid, blur…)
+│   ├── scene/                  # 3D graphics (Three.js)
+│   │   ├── world.js            # Renderer, bloom, lights, camera, auto quality
+│   │   ├── environment.js      # The shrine path, torii, lanterns, trees, sky
+│   │   ├── hero.js, heroRobe.js, heroStyle.js   # The VRM onmyōji and his robes
+│   │   ├── yokai.js, oni.js    # The parade and the great oni
+│   │   ├── fx.js               # Spell effects: particles, talismans, magic circles
+│   │   └── toon.js, textures.js   # Toon materials, outlines, painted textures
+│   └── ui/                     # Screen, text and sound
+│       ├── ui.js               # HUD, equation tags, banners, AI panel, settings
+│       ├── strings.js          # All texts, Chinese and English
+│       ├── pad.js              # The talisman you write on
+│       ├── coach.js            # The tutorial's spotlight and speech bubble
+│       └── audio.js            # Synthesized sound effects and music
+├── tests/                      # `npm test`: problem generator & difficulty checks (Node 18+)
+├── models/hero.vrm             # The hero's 3D model
+├── mnist_tfjs_model/           # Deployed TensorFlow.js model (model.json + weights)
+├── mlp_training/               # Python training notebook, logs, SavedModel
+├── data/MNIST.zip              # Original MNIST dataset (for training)
+├── images/                     # Screenshots for this README
+├── requirements.txt            # Python dependencies (training)
+└── LICENSE
 ```
 
 ---

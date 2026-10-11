@@ -184,11 +184,6 @@ body:not(.in-game) #hud { opacity: 0; visibility: hidden; }
 .heart.lost svg { fill: rgba(255, 255, 255, 0.16); filter: none; }
 .heart.pop { animation: heartPop 0.5s ease-out; }
 @keyframes heartPop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
-.chip {
-  padding: 4px 10px; border-radius: 999px;
-  background: rgba(20, 14, 46, 0.6); border: 1px solid var(--line);
-  font-size: 12px; color: var(--dim); letter-spacing: 0.04em;
-}
 .combo { font: 600 14px/1 var(--font-ui); color: var(--dim); opacity: 0; transition: opacity 0.3s; }
 .combo b { font: 900 26px/1 var(--font-display); color: var(--gold); text-shadow: 0 0 14px rgba(246, 201, 91, 0.6); }
 .combo.show { opacity: 1; }

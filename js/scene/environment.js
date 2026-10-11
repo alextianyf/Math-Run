@@ -405,7 +405,7 @@ function buildTrees(scene) {
   ]);
   const cedarCount = 70;
   const cedarTrunk = instanced(trunk, toon(0x3a2a26), cedarCount);
-  const cedarTop = instanced(needles, toon(0x1d3d3a, { flatShading: true }), cedarCount);
+  const cedarTop = instanced(needles, toon(0x1d3d3a), cedarCount);
   scene.add(cedarTrunk, cedarTop);
   const cedars = new Scroller([cedarTrunk, cedarTop], Array.from({ length: cedarCount }, (_, i) => ({
     x: (i % 2 ? 1 : -1) * rand(8.5, 22), z: NEAR - Math.random() * SPAN, s: rand(0.9, 2), ry: Math.random() * Math.PI,
@@ -422,7 +422,7 @@ function buildTrees(scene) {
   ].map(([x, y, z, r]) => place(new THREE.IcosahedronGeometry(r, 1), [x, y, z])));
   const sakCount = 24;
   const sakTrunkMesh = instanced(sakTrunk, toon(0x3b2630), sakCount);
-  const sakTopMesh = instanced(blossom, toon(0xf4a9c8, { flatShading: true, emissive: 0x4a1030 }), sakCount);
+  const sakTopMesh = instanced(blossom, toon(0xf4a9c8, { emissive: 0x4a1030 }), sakCount);
   scene.add(sakTrunkMesh, sakTopMesh);
   const sakura = new Scroller([sakTrunkMesh, sakTopMesh], Array.from({ length: sakCount }, (_, i) => ({
     x: (i % 2 ? 1 : -1) * rand(5.6, 8), z: NEAR - (i / sakCount) * SPAN - rand(0, 4), s: rand(0.9, 1.25), ry: Math.random() * Math.PI * 2,

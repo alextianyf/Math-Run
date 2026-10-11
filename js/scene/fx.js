@@ -101,6 +101,25 @@ export function createFx(scene, camera) {
     geo.attributes.palpha.needsUpdate = true;
   }
 
+  /* ===================== materials ===================== */
+  // Every effect gets its own material (its colour and fade are its own) and frees
+  // it when done. warmObjects() keeps one spare of each kind, so their shaders stay
+  // compiled and no cast ever waits for the GPU to compile one.
+  const ringMat = (color) => new THREE.SpriteMaterial({ map: ringTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  const haloMat = (color) => new THREE.SpriteMaterial({ map: glowTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  const sealMat = (ch) => new THREE.SpriteMaterial({ map: sealTex(ch), transparent: true, depthTest: false, depthWrite: false });
+  const circleMat = (color, bright) => new THREE.MeshBasicMaterial({
+    map: magicCircleTex(), color: glow(color, bright), transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+  });
+  const paperMat = (texture) => new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, fog: false });
+  const trailMat = (color) => new THREE.ShaderMaterial({
+    uniforms: { color: { value: glow(color, 2.4) }, fade: { value: 1 } },
+    vertexShader: 'attribute float ta; varying float vA; void main(){ vA = ta; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 color; uniform float fade; varying float vA; void main(){ gl_FragColor = vec4(color, vA * fade); }',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+
   /* ===================== timed sprites/planes (rings, circles, seals) ===================== */
   const timed = [];
   function addTimed(obj, dur, tick) {
@@ -121,7 +140,7 @@ export function createFx(scene, camera) {
   }
 
   function ring(p, { color = 0xffd36b, scale = 3, dur = 0.45 } = {}) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const s = new THREE.Sprite(ringMat(color));
     s.position.copy(p);
     addTimed(s, dur, (k, o) => {
       const e = 1 - Math.pow(1 - k, 3);
@@ -133,10 +152,7 @@ export function createFx(scene, camera) {
   // Onmyōji circle: billboard at the hand when casting, or flat on the ground (portal)
   const circleGeo = new THREE.PlaneGeometry(1, 1);
   function magicCircle(p, { color = 0xffc84a, scale = 1.2, dur = 0.55, ground = false, spin = 3, bright = 2.2 } = {}) {
-    const m = new THREE.Mesh(circleGeo, new THREE.MeshBasicMaterial({
-      map: magicCircleTex(), color: glow(color, bright), transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-    }));
+    const m = new THREE.Mesh(circleGeo, circleMat(color, bright));
     m.position.copy(p);
     if (ground) m.rotation.x = -Math.PI / 2;
     addTimed(m, dur, (k, o) => {
@@ -151,7 +167,7 @@ export function createFx(scene, camera) {
 
   // 滅 seal: pops in big, settles, then fades — sized to read the same at any distance
   function seal(p, ch = '滅') {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sealTex(ch), transparent: true, depthTest: false, depthWrite: false }));
+    const s = new THREE.Sprite(sealMat(ch));
     s.position.copy(p);
     s.renderOrder = 10;
     const base = camera.position.distanceTo(p) * 0.11;
@@ -179,12 +195,7 @@ export function createFx(scene, camera) {
     const idx = [];
     for (let i = 0; i < TRAIL_N - 1; i++) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
     g.setIndex(idx);
-    const mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({
-      uniforms: { color: { value: glow(color, 2.4) }, fade: { value: 1 } },
-      vertexShader: 'attribute float ta; varying float vA; void main(){ vA = ta; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'uniform vec3 color; uniform float fade; varying float vA; void main(){ gl_FragColor = vec4(color, vA * fade); }',
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    }));
+    const mesh = new THREE.Mesh(g, trailMat(color));
     mesh.frustumCulled = false;
     scene.add(mesh);
     return { mesh, tp, ta, g, hist: [] };
@@ -210,8 +221,8 @@ export function createFx(scene, camera) {
   // texture: CanvasTexture shared by all talismans of one cast (ref-counted)
   function talisman(texture, from, getTarget, { dur = 0.34, side: bend = 0, onHit, color = 0xffc84a } = {}) {
     texture.userData.refs = (texture.userData.refs || 0) + 1;
-    const mesh = new THREE.Mesh(talGeo, new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, fog: false }));
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const mesh = new THREE.Mesh(talGeo, paperMat(texture));
+    const halo = new THREE.Sprite(haloMat(color));
     halo.scale.setScalar(1.4);
     mesh.add(halo);
     mesh.position.copy(from);
@@ -262,6 +273,19 @@ export function createFx(scene, camera) {
   return {
     emit, ring, talisman, magicCircle, seal,
     setScale(px) { uniforms.uScale.value = px; },
+    // one object per effect material, to be compiled once and then kept (hidden)
+    warmObjects() {
+      const paper = new THREE.CanvasTexture(document.createElement('canvas'));
+      paper.colorSpace = THREE.SRGBColorSpace;      // like the real talisman paper
+      return [
+        new THREE.Sprite(ringMat(0xffffff)),
+        new THREE.Sprite(haloMat(0xffffff)),
+        new THREE.Sprite(sealMat('滅')),
+        new THREE.Mesh(circleGeo, circleMat(0xffffff, 1)),
+        new THREE.Mesh(talGeo, paperMat(paper)),
+        new THREE.Mesh(talGeo, trailMat(0xffffff)),
+      ];
+    },
     update(dt) {
       updateFlights(dt);
       updateTimed(dt);

@@ -178,12 +178,6 @@ function score(n, acc) {
 
 const rate = (acc, parens) => 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
 
-export function difficultyOf(tree, parens) {
-  const acc = { sum: 0, ops: 0, kinds: new Set() };
-  score(tree, acc);
-  return rate(acc, parens);
-}
-
 // independent check: evaluate the tree exactly
 export function evaluate(n) {
   if (n.t === 'n') return n.v;

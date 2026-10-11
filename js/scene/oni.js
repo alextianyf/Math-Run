@@ -7,7 +7,25 @@ import { tigerTex } from './textures.js';
 
 const smoothTo = (cur, target, k) => cur + (target - cur) * k;
 
-export function createOni() {
+// Building an oni takes ~60 ms (a visible stutter), so a finished one is kept and
+// handed out again: the rank-trial boss and the capture scene both take it from here.
+let spare = null;
+export function takeOni() {
+  const oni = spare ?? createOni();
+  spare = null;
+  return oni;
+}
+export function releaseOni(oni) {
+  oni.root.removeFromParent();
+  oni.root.position.set(0, 0, 0);
+  oni.root.rotation.set(0, 0, 0);
+  oni.root.scale.setScalar(1);
+  oni.reset();
+  if (spare) oni.dispose();
+  else spare = oni;
+}
+
+function createOni() {
   const tiger = tigerTex();
   tiger.repeat.set(2, 1);
   const M = {
@@ -263,6 +281,12 @@ export function createOni() {
     flash() { flashT = 1; staggerT = 1; },
     // jump every joint straight to the current mode's pose (for skipping cinematics)
     snap(t = 0) { Object.assign(pose, target(t)); this.apply(); },
+    // back to a calm idle, as if new
+    reset() {
+      mode = 'idle'; staggerT = flashT = roarT = walkPhase = 0;
+      M.skin.emissive.setRGB(0.17, 0.016, 0.016);
+      this.snap();
+    },
     update(dt, t, walkSpeed = 0) {
       walkPhase += dt * (1.2 + walkSpeed * 0.25) * Math.PI;
       staggerT = Math.max(0, staggerT - dt * 2.5);

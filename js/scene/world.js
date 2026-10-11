@@ -135,6 +135,9 @@ export function createWorld(canvas) {
 
   function applySize() {
     const q = QUALITY[quality];
+    // the lowest quality skips the bloom pass but keeps the same render path, so
+    // stepping down never forces every shader to recompile (a long stall)
+    bloom.enabled = q.bloom;
     const dpr = Math.min(window.devicePixelRatio || 1, q.dpr);
     renderer.setPixelRatio(dpr);
     renderer.setSize(width, height, false);
@@ -183,10 +186,7 @@ export function createWorld(canvas) {
       hero.update(dt, speed, t, camera);
       updateCamera(dt, t);
     },
-    render() {
-      if (QUALITY[quality].bloom) composer.render();
-      else renderer.render(scene, camera);
-    },
+    render() { composer.render(); },
     handPosition(out) { return hero.handR.getWorldPosition(out); },
     // World → CSS pixel coordinates inside the canvas
     project(v, out) {

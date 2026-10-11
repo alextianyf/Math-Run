@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 let ramp = null;
-export function toonRamp() {
+function toonRamp() {
   if (!ramp) {
     ramp = new THREE.DataTexture(new Uint8Array([110, 185, 255]), 3, 1, THREE.RedFormat);
     ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
@@ -22,7 +22,7 @@ export const glow = (hex, k = 2.5) => new THREE.Color(hex).multiplyScalar(k);
 
 /* ---------- outlines (inverted hull, fog-aware) ---------- */
 const outlineCache = new Map();
-export function outlineMaterial(thickness = 0.018, color = 0x0c0818) {
+function outlineMaterial(thickness = 0.018, color = 0x0c0818) {
   const key = `${thickness}:${color}`;
   if (outlineCache.has(key)) return outlineCache.get(key);
   const m = new THREE.ShaderMaterial({

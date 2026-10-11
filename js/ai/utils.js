@@ -176,36 +176,3 @@ export function softmax(arr){
   const s = exps.reduce((a, b) => a + b, 0);
   return exps.map(v => v / s);
 }
-
-// Return top-k indices with probabilities, sorted desc by p
-export function argTopK(probs, k){
-  return probs
-    .map((p, i) => ({ p, i }))
-    .sort((a, b) => b.p - a.p)
-    .slice(0, k);
-}
-
-// ===== Render Probability Bars =====
-// root: DOM element to render into
-// probs: array of length 10 (class probabilities 0..9)
-// highlightIdx: optional index to visually emphasize
-export function renderBars(root, probs, highlightIdx){
-  root.innerHTML = '';
-  for (let i = 0; i < 10; i++){
-    const bar = document.createElement('div');
-    bar.className = 'bar';
-
-    const span = document.createElement('span'); // the filled bar
-    span.style.width = (probs[i] * 100).toFixed(2) + '%';
-    if (i === highlightIdx) span.style.filter = 'brightness(1.35)';
-
-    const label = document.createElement('label'); // digit label
-    label.textContent = String(i);
-
-    const val = document.createElement('em'); // percentage text
-    val.textContent = (probs[i] * 100).toFixed(2) + '%';
-
-    bar.append(span, label, val);
-    root.appendChild(bar);
-  }
-}

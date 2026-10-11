@@ -1,7 +1,7 @@
-// tutorial.js — the coach layer for the opening tutorial: a dimming spotlight
-// that glides between points of interest, a speech bubble placed beside it, a
-// finger that demonstrates writing on the talisman, and a 3-2-1 countdown.
-// The flow itself (which step, when to pause) lives in main.js.
+// coach.js — the look of the opening tutorial (its steps are in game/tutorial.js):
+// a dimming spotlight that glides between points of interest, a speech bubble
+// placed beside it, a finger that demonstrates writing on the talisman, and a
+// 3-2-1 countdown.
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
