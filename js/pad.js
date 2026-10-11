@@ -6,8 +6,13 @@ export const MODEL_SIZE = 280;     // side of the square image fed to preprocess
 const MODEL_BOX = 190;             // longest side of the digit inside that image
 const MODEL_LINE = 18;             // stroke width inside that image (best of 12–22 on jittered test digits)
 const INK = '#b3170f';
+// How long to wait (ms) after the pen lifts before reading the digit: [after the
+// first stroke, after later strokes]. One stroke may be an unfinished 4, 5 or crossed 7,
+// so that wait is longer; writing with a mouse is slower than with a finger or pen.
+const WAITS = { mouse: [1500, 1100], touch: [1100, 800], pen: [1100, 800] };
 
-export function createPad(canvas, { onInput, onFinish, idleMs = 620 } = {}) {
+// onArm(ms) fires when the submit countdown starts, onDisarm() when it's cancelled
+export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
   const ctx = canvas.getContext('2d');
   const modelCanvas = document.createElement('canvas');
   modelCanvas.width = modelCanvas.height = MODEL_SIZE;
@@ -17,6 +22,7 @@ export function createPad(canvas, { onInput, onFinish, idleMs = 620 } = {}) {
   let current = null;
   let dpr = 1, w = 1, h = 1;
   let idleTimer = 0;
+  let pointerType = 'mouse';
   let enabled = true;
 
   const inkWidth = () => Math.max(7, Math.min(w, h) * 0.07);
@@ -80,7 +86,8 @@ export function createPad(canvas, { onInput, onFinish, idleMs = 620 } = {}) {
     if (!enabled || current) return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
-    clearTimeout(idleTimer);
+    disarm();
+    pointerType = e.pointerType in WAITS ? e.pointerType : 'mouse';
     current = [pos(e)];
     strokes.push(current);
     redraw();
@@ -99,9 +106,16 @@ export function createPad(canvas, { onInput, onFinish, idleMs = 620 } = {}) {
     if (!current) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
     current = null;
+    const wait = WAITS[pointerType][strokes.length > 1 ? 1 : 0];
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => onFinish?.(), idleMs);
+    idleTimer = setTimeout(() => { idleTimer = 0; onFinish?.(); }, wait);
+    onArm?.(wait);
   };
+  function disarm() {
+    if (idleTimer) onDisarm?.();
+    clearTimeout(idleTimer);
+    idleTimer = 0;
+  }
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
   canvas.addEventListener('lostpointercapture', end);
@@ -119,11 +133,11 @@ export function createPad(canvas, { onInput, onFinish, idleMs = 620 } = {}) {
     resize,
     get writing() { return !!current; },
     hasInk() { return strokes.length > 0; },
-    setEnabled(v) { enabled = v; if (!v) { current = null; clearTimeout(idleTimer); } },
+    setEnabled(v) { enabled = v; if (!v) { current = null; disarm(); } },
     clear() {
       strokes = [];
       current = null;
-      clearTimeout(idleTimer);
+      disarm();
       redraw();
     },
 

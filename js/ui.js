@@ -17,6 +17,7 @@ export const store = {
 /* ===================== i18n ===================== */
 const DICT = {
   zh: {
+    kicker: '少年阴阳师 × 手写 AI',
     subtitle: '百鬼夜行',
     tagline: '妖怪们带着算式从夜色里涌来。在符纸上写下答案，降妖除魔！',
     how1: '每只妖怪头上都有一道算式',
@@ -28,7 +29,25 @@ const DICT = {
     best: '最高',
     wave: '第 {n} 波',
     combo: '连击',
-    padHint: '在符纸上写答案',
+    tutSkip: '跳过教程',
+    tutNext: '知道了',
+    tutYokaiT: '妖怪来了！',
+    tutYokai: '百鬼夜行的妖怪会从参道深处朝你飘过来——千万别让它碰到你。',
+    tutEqT: '看它头上的算式',
+    tutEq: '每只妖怪都挂着一道算式，算出答案就能降服它。这一只是 1 + 2。',
+    tutWriteT: '在符纸上写答案',
+    tutWrite: '用手指或鼠标在符纸上写出答案，写完停一下，符咒就会自己飞出去。',
+    tutWrong: '{d} 不对哦——1 + 2 等于几？再写一次。',
+    tutHint: '提示：写一个大大的 3。',
+    tutUnclear: 'AI 没看清，写大一点、清楚一点。',
+    tutNiceT: '降妖成功！',
+    tutNice: '答对了，符咒会自动追上妖怪。答案相同的妖怪，一张符就能一起打中。',
+    tutDangerT: '小心被抓',
+    tutDanger: '答错或者太慢，妖怪碰到你就会掉一颗心。三颗心都没了，大鬼就会把你抓走！',
+    tutReadyT: '听懂了吗？',
+    tutReady: '真正的百鬼夜行就要开始了。',
+    tutReplay: '再听一遍',
+    tutGo: '继续奔跑',
     unclear: '看不清，再写一次',
     miss: '没有妖怪等于 {d}',
     idle: '还没有妖怪',
@@ -59,6 +78,7 @@ const DICT = {
     lang: 'EN',
   },
   en: {
+    kicker: 'Onmyōji × Handwriting AI',
     subtitle: 'Night Parade',
     tagline: 'Yokai pour out of the night, each carrying a math riddle. Write the answer on your talisman to banish them!',
     how1: 'Every yokai carries an equation',
@@ -70,7 +90,25 @@ const DICT = {
     best: 'Best',
     wave: 'Wave {n}',
     combo: 'Combo',
-    padHint: 'Write the answer here',
+    tutSkip: 'Skip tutorial',
+    tutNext: 'Got it',
+    tutYokaiT: 'A yokai!',
+    tutYokai: 'The Night Parade drifts down the shrine path toward you — don’t let it touch you.',
+    tutEqT: 'Read its equation',
+    tutEq: 'Every yokai carries an equation. Solve it to banish it — this one says 1 + 2.',
+    tutWriteT: 'Write the answer',
+    tutWrite: 'Write the answer on the talisman with your finger or mouse, then pause — it flies by itself.',
+    tutWrong: '{d} isn’t right — what’s 1 + 2? Try again.',
+    tutHint: 'Hint: write a big 3.',
+    tutUnclear: 'The AI couldn’t read that — write it bigger and clearer.',
+    tutNiceT: 'Banished!',
+    tutNice: 'Right answer — the talisman homes in. Yokai that share an answer are all hit by one talisman.',
+    tutDangerT: 'Don’t get caught',
+    tutDanger: 'Too slow or wrong, and a yokai that reaches you takes a heart. Lose all three and the great oni carries you off!',
+    tutReadyT: 'Got it?',
+    tutReady: 'The real Night Parade is about to begin.',
+    tutReplay: 'Once more',
+    tutGo: 'Keep running',
     unclear: "Can't read that — try again",
     miss: 'No yokai equals {d}',
     idle: 'No yokai yet',
@@ -221,7 +259,6 @@ export function talismanState(state) {
   void el.offsetWidth;
   if (state) el.classList.add(state);
 }
-export function showPadHint(v) { $('pad-hint').classList.toggle('show', v); }
 export function setGuess(digit, p) {
   const el = $('guess');
   if (digit == null) { el.classList.remove('show'); return; }
@@ -229,6 +266,14 @@ export function setGuess(digit, p) {
   el.style.setProperty('--conf', p.toFixed(2));
   el.classList.add('show');
 }
+
+// the gold bar that fills while the talisman waits to be read
+export function armTalisman(ms) {
+  const el = $('pad-timer');
+  el.style.setProperty('--wait', `${ms}ms`);
+  el.classList.remove('run'); void el.offsetWidth; el.classList.add('run');
+}
+export function disarmTalisman() { $('pad-timer').classList.remove('run'); }
 
 export function damageFlash() {
   const v = $('vignette');

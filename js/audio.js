@@ -114,6 +114,13 @@ export const sfx = {
   heal() { if (ok()) [4, 5, 7].forEach((k, i) => bell(SCALE[k], now() + i * 0.1, 0.18, 1.2)); },
   over() { if (ok()) [5, 4, 2, 0].forEach((k, i) => pluck(SCALE[k], now() + i * 0.22, 0.25, sfxBus)); },
   click() { if (ok()) pluck(880, now(), 0.08, sfxBus); },
+  // tutorial
+  coach() { if (ok()) [4, 6].forEach((k, i) => pluck(SCALE[k] * 2, now() + i * 0.07, 0.1, sfxBus)); },
+  countdown(i, last) {
+    if (!ok()) return;
+    if (!last) drum(now(), { f0: 150, f1: 70, vol: 0.55, dur: 0.25 });
+    else [2, 4, 5].forEach((k, j) => bell(SCALE[k], now() + j * 0.06, 0.26, 1.3));
+  },
   // capture cinematic
   portal() {
     if (!ok()) return;

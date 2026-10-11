@@ -4,7 +4,8 @@
 // handwrites a digit on the talisman; the MNIST model reads it and a talisman
 // flies at EVERY yokai whose answer matches — so spotting shared answers pays.
 // Losing the last heart plays a capture cinematic: the parade circles the hero
-// and the great oni rises from a portal to grab him.
+// and the great oni rises from a portal to grab him. Every run started from the
+// title opens with a playable tutorial that pauses on the first yokai.
 import * as THREE from 'three';
 import { createWorld, LANES } from './world.js';
 import { createYokai } from './yokai.js';
@@ -15,6 +16,7 @@ import { createPad, MODEL_SIZE } from './pad.js';
 import { initRecognizer, classify, aiInfo } from './recognizer.js';
 import { initAudio, setMuted, sfx, startMusic, stopMusic, setTempo } from './audio.js';
 import * as ui from './ui.js';
+import { createCoach } from './tutorial.js';
 
 const $ = (id) => document.getElementById(id);
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -54,7 +56,7 @@ const S = {
   enemies: [],
   ai: { reads: 0, fixed: 0, unclear: 0 },
   best: ui.store.get('best', 0),
-  tutorial: !ui.store.get('tutorialDone', false),
+  tut: null,                  // active tutorial: { step, frozen, e, misses, timer }
 };
 const captor = { oni: null, step: 0 };
 
@@ -71,7 +73,13 @@ function onResize() {
 new ResizeObserver(onResize).observe(stage);
 onResize();
 
-const pad = createPad($('pad'), { onInput: liveGuess, onFinish: finishWriting });
+const pad = createPad($('pad'), {
+  onInput: () => { if (S.tut?.step === 'write') coach.demo(false); liveGuess(); },
+  onFinish: finishWriting,
+  onArm: (ms) => ui.armTalisman(ms),
+  onDisarm: () => ui.disarmTalisman(),
+});
+const coach = createCoach();
 new ResizeObserver(() => pad.resize()).observe($('pad'));
 
 ui.applyI18n();
@@ -88,19 +96,20 @@ document.body.classList.toggle('ai-open', ui.store.get('aiPanel', window.innerWi
 // the hero model loads alongside the digit recogniser; if it fails we still let the game start
 Promise.all([initRecognizer(), hero.ready.catch(() => null)])
   .then(() => {
-    const btn = $('btn-start');
-    btn.disabled = false;
-    btn.dataset.i18n = 'start';
-    btn.textContent = ui.t('start');
+    $('btn-start').disabled = false;
+    $('start-label').dataset.i18n = 'start';
+    $('start-label').textContent = ui.t('start');
     $('ai-status').dataset.i18n = '';
     $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
+    $('ai-chip').classList.add('ready');
     ui.setAIMeta(aiInfo.backend);
     if (S.mode === 'loading') S.mode = 'title';
   })
   .catch((err) => {
     console.error('[math-run] model load failed', err);
-    $('btn-start').dataset.i18n = 'loadFail';
-    $('btn-start').textContent = ui.t('loadFail');
+    $('start-label').dataset.i18n = 'loadFail';
+    $('start-label').textContent = ui.t('loadFail');
+    $('ai-chip').classList.add('fail');
   });
 
 /* ===================== helpers ===================== */
@@ -133,30 +142,32 @@ function chooseLane() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function spawn(boss = false) {
+// forced: { type, lane, text, answer, z, speed } — a scripted yokai (the tutorial)
+function spawn(boss = false, forced = null) {
   const P = waveParams(S.wave);
-  const type = boss ? 'oni' : pickType();
-  const lane = boss ? 1 : chooseLane();
+  const type = forced?.type ?? (boss ? 'oni' : pickType());
+  const lane = forced?.lane ?? (boss ? 1 : chooseLane());
   const live = targets();
   // ~30%: reuse an answer already on screen (different expression) → multi-banish chance
   const reuse = live.length && Math.random() < 0.3 ? live[Math.floor(Math.random() * live.length)].answer : undefined;
   const tier = boss ? Math.min(4, P.tier + 1) : P.tier;
-  const prob = makeProblem(tier, reuse, new Set(live.map((e) => e.text)));
+  const prob = forced ?? makeProblem(tier, reuse, new Set(live.map((e) => e.text)));
+  const z0 = forced?.z ?? SPAWN_Z;
 
   // drift in from the forest on either side, settling into the lane as it approaches
   // (keeps far-away tags apart, where perspective squeezes the lanes together)
   const side = lane === 1 ? (Math.random() < 0.5 ? -1 : 1) : lane - 1;
   const x0 = boss ? 0 : LANES[lane] + side * rand(3, 4.5);
   const yokai = createYokai(type);
-  yokai.root.position.set(x0, 0, SPAWN_Z);
+  yokai.root.position.set(x0, 0, z0);
   yokai.root.scale.setScalar(0.01);
   world.scene.add(yokai.root);
 
   const hpTotal = boss ? 2 + Math.floor(S.wave / 4) : 1;
   const e = {
     yokai, lane, boss, tier, x0,
-    z: SPAWN_Z,
-    speed: (HIT_Z - SPAWN_Z) / (P.travel * TYPE_PACE[type]),
+    z: z0,
+    speed: forced?.speed ?? (HIT_Z - SPAWN_Z) / (P.travel * TYPE_PACE[type]),
     answer: prob.answer, text: prob.text,
     tag: ui.createTag(prob.text, { boss, hp: hpTotal }),
     hpDone: 0, hpTotal,
@@ -171,7 +182,7 @@ function spawn(boss = false) {
     sfx.boss();
     world.shake(0.25);
   }
-  if (S.tutorial) ui.showPadHint(true);
+  return e;
 }
 
 function measureTag(e) {
@@ -224,6 +235,7 @@ function decide(probs) {
 }
 
 async function finishWriting() {
+  ui.disarmTalisman();
   if (!pad.hasInk() || pad.writing) return;
   const rgba = S.mode === 'playing' && aiInfo.ready ? pad.renderForModel() : null;
   if (!rgba) { pad.clear(); ui.setGuess(null); return; }
@@ -243,6 +255,7 @@ async function finishWriting() {
 
   const dec = decide(result.probs);
   const pct = Math.round(dec.p * 100);
+  if (S.tut) { tutorialAnswer(dec, pct, result, paper); return; }
   S.ai.reads++;
   if (dec.kind === 'hit') {
     if (dec.corrected != null) S.ai.fixed++;
@@ -290,11 +303,6 @@ function cast(digit, paper) {
   const from = castCircle(color);
   ui.talismanState('cast');
   sfx.cast();
-  if (S.tutorial) {
-    S.tutorial = false;
-    ui.store.set('tutorialDone', true);
-    ui.showPadHint(false);
-  }
 
   const n = victims.length;
   if (n >= 2) {
@@ -384,6 +392,7 @@ function impact(e, n) {
   }
   e.yokai.flash();
   e.dying = 0.0001;
+  if (S.tut && e === S.tut.e) tutorialBanished();
   ui.setTagState(e.tag, 'hit');
   ui.removeTag(e.tag, 600);
   e.tag = null;
@@ -435,7 +444,6 @@ function beginCapture() {
   stopMusic();
   pad.clear();
   pad.setEnabled(false);
-  ui.showPadHint(false);
   ui.clearTags();
   document.body.classList.add('cinematic');
 
@@ -566,6 +574,145 @@ function showGameOver() {
   $('btn-retry').focus();
 }
 
+/* ===================== opening tutorial ===================== */
+// Plays inside the real run: the first yokai drifts in and the game pauses on it.
+// The coach spotlights the yokai, its equation, then the talisman (with a writing
+// demo) and waits for a correct answer — wrong answers are coached, not punished.
+// Then it explains hearts, asks "got it?", and counts the real run in: 3, 2, 1.
+const TUT_YOKAI = { type: 'onibi', lane: 1, text: '1 + 2', answer: 3, z: -25, speed: 10 };   // reaches the stop ~1.1 s after Start
+const TUT_FREEZE_Z = -14;
+
+const padded = (r, p) => ({ x: r.left - p, y: r.top - p, w: r.width + p * 2, h: r.height + p * 2 });
+const tutA = new THREE.Vector3(), tutB = new THREE.Vector3(), scrA = { x: 0, y: 0 }, scrB = { x: 0, y: 0 };
+
+function yokaiSpot() {
+  const e = S.tut?.e;
+  if (!e || !S.enemies.includes(e)) return null;
+  world.project(e.yokai.center(tutA), scrA);
+  world.project(tutB.copy(tutA).setY(tutA.y + 0.5), scrB);
+  const r = Math.max(52, Math.abs(scrA.y - scrB.y) * 1.7);
+  const s = stage.getBoundingClientRect();
+  return { x: s.left + scrA.x - r, y: s.top + scrA.y - r, w: r * 2, h: r * 2, round: true };
+}
+function tagSpot() {
+  const el = S.tut?.e?.tag?.querySelector('.tag-in');
+  return el ? padded(el.getBoundingClientRect(), 10) : null;
+}
+const elSpot = (id, p = 10) => () => padded($(id).getBoundingClientRect(), p);
+
+function startTutorial() {
+  S.tut = { step: 'approach', frozen: false, e: null, misses: 0, timer: 0 };
+  coach.show(true);
+  coach.focus(null, { dim: false });
+  coach.hush();
+  pad.setEnabled(false);
+  S.tut.e = spawn(false, TUT_YOKAI);
+}
+
+function tutStep(step) {
+  if (!S.tut) return;
+  S.tut.step = step;
+  sfx.coach();
+  const next = (to) => [{ label: ui.t('tutNext'), onClick: () => tutStep(to) }];
+  if (step === 'yokai') {
+    coach.focus(yokaiSpot);
+    coach.say({ title: ui.t('tutYokaiT'), text: ui.t('tutYokai'), buttons: next('equation') });
+  } else if (step === 'equation') {
+    coach.focus(tagSpot);
+    coach.say({ title: ui.t('tutEqT'), text: ui.t('tutEq'), buttons: next('write') });
+  } else if (step === 'write') {
+    coach.focus(elSpot('talisman', 12));
+    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite') });
+    coach.demo(true, () => $('pad').getBoundingClientRect());
+    pad.setEnabled(true);
+  } else if (step === 'nice') {
+    coach.focus(null, { dim: false });
+    coach.say({ title: ui.t('tutNiceT'), text: ui.t('tutNice'), buttons: next('danger') });
+  } else if (step === 'danger') {
+    coach.focus(elSpot('hearts', 10));
+    coach.say({ title: ui.t('tutDangerT'), text: ui.t('tutDanger'), buttons: next('ready') });
+  } else if (step === 'ready') {
+    coach.focus(null);
+    coach.say({
+      title: ui.t('tutReadyT'), text: ui.t('tutReady'),
+      buttons: [
+        { label: ui.t('tutReplay'), kind: 'ghost', onClick: replayTutorial },
+        { label: ui.t('tutGo'), onClick: () => finishTutorial() },
+      ],
+    });
+  }
+}
+
+function updateTutorial(dt) {
+  const T = S.tut;
+  if (T.step === 'approach' && T.e && T.e.z >= TUT_FREEZE_Z) T.frozen = true;   // the parade halts…
+  if (T.step === 'approach' && T.frozen && (S.mode === 'playing' || S.introT > 1.2)) tutStep('yokai');   // …and as the camera lands, the coach takes over
+  if (T.step === 'banished' && (T.timer -= dt) <= 0) tutStep('nice');
+  coach.update(dt);
+}
+
+function tutorialAnswer(dec, pct, result, paper) {
+  const T = S.tut;
+  if (T.step !== 'write') return;
+  if (dec.kind === 'hit') {
+    ui.showAI(result.img28, result.probs, { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
+    pad.setEnabled(false);
+    coach.demo(false);
+    coach.hush();
+    coach.focus(null, { dim: false });
+    T.step = 'flying';
+    cast(dec.d, paper);
+    return;
+  }
+  ui.showAI(result.img28, result.probs, { text: ui.t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
+  ui.talismanState('shake');
+  sfx.unclear();
+  if (dec.kind === 'unclear') coach.nudge(ui.t('tutUnclear'));
+  else {
+    T.misses++;
+    coach.nudge(`${ui.t('tutWrong', { d: dec.d })}${T.misses >= 2 ? ' ' + ui.t('tutHint') : ''}`);
+  }
+  coach.demo(true);
+}
+
+function tutorialBanished() {
+  S.tut.step = 'banished';
+  S.tut.timer = 0.9;                         // let the seal and sparks play first
+}
+
+function replayTutorial() {
+  for (const e of [...S.enemies]) removeEnemy(e);
+  Object.assign(S.tut, { step: 'approach', frozen: false, misses: 0 });
+  coach.hush();
+  coach.focus(null, { dim: false });
+  S.tut.e = spawn(false, TUT_YOKAI);
+}
+
+// "Keep running" or Skip: count the real run in, starting from a clean slate
+async function finishTutorial() {
+  const T = S.tut;
+  if (!T || T.step === 'countdown') return;
+  T.step = 'countdown';
+  T.frozen = false;
+  coach.hush();
+  coach.demo(false);
+  coach.focus(null, { dim: false });
+  pad.setEnabled(false);
+  pad.clear();
+  for (const e of [...S.enemies]) removeEnemy(e);
+  await coach.countdown(['3', '2', '1', ui.t('go')], (i) => sfx.countdown(i, i === 3));
+  if (S.tut !== T) return;                  // the run was left meanwhile
+  S.tut = null;
+  coach.show(false);
+  Object.assign(S, { score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, wave: 1, spawnTimer: 0.4, ai: { reads: 0, fixed: 0, unclear: 0 } });
+  ui.setScore(0);
+  ui.setDistance(0);
+  ui.setCombo(0);
+  ui.setWave(1);
+  ui.resetAI();
+  pad.setEnabled(true);
+}
+
 /* ===================== run lifecycle ===================== */
 function clearEnemies() {
   for (const e of [...S.enemies]) removeEnemy(e);
@@ -587,16 +734,19 @@ function resetRun() {
   ui.setCombo(0);
   ui.setWave(1);
   ui.resetAI();
-  ui.showPadHint(false);
   pad.clear();
   setTempo(1);
+  S.tut = null;
+  coach.show(false);
 }
 
-function startGame() {
+// retry = "Run again" from the game-over card: skips the tutorial and the long intro.
+// Every Start from the title plays the tutorial.
+function startGame(retry = false) {
   if (!aiInfo.ready) return;
   initAudio();
   sfx.click();
-  const fromOver = S.mode === 'over';
+  const fromOver = retry && S.mode === 'over';
   resetRun();
   ui.show('ov-title', false);
   ui.show('ov-over', false);
@@ -607,10 +757,12 @@ function startGame() {
   S.introT = fromOver ? 0.9 : 0;
   pad.setEnabled(false);
   startMusic();
+  if (!retry) startTutorial();
 }
 
 function beginPlay() {
   S.mode = 'playing';
+  if (S.tut) return;                     // the tutorial owns the pad and the first yokai
   pad.setEnabled(true);
   ui.banner(ui.t('go'), 'go');
 }
@@ -618,6 +770,7 @@ function beginPlay() {
 function pause() {
   if (S.mode !== 'playing') return;
   S.mode = 'paused';
+  document.body.classList.add('paused');
   pad.setEnabled(false);
   stopMusic();
   ui.show('ov-pause');
@@ -626,8 +779,9 @@ function pause() {
 function resume() {
   if (S.mode !== 'paused') return;
   ui.show('ov-pause', false);
+  document.body.classList.remove('paused');
   S.mode = 'playing';
-  if (S.cooldown <= 0) pad.setEnabled(true);
+  if (S.cooldown <= 0 && (!S.tut || S.tut.step === 'write')) pad.setEnabled(true);
   startMusic();
 }
 function toTitle() {
@@ -636,13 +790,14 @@ function toTitle() {
   ui.show('ov-pause', false);
   ui.show('ov-over', false);
   ui.show('ov-title');
-  document.body.classList.remove('in-game');
+  document.body.classList.remove('in-game', 'paused');
   world.setCameraMode('title');
   S.mode = 'title';
 }
 
 /* ===================== per-frame ===================== */
 function updatePlaying(dt) {
+  if (S.tut) { updateTutorial(dt); return; }
   const P = waveParams(S.wave);
   S.distance += S.speed * dt * 0.6;
   ui.setDistance(S.distance);
@@ -678,7 +833,7 @@ function updatePlaying(dt) {
 const smooth01 = (k) => { const c = Math.min(1, Math.max(0, k)); return c * c * (3 - 2 * c); };
 
 function updateEnemies(dt) {
-  const moving = S.mode === 'playing';
+  const moving = (S.mode === 'playing' || (S.mode === 'intro' && S.tut)) && !S.tut?.frozen;
   const shown = [];
   for (const e of [...S.enemies]) {
     e.yokai.update(dt, S.t);
@@ -748,7 +903,7 @@ function updateEnemies(dt) {
 function step(dt, realDt) {
   const P = waveParams(S.wave);
   let target = 0;                       // title: the hero stands in his idle pose
-  if (S.mode === 'intro' || S.mode === 'playing') target = P.runSpeed;
+  if (S.mode === 'intro' || S.mode === 'playing') target = S.tut?.frozen ? 0 : P.runSpeed;   // the hero stops while the tutorial talks
   else if (S.mode === 'caught' || S.mode === 'over') target = 0;
   S.speed += (target - S.speed) * Math.min(1, dt * (S.mode === 'caught' ? 5 : 2));
 
@@ -760,6 +915,7 @@ function step(dt, realDt) {
 
   if (S.mode === 'intro') {
     S.introT += dt;
+    if (S.tut) updateTutorial(dt);
     if (S.introT > 1.45) beginPlay();
   } else if (S.mode === 'playing') {
     updatePlaying(dt);
@@ -787,8 +943,9 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 /* ===================== controls ===================== */
-$('btn-start').addEventListener('click', startGame);
-$('btn-retry').addEventListener('click', startGame);
+$('btn-start').addEventListener('click', () => startGame(false));
+$('tut-skip').addEventListener('click', () => finishTutorial());
+$('btn-retry').addEventListener('click', () => startGame(true));
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
 $('btn-over-title').addEventListener('click', toTitle);
@@ -810,10 +967,7 @@ $('btn-lang').addEventListener('click', () => {
   ui.setWave(S.wave);
   ui.setBest(S.best);
   ui.setCombo(S.combo);
-  if (aiInfo.ready) {
-    $('btn-start').textContent = ui.t('start');
-    $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
-  }
+  if (aiInfo.ready) $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
 });
 stage.addEventListener('pointerdown', skipCapture);
 
@@ -823,7 +977,7 @@ document.addEventListener('keydown', (e) => {
     if (S.mode === 'playing') pause(); else if (S.mode === 'paused') resume();
   } else if ((e.key === 'Enter' || e.key === ' ') && (S.mode === 'title' || S.mode === 'over') && document.activeElement?.tagName !== 'BUTTON') {
     e.preventDefault();
-    startGame();
+    startGame(S.mode === 'over');
   } else if (DEBUG && S.mode === 'playing' && /^[0-9]$/.test(e.key)) {
     // ?debug: digit keys cast directly (skips the model) — handy for testing
     const d = Number(e.key);
@@ -837,4 +991,4 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
-if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, waveParams, beginCapture, skipCapture };
+if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, waveParams, beginCapture, skipCapture, coach };
