@@ -30,12 +30,20 @@ export function outlineMaterial(thickness = 0.018, color = 0x0c0818) {
       thickness: { value: thickness },
       color: { value: new THREE.Color(color) },
     }]),
+    // skinning chunks are no-ops unless the object is a SkinnedMesh
     vertexShader: /* glsl */`
       #include <common>
+      #include <skinning_pars_vertex>
       #include <fog_pars_vertex>
       uniform float thickness;
       void main() {
-        vec4 mvPosition = modelViewMatrix * vec4(position + normal * thickness, 1.0);
+        #include <beginnormal_vertex>
+        #include <skinbase_vertex>
+        #include <skinnormal_vertex>
+        #include <begin_vertex>
+        #include <skinning_vertex>
+        transformed += normalize(objectNormal) * thickness;
+        vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
         gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
       }`,
@@ -57,7 +65,11 @@ export function outlineMaterial(thickness = 0.018, color = 0x0c0818) {
 }
 
 export function addOutline(mesh, thickness = 0.018) {
-  const o = new THREE.Mesh(mesh.geometry, outlineMaterial(thickness));
+  const o = mesh.isSkinnedMesh
+    ? new THREE.SkinnedMesh(mesh.geometry, outlineMaterial(thickness))
+    : new THREE.Mesh(mesh.geometry, outlineMaterial(thickness));
+  if (mesh.isSkinnedMesh) { o.bind(mesh.skeleton, mesh.bindMatrix); o.frustumCulled = false; }
+  if (mesh.frustumCulled === false) o.frustumCulled = false;
   o.raycast = () => {};
   mesh.add(o);
   return o;
@@ -120,6 +132,77 @@ export const lathe = (pts, segs = 20) => {
   const ordered = pts[0][1] > pts[pts.length - 1][1] ? [...pts].reverse() : pts;
   return new THREE.LatheGeometry(ordered.map(([r, y]) => new THREE.Vector2(r, y)), segs);
 };
+
+// Loft a surface through horizontal cross-sections, top → bottom.
+//   rows: [{ y, rx, rz, cx, cz, e, ef }]  rx/rz half-widths, cx/cz centre offset,
+//         e = superellipse exponent (2 = ellipse, higher = boxier), ef = exponent for the
+//         front half (z sign = `front`) so a face can be flatter than the skull behind it
+//   opts: segs, a0/a1 (open arc), seam (angle offset), uRep, front (±1),
+//         uv(x,y,z) → [u,v] planar mapping, groups(a) → material index per column,
+//         weights(x,y,z) → [[boneName,w]] + boneIndex for a skinned surface
+const TAU = Math.PI * 2;
+const sgnPow = (c, k) => Math.sign(c) * Math.pow(Math.abs(c), k);
+export function loft(rows, { segs = 24, a0 = 0, a1 = TAU, seam = 0, uRep = 1, front = -1, uv = null, groups = null, weights = null, boneIndex = null } = {}) {
+  const closed = a1 - a0 >= TAU - 1e-6;
+  const cols = segs + 1;
+  const pos = [], uvs = [], skI = [], skW = [], colMat = [];
+  for (let i = 0; i < cols; i++) {
+    const a = a0 + (a1 - a0) * (i / segs) + seam;
+    colMat.push(groups ? groups(a) : 0);
+  }
+  rows.forEach((r, j) => {
+    for (let i = 0; i < cols; i++) {
+      const a = a0 + (a1 - a0) * (i / segs) + seam;
+      const sa = Math.sin(a), ca = Math.cos(a);
+      const isFront = ca * front > 0;
+      const e = (isFront && r.ef) || r.e || 2;
+      const k = 2 / e;
+      const x = (r.cx || 0) + sgnPow(sa, k) * r.rx, z = (r.cz || 0) + sgnPow(ca, k) * r.rz;
+      pos.push(x, r.y, z);
+      if (uv) uvs.push(...uv(x, r.y, z)); else uvs.push((i / segs) * uRep, 1 - j / (rows.length - 1));
+      if (weights) {
+        const w = weights(x, r.y, z).sort((p, q) => q[1] - p[1]).slice(0, 4);
+        const sum = w.reduce((s, [, v]) => s + v, 0) || 1;
+        for (let q = 0; q < 4; q++) { skI.push(w[q] ? boneIndex.get(w[q][0]) : 0); skW.push(w[q] ? w[q][1] / sum : 0); }
+      }
+    }
+  });
+  const byMat = new Map();
+  for (let j = 0; j < rows.length - 1; j++) {
+    for (let i = 0; i < segs; i++) {
+      const a = j * cols + i, b = a + 1, c = a + cols, d = c + 1;
+      const m = colMat[i];
+      if (!byMat.has(m)) byMat.set(m, []);
+      byMat.get(m).push(a, c, b, b, c, d);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  if (weights) {
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skI, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skW, 4));
+  }
+  const idx = [];
+  let start = 0;
+  for (const m of [...byMat.keys()].sort()) {
+    const list = byMat.get(m);
+    idx.push(...list);
+    g.addGroup(start, list.length, m);
+    start += list.length;
+  }
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  if (closed) {                                   // weld normals across the seam
+    const n = g.attributes.normal, v = new THREE.Vector3(), u = new THREE.Vector3();
+    for (let j = 0; j < rows.length; j++) {
+      const a = j * cols, b = a + segs;
+      v.fromBufferAttribute(n, a).add(u.fromBufferAttribute(n, b)).normalize();
+      n.setXYZ(a, v.x, v.y, v.z); n.setXYZ(b, v.x, v.y, v.z);
+    }
+  }
+  return g;
+}
 
 // Named pivot (joint) helper
 export function joint(parent, x = 0, y = 0, z = 0) {

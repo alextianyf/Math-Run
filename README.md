@@ -347,6 +347,7 @@ While **Math Run** already demonstrates how a neural network can be deployed dir
 - The **MNIST dataset**: a classic benchmark dataset of handwritten digits, which has enabled decades of progress in computer vision research.  
 
 - **TensorFlow.js**: for providing the tools to run deep learning models directly in the browser, making this interactive demo possible.  
+- **VRoid Project / pixiv**: the hero is the CC0 VRoid Studio sample character "Sakurada Fumiriya" (`models/hero.vrm`, restyled in-game), rendered with [three-vrm](https://github.com/pixiv/three-vrm).  
 
 - The open-source community: whose libraries, documentation, and shared knowledge make projects like this achievable.  
 

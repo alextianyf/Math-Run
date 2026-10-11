@@ -40,8 +40,11 @@ export function createWorld(canvas) {
   scene.add(moon, key, fill);
 
   const env = createEnvironment(scene);
+  env.step(6, 0, 0);        // start with a torii just behind the hero: it frames him on the title screen
   const hero = createHero();
-  scene.add(hero.root);
+  scene.add(hero.root, hero.dynamic);
+  let heroReady = false;
+  hero.ready.then(() => setTimeout(() => { heroReady = true; }, 1500)).catch(() => { heroReady = true; });
 
   /* ---------- post-processing ---------- */
   const composer = new EffectComposer(renderer);
@@ -61,8 +64,10 @@ export function createWorld(canvas) {
     shake: 0,
   };
   function computePresets(aspect) {
-    const portrait = aspect < 1;
+    const portrait = aspect < 1, wide = aspect >= 1.45;
+    const debug = presets?.debug;
     presets = {
+      debug,
       play: {
         pos: new THREE.Vector3(0, portrait ? 3.6 : 3.1, portrait ? 6.8 : 5.8),
         look: new THREE.Vector3(0, portrait ? 1.0 : 1.2, -10),
@@ -70,8 +75,9 @@ export function createWorld(canvas) {
       // camera faces +z here, so screen-left is world +x: look right of the hero
       // to push him to the right half, away from the title card
       title: {
-        pos: new THREE.Vector3(portrait ? 0.3 : 1.25, portrait ? 1.3 : 1.45, portrait ? -4.4 : -3.6),
-        look: new THREE.Vector3(portrait ? 0.05 : 1.2, portrait ? 0.55 : 1.2, 0),
+        // (portrait: aim below the hero so he sits in the top third, above the title card)
+        pos: new THREE.Vector3(portrait ? 0.25 : 1.05, portrait ? 1.45 : 1.35, portrait ? -4.4 : -2.85),
+        look: new THREE.Vector3(portrait ? 0.05 : 1.0, portrait ? -0.25 : 1.18, 0),
       },
       // capture scene: over the kneeling hero's shoulder, looking up at the oni's face
       caught: {
@@ -82,9 +88,9 @@ export function createWorld(canvas) {
       // one side, the hero kicking in its fist on the other (camera stays inside the
       // lantern-post line so nothing passes in front of it)
       held: {
-        // (landscape looks further left so the pair sits in the right half, clear of the game-over card)
-        pos: new THREE.Vector3(-2.8, portrait ? 4.4 : 4.75, portrait ? 0.15 : 0.1),
-        look: new THREE.Vector3(0.6, portrait ? 4.25 : 4.55, portrait ? -1.15 : -2.9),
+        // (wide screens look further left so the pair sits in the right half, clear of the game-over card)
+        pos: new THREE.Vector3(-2.8, wide ? 4.75 : 4.4, wide ? 0.1 : 0.15),
+        look: new THREE.Vector3(0.6, wide ? 4.55 : 4.25, wide ? -2.9 : -1.15),
       },
     };
   }
@@ -145,6 +151,7 @@ export function createWorld(canvas) {
     get quality() { return quality; },
     setQuality(q) { quality = Math.max(0, Math.min(2, q)); applySize(); },
     sampleFrame(dt) {
+      if (!heroReady) return;                 // loading the character stalls frames; don't count those
       sampleT += dt; sampleN++;
       if (sampleT < 3) return;
       const avg = sampleT / sampleN;
@@ -173,7 +180,7 @@ export function createWorld(canvas) {
     },
     update(dt, speed, t) {
       env.step(speed * dt, t, dt);
-      hero.update(dt, speed, t);
+      hero.update(dt, speed, t, camera);
       updateCamera(dt, t);
     },
     render() {

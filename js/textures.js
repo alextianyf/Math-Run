@@ -85,42 +85,36 @@ export const cloudTex = () => make('cloud', 256, 128, (g) => {
 });
 
 /* ===================== hero ===================== */
-// Equirectangular face for a SphereGeometry head (front = -z = u 0.75)
-export const faceTex = () => make('face', 512, 256, (g) => {
-  g.fillStyle = '#f7d2b2'; g.fillRect(0, 0, 512, 256);
-  const cx = 384, ey = 136;
-  for (const sx of [-1, 1]) radial(g, cx + sx * 36, ey + 30, 16, [[0, 'rgba(255,120,130,0.35)'], [1, 'rgba(255,120,130,0)']]);
-  for (const sx of [-1, 1]) {
-    const x = cx + sx * 28;
-    // iris
-    const iris = g.createLinearGradient(0, ey - 14, 0, ey + 14);
-    iris.addColorStop(0, '#24163f'); iris.addColorStop(1, '#8d64e0');
-    g.fillStyle = iris;
-    g.beginPath(); g.ellipse(x, ey, 9.5, 13, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#160c26';
-    g.beginPath(); g.ellipse(x, ey - 1, 4.5, 6.5, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff';
-    g.beginPath(); g.arc(x - sx * 3.5, ey - 6, 3.4, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(x + sx * 3, ey + 5, 1.6, 0, Math.PI * 2); g.fill();
-    // upper lash with a flick at the outer corner
-    g.strokeStyle = '#1a1226'; g.lineCap = 'round'; g.lineWidth = 4.5;
-    g.beginPath();
-    g.moveTo(x - sx * 13, ey - 8);
-    g.quadraticCurveTo(x, ey - 18, x + sx * 14, ey - 11);
-    g.lineTo(x + sx * 19, ey - 15);
-    g.stroke();
-    // red onmyōji liner
-    g.strokeStyle = '#d23a3a'; g.lineWidth = 2.2;
-    g.beginPath(); g.moveTo(x + sx * 13, ey - 5); g.lineTo(x + sx * 20, ey - 9); g.stroke();
-    // brow
-    g.strokeStyle = '#2a2235'; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(x - sx * 10, ey - 25); g.lineTo(x + sx * 12, ey - 28); g.stroke();
+// Kariginu cloth: white silk with soft vertical folds and a faint woven sheen
+export const robeFoldTex = () => make('robeFold', 256, 128, (g, w, h) => {
+  g.fillStyle = '#f6f3ec'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9; i++) {
+    const x = (i / 9) * w + Math.random() * 8, fw = 14 + Math.random() * 16;
+    const grd = g.createLinearGradient(x - fw, 0, x + fw, 0);
+    grd.addColorStop(0, 'rgba(150,140,190,0)'); grd.addColorStop(0.5, 'rgba(150,140,190,0.22)'); grd.addColorStop(1, 'rgba(150,140,190,0)');
+    g.fillStyle = grd; g.fillRect(x - fw, 0, fw * 2, h);
   }
-  g.strokeStyle = '#b07a64'; g.lineWidth = 2;
-  g.beginPath(); g.moveTo(cx, ey + 14); g.lineTo(cx - 2, ey + 20); g.stroke();
-  g.strokeStyle = '#7a2e2e'; g.lineWidth = 2.6;
-  g.beginPath(); g.moveTo(cx - 9, ey + 32); g.quadraticCurveTo(cx + 2, ey + 38, cx + 11, ey + 29); g.stroke();
-});
+  g.fillStyle = 'rgba(255,255,255,0.35)';
+  for (let y = 0; y < h; y += 4) g.fillRect(0, y, w, 1);
+}, { repeat: true });
+
+// Sashinuki (指貫): violet silk with gathered folds and small wisteria-diamond crests
+export const sashinukiTex = () => make('sashinuki', 256, 256, (g, w, h) => {
+  g.fillStyle = '#4b3486'; g.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 32) {                    // soft vertical folds
+    const grd = g.createLinearGradient(x, 0, x + 32, 0);
+    grd.addColorStop(0, 'rgba(20,8,50,0.28)'); grd.addColorStop(0.5, 'rgba(255,255,255,0.05)'); grd.addColorStop(1, 'rgba(20,8,50,0.28)');
+    g.fillStyle = grd; g.fillRect(x, 0, 32, h);
+  }
+  g.fillStyle = 'rgba(232,222,255,0.78)';
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      const x = col * 64 + (row % 2 ? 32 : 0) + 16, y = row * 64 + 32;
+      g.beginPath(); g.moveTo(x, y - 8); g.lineTo(x + 7, y); g.lineTo(x, y + 8); g.lineTo(x - 7, y); g.closePath(); g.fill();
+      for (const [dx, dy] of [[0, -12], [12, 0], [0, 12], [-12, 0]]) { g.beginPath(); g.arc(x + dx, y + dy, 2.2, 0, Math.PI * 2); g.fill(); }
+    }
+  }
+}, { repeat: true });
 
 // Seimei kikyō pentagram crest for the back of the robe
 export const crestTex = () => make('crest', 256, 256, (g) => {

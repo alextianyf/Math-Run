@@ -85,7 +85,8 @@ setMuted(muted);
 document.body.classList.toggle('muted', muted);
 document.body.classList.toggle('ai-open', ui.store.get('aiPanel', window.innerWidth >= 900));
 
-initRecognizer()
+// the hero model loads alongside the digit recogniser; if it fails we still let the game start
+Promise.all([initRecognizer(), hero.ready.catch(() => null)])
   .then(() => {
     const btn = $('btn-start');
     btn.disabled = false;
@@ -484,7 +485,7 @@ function grabHero() {
 }
 function followFist() {
   captor.oni.handR.localToWorld(palm.set(0, -0.16, 0));
-  hero.root.position.set(palm.x, palm.y - 1.0, palm.z + 0.12);
+  hero.root.position.set(palm.x, palm.y - 1.08, palm.z + 0.12);
   hero.root.rotation.set(0, 0, Math.sin(S.t * 3.1) * 0.12);
 }
 
@@ -746,7 +747,7 @@ function updateEnemies(dt) {
 
 function step(dt, realDt) {
   const P = waveParams(S.wave);
-  let target = 3.2;
+  let target = 0;                       // title: the hero stands in his idle pose
   if (S.mode === 'intro' || S.mode === 'playing') target = P.runSpeed;
   else if (S.mode === 'caught' || S.mode === 'over') target = 0;
   S.speed += (target - S.speed) * Math.min(1, dt * (S.mode === 'caught' ? 5 : 2));
