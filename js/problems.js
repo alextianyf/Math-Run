@@ -1,87 +1,216 @@
-// problems.js — equation generator. Every answer is a single digit (0–9) so it
-// can be handwritten in one go and read by the MNIST model.
+// problems.js — procedural equation generator. Every answer is a whole number 0–9
+// (one handwritten digit), but the expression around it can mix + − × ÷, brackets,
+// powers (x², x³, 2⁵, 7⁰) and roots (√, ∛), nested as deep as the player can take.
 //
-// makeProblem(tier, answer?) lets the game ask for a *specific* answer, which is
-// how it sets up "same value, different expression" pairs for multi-banishes.
+// It works backwards: pick the answer, then repeatedly "explain" a number as an
+// operation whose result is that number:  7 → 12 − 5 → 3 × 4 − 5 → √16 × 3 − 5.
+// Every intermediate value is a non-negative integer under a cap, so the problem is
+// always solvable by mental math, and the space of problems is far too large to
+// repeat. Each problem is scored on the same scale as the player's rating
+// (adaptive.js), so the director can simply ask for "something around 950".
 
+const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const sup = (n) => String(n).split('').map((d) => SUP[+d]).join('');
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-const shuffle = (arr) => arr.map((v) => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-// Each generator takes the target answer and returns display text, or null if
-// that answer can't be expressed nicely with this operation.
-const OPS = {
-  add(ans) {
-    const a = ri(0, ans);
-    return `${a} + ${ans - a}`;
-  },
-  sub(ans) {
-    const b = ri(0, 9 - ans);
-    return `${ans + b} − ${b}`;
-  },
-  subBig(ans) {
-    const b = ri(4, 13);
-    return `${ans + b} − ${b}`;
-  },
-  mul(ans) {
-    const pairs = { 0: [[0, ri(1, 9)], [ri(1, 9), 0]], 2: [[1, 2], [2, 1]], 4: [[2, 2], [1, 4]], 6: [[2, 3], [3, 2]], 8: [[2, 4], [4, 2]], 9: [[3, 3]] }[ans];
-    if (!pairs) return null;
-    const [a, b] = pairs[ri(0, pairs.length - 1)];
-    return `${a} × ${b}`;
-  },
-  div(ans) {
-    const b = ri(2, 5);
-    return `${ans * b} ÷ ${b}`;
-  },
-  divBig(ans) {
-    const b = ri(3, 9);
-    return `${ans * b} ÷ ${b}`;
-  },
-  addSub(ans) {                       // a + b − c
-    const c = ri(1, 9), s = ans + c;
-    if (s < 2 || s > 18) return null;
-    const a = ri(Math.max(1, s - 9), Math.min(9, s - 1));
-    return `${a} + ${s - a} − ${c}`;
-  },
-  mulSub(ans) {                       // a × b − c
-    for (let tries = 0; tries < 12; tries++) {
-      const a = ri(2, 6), b = ri(2, 6), c = a * b - ans;
-      if (c >= 1 && c <= 12) return `${a} × ${b} − ${c}`;
+const BASIC = ['+', '−', '×', '÷'];
+const ALL = [...BASIC, 'sq', 'sqrt', 'cube', 'cbrt', 'pow'];
+// What the generator may use, by target difficulty. Candidates are scored and the
+// closest one wins, so the bands only need to be roughly right.
+const BANDS = [
+  { upTo: 600, ops: ['+', '−'], steps: [1, 1], cap: 18 },
+  { upTo: 760, ops: BASIC, steps: [1, 2], cap: 36 },
+  { upTo: 900, ops: BASIC, steps: [2, 3], cap: 60 },
+  { upTo: 1100, ops: [...BASIC, 'sq', 'sqrt'], steps: [2, 3], cap: 100 },
+  { upTo: 1350, ops: ALL, steps: [2, 4], cap: 125, deep: true },
+  { upTo: Infinity, ops: ALL, steps: [3, 5], cap: 150, deep: true },
+];
+const EXOTIC = new Set(['sq', 'sqrt', 'cube', 'cbrt', 'pow']);
+const POWERS = { 1: [[2, 0], [3, 0], [5, 0], [7, 0], [9, 0]], 16: [[2, 4]], 32: [[2, 5]], 64: [[2, 6], [4, 3]], 81: [[3, 4]] };
+const CUBES = { 8: 2, 27: 3, 64: 4, 125: 5 };
+const isSquare = (v) => v >= 4 && Number.isInteger(Math.sqrt(v));
+
+/* ===================== building expression trees ===================== */
+const num = (v) => ({ t: 'n', v });
+
+function factorPairs(v) {
+  const out = [];
+  for (let a = 2; a * a <= v; a++) if (v % a === 0) out.push([a, v / a], [v / a, a]);
+  return out;
+}
+
+function feasible(v, cfg) {
+  return cfg.ops.filter((op) => {
+    switch (op) {
+      case '+': return v >= 2;
+      case '−': return v + 1 <= cfg.cap;
+      case '×': return factorPairs(v).length > 0;      // never "0 × …": too easy to spot
+      case '÷': return v >= 1 && v * 2 <= cfg.cap;    // never "0 ÷ …" either
+      case 'sq': return isSquare(v) && v <= cfg.cap;
+      case 'cube': return v in CUBES && v <= cfg.cap;
+      case 'pow': return v in POWERS && v <= cfg.cap;
+      case 'sqrt': return v >= 2 && v * v <= cfg.cap;
+      case 'cbrt': return v >= 2 && v ** 3 <= cfg.cap;
+      default: return false;
     }
-    return null;
-  },
-  mulAdd(ans) {                       // a × b + c
-    const opts = [[2, 2], [2, 3], [3, 2], [2, 4], [4, 2], [3, 3]].filter(([a, b]) => a * b < ans);
-    if (!opts.length) return null;
-    const [a, b] = opts[ri(0, opts.length - 1)];
-    return `${a} × ${b} + ${ans - a * b}`;
-  },
-  divAdd(ans) {                       // a ÷ b + c
-    if (ans < 2) return null;
-    const q = ri(1, ans - 1), b = ri(2, 6);
-    return `${q * b} ÷ ${b} + ${ans - q}`;
-  },
-  groupDiv(ans) {                     // (a + b) ÷ c
-    if (ans < 1) return null;
-    const c = ri(2, 4), s = ans * c;
-    const a = ri(1, s - 1);
-    return `(${a} + ${s - a}) ÷ ${c}`;
-  },
-};
+  });
+}
 
-const TIERS = {
-  1: ['add', 'sub'],
-  2: ['add', 'sub', 'mul', 'div'],
-  3: ['subBig', 'mul', 'divBig', 'addSub', 'div'],
-  4: ['subBig', 'divBig', 'addSub', 'mulSub', 'mulAdd', 'divAdd', 'groupDiv'],
-};
+// a perfect power near v, so + and − can open the door to powers and roots
+function powerOperand(cfg, min, max) {
+  const options = [];
+  for (let b = 2; b * b <= max; b++) if (b * b >= min) options.push(b * b);
+  for (const c of Object.keys(CUBES).map(Number)) if (c >= min && c <= max) options.push(c);
+  return options.length ? pick(options) : null;
+}
 
-export function makeProblem(tier, answer = ri(0, 9), avoid = new Set()) {
-  const ops = TIERS[Math.min(4, Math.max(1, tier))];
-  for (let attempt = 0; attempt < 30; attempt++) {
-    for (const op of shuffle(ops)) {
-      const text = OPS[op](answer);
-      if (text && !avoid.has(text)) return { text, answer };
+function split(steps) {
+  const left = ri(0, steps);
+  return [left, steps - left];
+}
+
+function build(v, steps, cfg) {
+  if (steps <= 0) return num(v);
+  const ops = feasible(v, cfg);
+  if (!ops.length) return num(v);
+  // exotic operations are rarer to be feasible, so favour them when they are
+  const weighted = ops.flatMap((op) => (EXOTIC.has(op) ? [op, op, op] : op === '×' || op === '÷' ? [op, op] : [op]));
+  const op = pick(weighted);
+  const rest = steps - 1;
+  const exoticOn = cfg.ops.some((o) => EXOTIC.has(o));
+  switch (op) {
+    case '+': {
+      let a = exoticOn && Math.random() < 0.45 ? powerOperand(cfg, 1, v - 1) : null;
+      if (a == null) a = ri(1, v - 1);
+      const [l, r] = split(rest);
+      return { t: 'b', op, a: build(a, l, cfg), b: build(v - a, r, cfg), v };
     }
+    case '−': {
+      let a = exoticOn && Math.random() < 0.5 ? powerOperand(cfg, v + 1, cfg.cap) : null;
+      if (a == null) a = v + ri(1, cfg.cap - v);
+      const [l, r] = split(rest);
+      return { t: 'b', op, a: build(a, l, cfg), b: build(a - v, r, cfg), v };
+    }
+    case '×': {
+      const [a, b] = pick(factorPairs(v));
+      const [l, r] = split(rest);
+      return { t: 'b', op, a: build(a, l, cfg), b: build(b, r, cfg), v };
+    }
+    case '÷': {
+      const b = ri(2, Math.min(9, Math.floor(cfg.cap / v)));
+      const [l, r] = split(rest);
+      return { t: 'b', op, a: build(v * b, l, cfg), b: build(b, Math.min(r, 1), cfg), v };
+    }
+    case 'sq':
+      return { t: 'p', e: 2, base: build(Math.sqrt(v), cfg.deep ? rest : 0, cfg), v };
+    case 'cube':
+      return { t: 'p', e: 3, base: build(CUBES[v], cfg.deep ? rest : 0, cfg), v };
+    case 'pow': {
+      const [b, e] = pick(POWERS[v]);
+      return { t: 'p', e, base: num(b), v };
+    }
+    case 'sqrt':
+      return { t: 'r', k: 2, a: build(v * v, cfg.deep ? rest : Math.min(rest, 1), cfg), v };
+    case 'cbrt':
+      return { t: 'r', k: 3, a: build(v ** 3, cfg.deep ? rest : 0, cfg), v };
   }
-  return { text: OPS.add(answer), answer };
+  return num(v);
+}
+
+/* ===================== rendering (minimal brackets) ===================== */
+const PREC = { '+': 1, '−': 1, '×': 2, '÷': 2 };
+
+function render(n, stats) {
+  if (n.t === 'n') return String(n.v);
+  if (n.t === 'p') {
+    const base = n.base.t === 'n' ? String(n.base.v) : `(${render(n.base, stats)})`;
+    if (n.base.t !== 'n') stats.parens++;
+    return base + sup(n.e);
+  }
+  if (n.t === 'r') {
+    const inner = n.a.t === 'n' ? String(n.a.v) : `(${render(n.a, stats)})`;
+    if (n.a.t !== 'n') stats.parens++;
+    return (n.k === 2 ? '√' : '∛') + inner;
+  }
+  const p = PREC[n.op];
+  const side = (child, right) => {
+    const s = render(child, stats);
+    if (child.t !== 'b') return s;
+    const cp = PREC[child.op];
+    // a − (b + c) and a ÷ (b × c) need brackets; a + (b − c) and a × (b ÷ c) don't
+    const need = cp < p || (right && cp === p && (n.op === '−' || n.op === '÷'));
+    if (need) stats.parens++;
+    return need ? `(${s})` : s;
+  };
+  return `${side(n.a, false)} ${n.op} ${side(n.b, true)}`;
+}
+
+/* ===================== difficulty (rating scale) ===================== */
+const W = { '+': 70, '−': 90, '×': 170, '÷': 200 };
+
+function score(n, acc) {
+  if (n.t === 'n') return;
+  if (n.t === 'b') {
+    acc.kinds.add(n.op);
+    acc.ops++;
+    let w = W[n.op];
+    const a = n.a.v, b = n.b.v;
+    if (n.op === '+' && Math.max(a, b) >= 10 && (a % 10) + (b % 10) >= 10) w += 40;   // carrying
+    if (n.op === '−' && a >= 10 && a % 10 < b % 10) w += 40;                          // borrowing
+    if (n.op === '×' && n.v >= 20) w += 40;
+    if (n.op === '÷' && a >= 30) w += 40;
+    acc.sum += w;
+    score(n.a, acc); score(n.b, acc);
+  } else if (n.t === 'p') {
+    acc.kinds.add(n.e === 2 ? 'sq' : n.e === 3 ? 'cube' : 'pow');
+    acc.ops++;
+    acc.sum += (n.e === 2 ? 320 : n.e === 3 ? 400 : 380) + (n.base.t === 'n' ? 0 : 80);
+    score(n.base, acc);
+  } else {
+    acc.kinds.add(n.k === 2 ? 'sqrt' : 'cbrt');
+    acc.ops++;
+    acc.sum += (n.k === 2 ? 330 + (n.a.v > 49 ? 50 : 0) : 430) + (n.a.t === 'n' ? 0 : 80);
+    score(n.a, acc);
+  }
+}
+
+export function difficultyOf(tree, parens) {
+  const acc = { sum: 0, ops: 0, kinds: new Set() };
+  score(tree, acc);
+  return 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
+}
+
+// independent check: evaluate the tree exactly
+export function evaluate(n) {
+  if (n.t === 'n') return n.v;
+  if (n.t === 'p') return evaluate(n.base) ** n.e;
+  if (n.t === 'r') return Math.round(evaluate(n.a) ** (1 / n.k));
+  const a = evaluate(n.a), b = evaluate(n.b);
+  return n.op === '+' ? a + b : n.op === '−' ? a - b : n.op === '×' ? a * b : a / b;
+}
+
+function generate(answer, cfg) {
+  const steps = ri(cfg.steps[0], cfg.steps[1]);
+  const tree = build(answer, steps, cfg);
+  const stats = { parens: 0 };
+  const text = render(tree, stats);
+  return { text, answer, tree, difficulty: difficultyOf(tree, stats.parens) };
+}
+
+const bandIndex = (target) => BANDS.findIndex((b) => target <= b.upTo);
+
+// A problem whose difficulty is close to `target`, with the given answer (0–9),
+// avoiding any text in `avoid`. Draws a batch of candidates and keeps the closest.
+export function makeProblem(target, { answer = ri(0, 9), avoid = new Set() } = {}) {
+  const i = bandIndex(target);
+  let best = null, bestGap = Infinity;
+  for (let k = 0; k < 24; k++) {
+    const band = BANDS[Math.max(0, Math.min(BANDS.length - 1, i + (Math.random() < 0.3 ? pick([-1, 1]) : 0)))];
+    const p = generate(answer, band);
+    if (avoid.has(p.text) || p.text.length > 24 || p.text === String(answer)) continue;
+    const gap = Math.abs(p.difficulty - target) + Math.random() * 30;   // a little noise keeps the mix varied
+    if (gap < bestGap) { best = p; bestGap = gap; }
+  }
+  return best ?? { text: `${answer} + 0`, answer, difficulty: 520 };
 }

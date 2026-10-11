@@ -42,7 +42,7 @@
       <header id="hud">
         <div class="hud-left">
           <div id="hearts" class="hearts"></div>
-          <div id="wave" class="chip"></div>
+          <div id="rank-chip" class="chip rank-chip"><b id="rank-name"></b></div>
           <div id="combo" class="combo"></div>
         </div>
         <div class="hud-right">
@@ -184,6 +184,10 @@
           <div><dt data-i18n="statBanished"></dt><dd id="st-banished"></dd></div>
           <div><dt data-i18n="statCombo"></dt><dd id="st-combo"></dd></div>
           <div><dt data-i18n="statDist"></dt><dd id="st-dist"></dd></div>
+          <div class="rank-stat">
+            <dt data-i18n="statRank"></dt><dd id="st-rank"></dd>
+            <svg id="st-curve" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" /><path class="line" /></svg>
+          </div>
           <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
         </dl>
         <button id="btn-retry" class="btn primary" data-i18n="retry"></button>

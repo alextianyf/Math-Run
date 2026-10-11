@@ -3,6 +3,8 @@
 // Yokai drift down the shrine path, each carrying an equation. The player
 // handwrites a digit on the talisman; the MNIST model reads it and a talisman
 // flies at EVERY yokai whose answer matches — so spotting shared answers pays.
+// What comes next is decided by the adaptive director (adaptive.js): problems are
+// generated on the fly (problems.js) to match the player's Elo-style rating.
 // Losing the last heart plays a capture cinematic: the parade circles the hero
 // and the great oni rises from a portal to grab him. Every run started from the
 // title opens with a playable tutorial that pauses on the first yokai.
@@ -11,7 +13,7 @@ import { createWorld, LANES } from './world.js';
 import { createYokai } from './yokai.js';
 import { createOni } from './oni.js';
 import { createFx } from './fx.js';
-import { makeProblem } from './problems.js';
+import { createDirector } from './adaptive.js';
 import { createPad, MODEL_SIZE } from './pad.js';
 import { initRecognizer, classify, aiInfo } from './recognizer.js';
 import { initAudio, setMuted, sfx, startMusic, stopMusic, setTempo } from './audio.js';
@@ -25,7 +27,8 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 const SPAWN_Z = -58;          // where yokai appear
 const HIT_Z = -0.6;           // where they reach the hero
 const MAX_HEARTS = 3;
-const KILLS_PER_WAVE = 6;
+const HEAL_STREAK = 8;        // this many right in a row wins a heart back
+const KILLS_PER_WAVE = 6;     // a "wave" beat (banner + chime) every this many yokai banished
 const TYPE_PACE = { onibi: 1, chochin: 1.08, kasa: 0.94, oni: 2.3 };   // × travel time
 const AURA = [                // combo aura tiers: [min combo, colour]
   [20, 0xc77dff],
@@ -34,16 +37,6 @@ const AURA = [                // combo aura tiers: [min combo, colour]
 ];
 const CAPTOR_SCALE = 1.45;
 
-function waveParams(wave) {
-  return {
-    travel: Math.max(5.2, 12.5 - (wave - 1) * 0.65),   // seconds from spawn to the hero
-    interval: Math.max(1.4, 5 - (wave - 1) * 0.36),     // seconds between spawns
-    maxAlive: Math.min(5, 1 + Math.floor(wave / 2)),
-    tier: wave <= 2 ? 1 : wave <= 4 ? 2 : wave <= 7 ? 3 : 4,
-    runSpeed: 7 + wave * 0.5,
-  };
-}
-
 /* ===================== state ===================== */
 const S = {
   mode: 'loading',            // loading | title | intro | playing | paused | caught | over
@@ -51,7 +44,7 @@ const S = {
   speed: 3,
   hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0,
   combo: 0, maxCombo: 0, wave: 1,
-  spawnTimer: 0, pendingBoss: false,
+  spawnTimer: 0, pendingBoss: false, trialHold: 0,
   cooldown: 0, invuln: 0,
   enemies: [],
   ai: { reads: 0, fixed: 0, unclear: 0 },
@@ -59,6 +52,8 @@ const S = {
   tut: null,                  // active tutorial: { step, frozen, e, misses, timer }
 };
 const captor = { oni: null, step: 0 };
+const director = createDirector();
+const showRank = () => ui.setRank(director.rankKey);
 
 /* ===================== setup ===================== */
 const stage = $('stage');
@@ -85,7 +80,8 @@ new ResizeObserver(() => pad.resize()).observe($('pad'));
 ui.applyI18n();
 ui.setHearts(MAX_HEARTS, MAX_HEARTS);
 ui.setBest(S.best);
-ui.setWave(1);
+director.startRun();
+showRank();
 ui.resetAI();
 
 let muted = ui.store.get('muted', false);
@@ -131,7 +127,7 @@ function addScore(n) {
 /* ===================== spawning ===================== */
 function pickType() {
   const r = Math.random();
-  if (S.wave >= 3 && r < 0.25) return 'kasa';
+  if (S.banished >= 6 && r < 0.25) return 'kasa';
   return r < 0.62 ? 'onibi' : 'chochin';
 }
 
@@ -144,14 +140,12 @@ function chooseLane() {
 
 // forced: { type, lane, text, answer, z, speed } — a scripted yokai (the tutorial)
 function spawn(boss = false, forced = null) {
-  const P = waveParams(S.wave);
   const type = forced?.type ?? (boss ? 'oni' : pickType());
   const lane = forced?.lane ?? (boss ? 1 : chooseLane());
   const live = targets();
   // ~30%: reuse an answer already on screen (different expression) → multi-banish chance
   const reuse = live.length && Math.random() < 0.3 ? live[Math.floor(Math.random() * live.length)].answer : undefined;
-  const tier = boss ? Math.min(4, P.tier + 1) : P.tier;
-  const prob = forced ?? makeProblem(tier, reuse, new Set(live.map((e) => e.text)));
+  const prob = forced ?? director.nextProblem({ answer: reuse, avoid: new Set(live.map((e) => e.text)), boss });
   const z0 = forced?.z ?? SPAWN_Z;
 
   // drift in from the forest on either side, settling into the lane as it approaches
@@ -163,13 +157,15 @@ function spawn(boss = false, forced = null) {
   yokai.root.scale.setScalar(0.01);
   world.scene.add(yokai.root);
 
-  const hpTotal = boss ? 2 + Math.floor(S.wave / 4) : 1;
+  const hpTotal = boss ? 3 + (director.rank >= 3 ? 1 : 0) : 1;
+  const qTravel = forced ? 1 : director.travelTime(prob);     // thinking time this problem deserves
   const e = {
-    yokai, lane, boss, tier, x0,
+    yokai, lane, boss, x0,
     z: z0,
-    speed: forced?.speed ?? (HIT_Z - SPAWN_Z) / (P.travel * TYPE_PACE[type]),
+    speed: forced?.speed ?? (HIT_Z - SPAWN_Z) / (qTravel * TYPE_PACE[type]),
+    problem: prob, qStart: 0, qTravel,
     answer: prob.answer, text: prob.text,
-    tag: ui.createTag(prob.text, { boss, hp: hpTotal }),
+    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch }),
     hpDone: 0, hpTotal,
     locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0,
   };
@@ -178,7 +174,7 @@ function spawn(boss = false, forced = null) {
   fx.emit(yokai.center(tmpV), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
-    ui.banner(ui.t('boss'), 'boss');
+    ui.banner(ui.t('trial'), 'boss', 2);
     sfx.boss();
     world.shake(0.25);
   }
@@ -332,6 +328,9 @@ function fizzle(digit, paper, penalize) {
     },
   });
   if (penalize) {
+    // a clearly written wrong digit is a wrong answer to the most urgent problem
+    const nearest = targets().reduce((a, b) => (!a || b.z > a.z ? b : a), null);
+    if (nearest) record(nearest, false);
     sfx.miss();
     ui.padToast(ui.t('miss', { d: digit }), 'bad');
     S.combo = 0;
@@ -361,8 +360,9 @@ function impact(e, n) {
     e.hpDone++;
     e.yokai.flash();
     world.shake(0.25);
-    const prob = makeProblem(e.tier, undefined, new Set(targets().map((o) => o.text)));
-    e.answer = prob.answer; e.text = prob.text;
+    record(e, true);
+    const prob = director.nextProblem({ avoid: new Set(targets().map((o) => o.text)), boss: true });
+    Object.assign(e, { problem: prob, qStart: e.age, qTravel: director.travelTime(prob), answer: prob.answer, text: prob.text });
     ui.setTagText(e.tag, prob.text);
     ui.setTagHp(e.tag, e.hpDone, e.hpTotal);
     measureTag(e);
@@ -380,15 +380,18 @@ function impact(e, n) {
   const pts = Math.round((base + 60 * far) * (1 + multiBonus) * comboMult());
   addScore(pts);
   ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 ? 'gold big' : 'gold');
+  record(e, true);
   if (e.boss) {
+    // rank trial passed: promotion, and a heart back as a reward
     ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
     world.shake(0.4);
-    if (S.hearts < MAX_HEARTS) {
-      S.hearts++;
-      ui.setHearts(S.hearts, MAX_HEARTS);
-      ui.banner(ui.t('heal'), 'heal');
-      sfx.heal();
-    }
+    director.promote();
+    showRank();
+    setTempo(director.tempo());
+    ui.banner(ui.t('promoted', { r: ui.t(director.rankKey) }), 'multi', 2);
+    sfx.wave();
+    heal(false);
+    S.trialHold = 2;                        // let the promotion sink in before any next trial
   }
   e.yokai.flash();
   e.dying = 0.0001;
@@ -399,17 +402,35 @@ function impact(e, n) {
   advance(e.boss ? 3 : 1);
 }
 
+// every few yokai banished: a "wave" beat, a banner and a chime to mark progress
+// (how hard and how fast is the director's business, not the wave's)
 function advance(kills) {
   S.banished += kills;
   const wave = 1 + Math.floor(S.banished / KILLS_PER_WAVE);
   if (wave > S.wave) {
     S.wave = wave;
-    ui.setWave(wave);
-    ui.banner(ui.t('wave', { n: wave }), 'wave');
+    ui.banner(ui.t('wave', { n: wave }), 'wave', 1);
     sfx.wave();
-    setTempo(wave);
-    if (wave % 4 === 0) S.pendingBoss = true;
   }
+}
+
+// one problem's outcome → the director; a rank trial is queued when the rating earns
+// one, and a long enough run of right answers wins a heart back
+function record(e, correct) {
+  if (S.tut) return;
+  const out = director.record(e.problem, { correct, time: e.age - e.qStart, travel: e.qTravel });
+  if (!out) return;                                   // already answered once
+  showRank();
+  if (out.trial && !S.pendingBoss && !S.enemies.some((o) => o.boss && !o.dying)) S.pendingBoss = true;
+  if (correct && out.streak % HEAL_STREAK === 0) heal(true);
+}
+
+function heal(announce) {
+  if (S.hearts >= MAX_HEARTS) return;
+  S.hearts++;
+  ui.setHearts(S.hearts, MAX_HEARTS);
+  sfx.heal();
+  if (announce) ui.banner(ui.t('heal'), 'heal', 1);
 }
 
 /* ===================== damage ===================== */
@@ -417,10 +438,12 @@ function playerHit(e) {
   const p = e.yokai.center(new THREE.Vector3());
   fx.emit(p, { count: 46, color: 0x9a5cff, color2: 0x2a1840, bright: 1.4, speed: 4, life: 0.9, size: 0.45, gravity: 0.5 });
   fx.ring(p, { color: 0x9a5cff, scale: 3 });
+  record(e, false);
+  if (!S.tut) director.hit();
   removeEnemy(e);
   if (S.invuln > 0) return;
 
-  S.hearts = Math.max(0, S.hearts - (e.boss ? 2 : 1));
+  S.hearts = Math.max(0, S.hearts - 1);       // a failed rank trial too: one heart, never more
   S.invuln = 0.8;
   S.combo = 0;
   ui.setCombo(0);
@@ -568,6 +591,10 @@ function showGameOver() {
   $('st-banished').textContent = S.banished;
   $('st-combo').textContent = S.maxCombo;
   $('st-dist').textContent = `${Math.floor(S.distance)} m`;
+  const run = director.endRun();
+  const delta = run.rating - run.start;
+  $('st-rank').textContent = ui.t('rankLine', { r: ui.t(director.rankKey), v: run.rating, d: `${delta >= 0 ? '+' : ''}${delta}` });
+  ui.setRankCurve(run.history);
   $('st-ai').textContent = ui.t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
   ui.show('ov-over');
   sfx.over();
@@ -708,7 +735,7 @@ async function finishTutorial() {
   ui.setScore(0);
   ui.setDistance(0);
   ui.setCombo(0);
-  ui.setWave(1);
+  showRank();
   ui.resetAI();
   pad.setEnabled(true);
 }
@@ -725,17 +752,18 @@ function resetRun() {
   endCapture();
   Object.assign(S, {
     hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, wave: 1,
-    spawnTimer: 1.2, pendingBoss: false, cooldown: 0, invuln: 0, timeScale: 1,
+    spawnTimer: 1.2, pendingBoss: false, trialHold: 0, cooldown: 0, invuln: 0, timeScale: 1,
     ai: { reads: 0, fixed: 0, unclear: 0 },
   });
   ui.setHearts(S.hearts, MAX_HEARTS);
   ui.setScore(0);
   ui.setDistance(0);
   ui.setCombo(0);
-  ui.setWave(1);
+  director.startRun();
+  showRank();
   ui.resetAI();
   pad.clear();
-  setTempo(1);
+  setTempo(director.tempo());
   S.tut = null;
   coach.show(false);
 }
@@ -786,6 +814,7 @@ function resume() {
 }
 function toTitle() {
   stopMusic();
+  if (S.mode === 'paused' || S.mode === 'playing') director.endRun();
   resetRun();
   ui.show('ov-pause', false);
   ui.show('ov-over', false);
@@ -798,7 +827,6 @@ function toTitle() {
 /* ===================== per-frame ===================== */
 function updatePlaying(dt) {
   if (S.tut) { updateTutorial(dt); return; }
-  const P = waveParams(S.wave);
   S.distance += S.speed * dt * 0.6;
   ui.setDistance(S.distance);
 
@@ -820,13 +848,14 @@ function updatePlaying(dt) {
   const alive = S.enemies.filter((e) => !e.dying).length;
   if (alive === 0) S.spawnTimer = Math.min(S.spawnTimer, 0.8);
   S.spawnTimer -= dt;
-  if (S.pendingBoss && !bossAlive) {
+  S.trialHold -= dt;
+  if (S.pendingBoss && !bossAlive && S.trialHold <= 0) {
     S.pendingBoss = false;
     spawn(true);
-    S.spawnTimer = P.interval * 1.5;
-  } else if (S.spawnTimer <= 0 && alive < P.maxAlive - (bossAlive ? 1 : 0)) {
+    S.spawnTimer = director.spawnInterval() * 1.5;
+  } else if (S.spawnTimer <= 0 && alive < director.maxAlive() - (bossAlive ? 1 : 0)) {
     spawn(false);
-    S.spawnTimer = P.interval * rand(0.85, 1.2);
+    S.spawnTimer = director.spawnInterval() * rand(0.85, 1.2);
   }
 }
 
@@ -901,9 +930,8 @@ function updateEnemies(dt) {
 }
 
 function step(dt, realDt) {
-  const P = waveParams(S.wave);
   let target = 0;                       // title: the hero stands in his idle pose
-  if (S.mode === 'intro' || S.mode === 'playing') target = S.tut?.frozen ? 0 : P.runSpeed;   // the hero stops while the tutorial talks
+  if (S.mode === 'intro' || S.mode === 'playing') target = S.tut?.frozen ? 0 : director.runSpeed();   // the hero stops while the tutorial talks
   else if (S.mode === 'caught' || S.mode === 'over') target = 0;
   S.speed += (target - S.speed) * Math.min(1, dt * (S.mode === 'caught' ? 5 : 2));
 
@@ -964,7 +992,7 @@ $('btn-ai').addEventListener('click', () => {
 });
 $('btn-lang').addEventListener('click', () => {
   ui.setLang(ui.getLang() === 'zh' ? 'en' : 'zh');
-  ui.setWave(S.wave);
+  showRank();
   ui.setBest(S.best);
   ui.setCombo(S.combo);
   if (aiInfo.ready) $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
@@ -991,4 +1019,4 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
-if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, waveParams, beginCapture, skipCapture, coach };
+if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, director, beginCapture, skipCapture, coach };

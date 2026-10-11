@@ -27,7 +27,17 @@ const DICT = {
     loadFail: 'AI 模型加载失败，请刷新重试',
     start: '开始奔跑',
     best: '最高',
+    rank0: '阴阳生',
+    rank1: '阴阳师',
+    rank2: '阴阳博士',
+    rank3: '阴阳头',
+    rank4: '晴明',
     wave: '第 {n} 波',
+    trial: '晋升考核！',
+    stretch: '挑战',
+    promoted: '晋升 · {r}',
+    statRank: '阶位 · 实力分',
+    rankLine: '{r} · {v}（{d}）',
     combo: '连击',
     tutSkip: '跳过教程',
     tutNext: '知道了',
@@ -54,7 +64,6 @@ const DICT = {
     multi2: '一符双妖！',
     multi3: '一符三妖！',
     multi4: '百鬼退散！',
-    boss: '大鬼来袭！',
     heal: '+1 生命',
     paused: '暂停',
     resume: '继续',
@@ -88,7 +97,17 @@ const DICT = {
     loadFail: 'AI model failed to load — please refresh',
     start: 'Start running',
     best: 'Best',
+    rank0: 'Apprentice',
+    rank1: 'Onmyōji',
+    rank2: 'Master',
+    rank3: 'Grand Master',
+    rank4: 'Seimei',
     wave: 'Wave {n}',
+    trial: 'Rank trial!',
+    stretch: 'Challenge',
+    promoted: 'Promoted · {r}',
+    statRank: 'Rank · rating',
+    rankLine: '{r} · {v} ({d})',
     combo: 'Combo',
     tutSkip: 'Skip tutorial',
     tutNext: 'Got it',
@@ -115,7 +134,6 @@ const DICT = {
     multi2: 'Double banish!',
     multi3: 'Triple banish!',
     multi4: 'Parade scattered!',
-    boss: 'Oni boss!',
     heal: '+1 life',
     paused: 'Paused',
     resume: 'Resume',
@@ -172,7 +190,7 @@ export function setHearts(n, max) {
   [...box.children].forEach((h, i) => {
     const was = !h.classList.contains('lost');
     h.classList.toggle('lost', i >= n);
-    if (was && i >= n) { h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); }
+    if (was !== i < n) { h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); }   // lost or won back
   });
   box.setAttribute('aria-label', `${n}/${max}`);
 }
@@ -182,7 +200,22 @@ export function setBest(n) {
   $('best').textContent = n.toLocaleString();
   $('title-best').textContent = n ? `${t('best')} ${n.toLocaleString()}` : '';
 }
-export function setWave(n) { $('wave').textContent = t('wave', { n }); }
+// in play only the title shows; the rating number waits for the game-over card
+export function setRank(key) {
+  $('rank-name').textContent = t(key);
+}
+
+// rating over the run as a small area chart on the game-over card
+export function setRankCurve(history) {
+  const svg = $('st-curve');
+  if (history.length < 2) { svg.style.display = 'none'; return; }
+  svg.style.display = '';
+  const lo = Math.min(...history) - 20, hi = Math.max(...history) + 20;
+  const pts = history.map((v, i) => [(i / (history.length - 1)) * 200, 42 - ((v - lo) / (hi - lo)) * 38]);
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('');
+  svg.querySelector('.line').setAttribute('d', line);
+  svg.querySelector('.area').setAttribute('d', `${line}L200 44L0 44Z`);
+}
 export function setCombo(n) {
   const el = $('combo');
   if (n < 2) { el.classList.remove('show'); return; }
@@ -192,19 +225,26 @@ export function setCombo(n) {
 }
 
 /* ===================== equation tags ===================== */
+// Unicode superscripts (2⁶) are tiny at a distance: render exponents as real <sup>
+const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+function setEquation(el, text) {
+  const safe = text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  el.innerHTML = safe.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `<sup>${[...m].map((c) => SUPS.indexOf(c)).join('')}</sup>`);
+}
 const tagLayer = () => $('labels');
 
-export function createTag(text, { boss = false, hp = 0 } = {}) {
+// stretch: a problem a notch above the player's level, marked with a small badge
+export function createTag(text, { boss = false, hp = 0, stretch = false } = {}) {
   const el = document.createElement('div');
-  el.className = 'tag' + (boss ? ' boss' : '');
-  el.innerHTML = `<div class="tag-in"><span class="eq"></span>${boss ? '<span class="hp"></span>' : ''}</div>`;
-  el.querySelector('.eq').textContent = text;
+  el.className = 'tag' + (boss ? ' boss' : '') + (stretch ? ' stretch' : '');
+  el.innerHTML = `<div class="tag-in"><span class="eq"></span>${boss ? '<span class="hp"></span>' : ''}${stretch ? `<span class="badge">${t('stretch')}</span>` : ''}</div>`;
+  setEquation(el.querySelector('.eq'), text);
   if (boss) setTagHp(el, 0, hp);
   tagLayer().appendChild(el);
   return el;
 }
 export function setTagText(el, text) {
-  el.querySelector('.eq').textContent = text;
+  setEquation(el.querySelector('.eq'), text);
   el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
 }
 export function setTagHp(el, done, total) {
@@ -233,15 +273,29 @@ export function popup(text, x, y, cls = '') {
   setTimeout(() => el.remove(), 1100);
 }
 
-let bannerTimer = 0;
-export function banner(text, cls = '') {
+let bannerTimer = 0, bannerLevel = 0, bannerNext = null;
+// level: a banner never cuts off a more important one still on screen
+// (2 promotion / rank trial · 1 wave / heal · 0 the rest); a level-1 banner
+// waits its turn, a passing one (multi-kill) is simply dropped
+export function banner(text, cls = '', level = 0) {
+  if (level < bannerLevel) {
+    if (level >= 1) bannerNext = [text, cls, level];
+    return;
+  }
   const el = $('banner');
+  bannerLevel = level;
   el.className = 'banner ' + cls;
   el.textContent = text;
   void el.offsetWidth;
   el.classList.add('show');
   clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(() => el.classList.remove('show'), 1500);
+  bannerTimer = setTimeout(() => {
+    el.classList.remove('show');
+    bannerLevel = 0;
+    const next = bannerNext;
+    bannerNext = null;
+    if (next) banner(...next);
+  }, 1500);
 }
 
 let toastTimer = 0;
