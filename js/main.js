@@ -13,7 +13,7 @@ import { createWorld, LANES } from './world.js';
 import { createYokai } from './yokai.js';
 import { createOni } from './oni.js';
 import { createFx } from './fx.js';
-import { createDirector } from './adaptive.js';
+import { createDirector, RANKS } from './adaptive.js';
 import { createPad, MODEL_SIZE } from './pad.js';
 import { initRecognizer, classify, aiInfo } from './recognizer.js';
 import { initAudio, setMuted, sfx, startMusic, stopMusic, setTempo } from './audio.js';
@@ -49,11 +49,18 @@ const S = {
   enemies: [],
   ai: { reads: 0, fixed: 0, unclear: 0 },
   best: ui.store.get('best', 0),
+  bestRank: ui.store.get('bestRank', 0),   // a record only: every run starts at the lowest rank
   tut: null,                  // active tutorial: { step, frozen, e, misses, timer }
 };
 const captor = { oni: null, step: 0 };
 const director = createDirector();
-const showRank = () => ui.setRank(director.rankKey);
+
+// HUD rank: seal and title, the bar toward the next trial, and what it's doing
+function showRank() {
+  const trial = S.pendingBoss || S.enemies.some((e) => e.boss && !e.dying);
+  const state = director.rank >= RANKS.length - 1 ? 'top' : trial ? 'trial' : director.progress >= 0.8 ? 'near' : '';
+  ui.setRank(director.rank, director.progress, state);
+}
 
 /* ===================== setup ===================== */
 const stage = $('stage');
@@ -80,6 +87,7 @@ new ResizeObserver(() => pad.resize()).observe($('pad'));
 ui.applyI18n();
 ui.setHearts(MAX_HEARTS, MAX_HEARTS);
 ui.setBest(S.best);
+ui.setBestRank(S.bestRank);
 director.startRun();
 showRank();
 ui.resetAI();
@@ -96,7 +104,7 @@ Promise.all([initRecognizer(), hero.ready.catch(() => null)])
     $('start-label').dataset.i18n = 'start';
     $('start-label').textContent = ui.t('start');
     $('ai-status').dataset.i18n = '';
-    $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
+    $('ai-status').textContent = ui.t('ready');
     $('ai-chip').classList.add('ready');
     ui.setAIMeta(aiInfo.backend);
     if (S.mode === 'loading') S.mode = 'title';
@@ -177,6 +185,7 @@ function spawn(boss = false, forced = null) {
     ui.banner(ui.t('trial'), 'boss', 2);
     sfx.boss();
     world.shake(0.25);
+    showRank();
   }
   return e;
 }
@@ -238,12 +247,15 @@ async function finishWriting() {
 
   pad.setEnabled(false);
   const paper = pad.snapshot();
+  const began = pad.startedAt;
   let result;
   try {
     result = await classify(rgba, MODEL_SIZE);
   } catch (err) {
     console.error('[math-run] classify failed', err);
   }
+  // pen down → reading: what one answer costs this player, so yokai never come faster
+  if (result) director.noteWrite((performance.now() - began) / 1000);
   pad.clear();
   ui.setGuess(null);
   if (S.mode === 'playing' && S.cooldown <= 0) pad.setEnabled(true);
@@ -386,15 +398,20 @@ function impact(e, n) {
     ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
     world.shake(0.4);
     director.promote();
-    showRank();
     setTempo(director.tempo());
-    ui.banner(ui.t('promoted', { r: ui.t(director.rankKey) }), 'multi', 2);
+    ui.promoBanner(director.rank);
     sfx.wave();
     heal(false);
-    S.trialHold = 2;                        // let the promotion sink in before any next trial
+    S.trialHold = 2.6;                      // let the promotion sink in before any next trial
+    if (director.rank > S.bestRank) {
+      S.bestRank = director.rank;
+      ui.store.set('bestRank', S.bestRank);
+      ui.setBestRank(S.bestRank);
+    }
   }
   e.yokai.flash();
   e.dying = 0.0001;
+  if (e.boss) showRank();
   if (S.tut && e === S.tut.e) tutorialBanished();
   ui.setTagState(e.tag, 'hit');
   ui.removeTag(e.tag, 600);
@@ -420,8 +437,8 @@ function record(e, correct) {
   if (S.tut) return;
   const out = director.record(e.problem, { correct, time: e.age - e.qStart, travel: e.qTravel });
   if (!out) return;                                   // already answered once
-  showRank();
   if (out.trial && !S.pendingBoss && !S.enemies.some((o) => o.boss && !o.dying)) S.pendingBoss = true;
+  showRank();
   if (correct && out.streak % HEAL_STREAK === 0) heal(true);
 }
 
@@ -441,6 +458,7 @@ function playerHit(e) {
   record(e, false);
   if (!S.tut) director.hit();
   removeEnemy(e);
+  if (e.boss) showRank();                   // the trial failed: back to the bar
   if (S.invuln > 0) return;
 
   S.hearts = Math.max(0, S.hearts - 1);       // a failed rank trial too: one heart, never more
@@ -578,14 +596,19 @@ function endCapture() {
   document.body.classList.remove('cinematic');
 }
 
+// a run's score counts as a record however the run ends: caught, quit from the
+// pause menu, or the page closed mid-run (the tutorial's practice points never count)
+function saveBest() {
+  if (S.tut || S.score <= S.best) return false;
+  S.best = S.score;
+  ui.store.set('best', S.best);
+  ui.setBest(S.best);
+  return true;
+}
+
 function showGameOver() {
   S.mode = 'over';
-  const newBest = S.score > S.best;
-  if (newBest) {
-    S.best = S.score;
-    ui.store.set('best', S.best);
-    ui.setBest(S.best);
-  }
+  const newBest = saveBest();
   $('over-score').textContent = S.score.toLocaleString();
   $('over-newbest').hidden = !newBest;
   $('st-banished').textContent = S.banished;
@@ -595,6 +618,14 @@ function showGameOver() {
   const delta = run.rating - run.start;
   $('st-rank').textContent = ui.t('rankLine', { r: ui.t(director.rankKey), v: run.rating, d: `${delta >= 0 ? '+' : ''}${delta}` });
   ui.setRankCurve(run.history);
+  // the ladder, and how close the next rank was — the reason to go again
+  const progress = director.progress;
+  ui.renderLadder($('over-ladder'), { reached: run.rank, progress, known: Math.max(S.bestRank, run.rank) + 1 });
+  const next = ui.t(`rank${run.rank + 1}`);
+  $('over-next').textContent = run.rank >= RANKS.length - 1 ? ui.t('topReached')
+    : progress >= 1 ? ui.t('oneTrial', { r: next })
+    : progress >= 0.6 ? ui.t('nearNext', { r: next })
+    : ui.t('nextRank', { r: next });
   $('st-ai').textContent = ui.t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
   ui.show('ov-over');
   sfx.over();
@@ -814,7 +845,10 @@ function resume() {
 }
 function toTitle() {
   stopMusic();
-  if (S.mode === 'paused' || S.mode === 'playing') director.endRun();
+  if (S.mode === 'paused' || S.mode === 'playing') {
+    saveBest();
+    director.endRun();
+  }
   resetRun();
   ui.show('ov-pause', false);
   ui.show('ov-over', false);
@@ -994,8 +1028,9 @@ $('btn-lang').addEventListener('click', () => {
   ui.setLang(ui.getLang() === 'zh' ? 'en' : 'zh');
   showRank();
   ui.setBest(S.best);
+  ui.setBestRank(S.bestRank);
   ui.setCombo(S.combo);
-  if (aiInfo.ready) $('ai-status').textContent = ui.t('ready', { b: aiInfo.backend });
+  if (aiInfo.ready) $('ai-status').textContent = ui.t('ready');
 });
 stage.addEventListener('pointerdown', skipCapture);
 
@@ -1018,5 +1053,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+window.addEventListener('pagehide', () => { if (S.mode === 'playing' || S.mode === 'paused') saveBest(); });
 
 if (DEBUG) window.__mathrun = { S, world, fx, hero, captor, spawn, decide, director, beginCapture, skipCapture, coach };

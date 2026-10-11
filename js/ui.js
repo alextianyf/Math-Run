@@ -37,6 +37,17 @@ const DICT = {
     stretch: '挑战',
     promoted: '晋升 · {r}',
     statRank: '阶位 · 实力分',
+    bestRank: '最高阶位',
+    nearTrial: '考核将至',
+    inTrial: '考核中',
+    oneTrial: '只差一场考核就是{r}！',
+    nearNext: '差一点就能挑战{r}！',
+    nextRank: '下一阶：{r}',
+    topReached: '已达最高阶 · 晴明！',
+    unlock1: '解锁：乘法与除法',
+    unlock2: '解锁：括号与多步运算',
+    unlock3: '解锁：平方与开方',
+    unlock4: '解锁：立方、乘方与开立方',
     rankLine: '{r} · {v}（{d}）',
     combo: '连击',
     tutSkip: '跳过教程',
@@ -81,7 +92,7 @@ const DICT = {
     aiRead: '读到 {d} · {p}%',
     aiFix: '结合场上答案：{a} → {b}',
     aiUnsure: '不确定（{d} · {p}%）',
-    ready: 'AI 就绪 · {b}',
+    ready: 'AI 就绪',
     go: '出发！',
     skip: '点击跳过',
     lang: 'EN',
@@ -107,6 +118,17 @@ const DICT = {
     stretch: 'Challenge',
     promoted: 'Promoted · {r}',
     statRank: 'Rank · rating',
+    bestRank: 'Best rank',
+    nearTrial: 'Trial soon',
+    inTrial: 'Trial!',
+    oneTrial: 'One trial away from {r}!',
+    nearNext: 'So close to the {r} trial!',
+    nextRank: 'Next: {r}',
+    topReached: 'Top rank reached: Seimei!',
+    unlock1: 'Unlocked: × and ÷',
+    unlock2: 'Unlocked: brackets, multi-step',
+    unlock3: 'Unlocked: squares and roots',
+    unlock4: 'Unlocked: cubes, powers, cube roots',
     rankLine: '{r} · {v} ({d})',
     combo: 'Combo',
     tutSkip: 'Skip tutorial',
@@ -151,7 +173,7 @@ const DICT = {
     aiRead: 'Read {d} · {p}%',
     aiFix: 'Context fix: {a} → {b}',
     aiUnsure: 'Unsure ({d} · {p}%)',
-    ready: 'AI ready · {b}',
+    ready: 'AI ready',
     go: 'Go!',
     skip: 'Tap to skip',
     lang: '中',
@@ -200,9 +222,36 @@ export function setBest(n) {
   $('best').textContent = n.toLocaleString();
   $('title-best').textContent = n ? `${t('best')} ${n.toLocaleString()}` : '';
 }
-// in play only the title shows; the rating number waits for the game-over card
-export function setRank(key) {
-  $('rank-name').textContent = t(key);
+/* ===================== ranks ===================== */
+// one seal character per rank: 阴阳生 · 阴阳师 · 阴阳博士 · 阴阳头 · 晴明
+export const SEALS = ['生', '师', '博', '头', '明'];
+
+// HUD: the rank's seal and title, a thin bar toward the next trial (no numbers;
+// the rating waits for the game-over card) and a hint.
+// state: '' · 'near' (trial soon) · 'trial' (under way) · 'top' (nothing above)
+export function setRank(i, progress = 0, state = '') {
+  $('rank-seal').textContent = SEALS[i];
+  $('rank-name').textContent = t(`rank${i}`);
+  $('rank-fill').style.width = `${Math.round(progress * 100)}%`;
+  $('rank-hint').textContent = state === 'near' ? t('nearTrial') : state === 'trial' ? t('inTrial') : '';
+  const chip = $('rank-chip');
+  for (const s of ['near', 'trial', 'top']) chip.classList.toggle(s, state === s);
+}
+
+// The five ranks as seals: lit up to `reached`, the next one filling up with
+// `progress`, and anything past `known` hidden as ？ — the next goal is always shown.
+export function renderLadder(el, { reached, progress = 0, known = reached + 1, labels = true }) {
+  el.innerHTML = SEALS.map((ch, i) => {
+    const state = i < reached ? 'lit' : i === reached ? 'lit cur' : i === reached + 1 ? 'next' : 'locked';
+    const shown = i <= known;
+    const fill = i === reached + 1 ? `<i style="height:${Math.round(progress * 100)}%"></i>` : '';
+    const name = shown ? t(`rank${i}`) : '？？？';
+    return `<li class="${state}" title="${name}"><span class="stamp">${fill}<b>${shown ? ch : '？'}</b></span>${labels ? `<small>${name}</small>` : ''}</li>`;
+  }).join('');
+}
+// title screen: the best rank ever reached (a record only; every run starts at the bottom)
+export function setBestRank(i) {
+  renderLadder($('title-ladder'), { reached: i, labels: false });
 }
 
 // rating over the run as a small area chart on the game-over card
@@ -276,16 +325,18 @@ export function popup(text, x, y, cls = '') {
 let bannerTimer = 0, bannerLevel = 0, bannerNext = null;
 // level: a banner never cuts off a more important one still on screen
 // (2 promotion / rank trial · 1 wave / heal · 0 the rest); a level-1 banner
-// waits its turn, a passing one (multi-kill) is simply dropped
-export function banner(text, cls = '', level = 0) {
+// waits its turn, a passing one (multi-kill) is simply dropped.
+// html: markup we build ourselves (never user text); ms: how long it stays
+export function banner(text, cls = '', level = 0, { html = null, ms = 1500 } = {}) {
   if (level < bannerLevel) {
-    if (level >= 1) bannerNext = [text, cls, level];
+    if (level >= 1) bannerNext = [text, cls, level, { html, ms }];
     return;
   }
   const el = $('banner');
   bannerLevel = level;
   el.className = 'banner ' + cls;
-  el.textContent = text;
+  if (html) el.innerHTML = html; else el.textContent = text;
+  el.style.animationDuration = `${ms}ms`;
   void el.offsetWidth;
   el.classList.add('show');
   clearTimeout(bannerTimer);
@@ -295,7 +346,15 @@ export function banner(text, cls = '', level = 0) {
     const next = bannerNext;
     bannerNext = null;
     if (next) banner(...next);
-  }, 1500);
+  }, ms);
+}
+
+// promotion: the new rank's seal stamps down, with what the rank unlocks
+export function promoBanner(i) {
+  const html = `<span class="stamp"><b>${SEALS[i]}</b></span>`
+    + `<span class="promo-text"><span class="promo-title">${t('promoted', { r: t(`rank${i}`) })}</span>`
+    + `<span class="promo-sub">${t(`unlock${i}`)}</span></span>`;
+  banner('', 'promo', 2, { html, ms: 2600 });
 }
 
 let toastTimer = 0;

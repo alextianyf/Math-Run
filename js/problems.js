@@ -7,15 +7,16 @@
 // Every intermediate value is a non-negative integer under a cap, so the problem is
 // always solvable by mental math, and the space of problems is far too large to
 // repeat. Each problem is scored on the same scale as the player's rating
-// (adaptive.js), so the director can simply ask for "something around 950".
+// (adaptive.js), so the director can simply ask for "something around 950" —
+// and say which operations the player has unlocked so far.
 
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const sup = (n) => String(n).split('').map((d) => SUP[+d]).join('');
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const BASIC = ['+', '−', '×', '÷'];
-const ALL = [...BASIC, 'sq', 'sqrt', 'cube', 'cbrt', 'pow'];
+export const BASIC = ['+', '−', '×', '÷'];
+export const ALL = [...BASIC, 'sq', 'sqrt', 'cube', 'cbrt', 'pow'];
 // What the generator may use, by target difficulty. Candidates are scored and the
 // closest one wins, so the bands only need to be roughly right.
 const BANDS = [
@@ -175,10 +176,12 @@ function score(n, acc) {
   }
 }
 
+const rate = (acc, parens) => 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
+
 export function difficultyOf(tree, parens) {
   const acc = { sum: 0, ops: 0, kinds: new Set() };
   score(tree, acc);
-  return 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
+  return rate(acc, parens);
 }
 
 // independent check: evaluate the tree exactly
@@ -190,27 +193,46 @@ export function evaluate(n) {
   return n.op === '+' ? a + b : n.op === '−' ? a - b : n.op === '×' ? a * b : a / b;
 }
 
+// kinds: the operations used ('+', '×', 'sqrt', 'pow', …) plus '()' for brackets
 function generate(answer, cfg) {
   const steps = ri(cfg.steps[0], cfg.steps[1]);
   const tree = build(answer, steps, cfg);
   const stats = { parens: 0 };
   const text = render(tree, stats);
-  return { text, answer, tree, difficulty: difficultyOf(tree, stats.parens) };
+  const acc = { sum: 0, ops: 0, kinds: new Set() };
+  score(tree, acc);
+  const kinds = new Set(acc.kinds);
+  if (stats.parens) kinds.add('()');
+  return { text, answer, tree, difficulty: rate(acc, stats.parens), kinds };
 }
 
 const bandIndex = (target) => BANDS.findIndex((b) => target <= b.upTo);
 
+// a band cut down to what the player has unlocked; featured operations are let in
+// even where the band would not use them yet, so a fresh unlock shows up at once
+function restrict(band, allow, feature) {
+  if (!allow) return band;
+  const ops = band.ops.filter((o) => allow.ops.includes(o));
+  for (const f of feature ?? []) if (allow.ops.includes(f) && !ops.includes(f)) ops.push(f);
+  const hi = Math.min(band.steps[1], allow.steps);
+  return { ...band, ops: ops.length ? ops : allow.ops, steps: [Math.min(band.steps[0], hi), hi] };
+}
+
 // A problem whose difficulty is close to `target`, with the given answer (0–9),
 // avoiding any text in `avoid`. Draws a batch of candidates and keeps the closest.
-export function makeProblem(target, { answer = ri(0, 9), avoid = new Set() } = {}) {
+//   allow:   { ops, steps, brackets } — what the player has unlocked (default: everything)
+//   feature: kinds to show off (a fresh unlock); candidates without one rank far behind
+export function makeProblem(target, { answer = ri(0, 9), avoid = new Set(), allow = null, feature = null } = {}) {
   const i = bandIndex(target);
   let best = null, bestGap = Infinity;
-  for (let k = 0; k < 24; k++) {
+  for (let k = 0; k < 32; k++) {
     const band = BANDS[Math.max(0, Math.min(BANDS.length - 1, i + (Math.random() < 0.3 ? pick([-1, 1]) : 0)))];
-    const p = generate(answer, band);
+    const p = generate(answer, restrict(band, allow, feature));
     if (avoid.has(p.text) || p.text.length > 24 || p.text === String(answer)) continue;
-    const gap = Math.abs(p.difficulty - target) + Math.random() * 30;   // a little noise keeps the mix varied
+    if (allow && !allow.brackets && p.kinds.has('()')) continue;
+    let gap = Math.abs(p.difficulty - target) + Math.random() * 30;   // a little noise keeps the mix varied
+    if (feature && !feature.some((f) => p.kinds.has(f))) gap += 250;
     if (gap < bestGap) { best = p; bestGap = gap; }
   }
-  return best ?? { text: `${answer} + 0`, answer, difficulty: 520 };
+  return best ?? { text: `${answer} + 0`, answer, difficulty: 520, kinds: new Set(['+']) };
 }

@@ -24,6 +24,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
   let idleTimer = 0;
   let pointerType = 'mouse';
   let enabled = true;
+  let startedAt = 0;                 // performance.now() of the first stroke since the last clear
 
   const inkWidth = () => Math.max(7, Math.min(w, h) * 0.07);
 
@@ -88,6 +89,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     try { canvas.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
     disarm();
     pointerType = e.pointerType in WAITS ? e.pointerType : 'mouse';
+    if (!strokes.length) startedAt = performance.now();
     current = [pos(e)];
     strokes.push(current);
     redraw();
@@ -132,6 +134,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
   return {
     resize,
     get writing() { return !!current; },
+    get startedAt() { return startedAt; },
     hasInk() { return strokes.length > 0; },
     setEnabled(v) { enabled = v; if (!v) { current = null; disarm(); } },
     clear() {

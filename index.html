@@ -42,7 +42,13 @@
       <header id="hud">
         <div class="hud-left">
           <div id="hearts" class="hearts"></div>
-          <div id="rank-chip" class="chip rank-chip"><b id="rank-name"></b></div>
+          <div id="rank-chip" class="rank-chip">
+            <span id="rank-seal" class="stamp" aria-hidden="true"></span>
+            <div class="rank-text">
+              <div class="rank-line"><b id="rank-name"></b><span id="rank-hint" class="rank-hint"></span></div>
+              <div class="rank-bar" aria-hidden="true"><i id="rank-fill"></i></div>
+            </div>
+          </div>
           <div id="combo" class="combo"></div>
         </div>
         <div class="hud-right">
@@ -135,6 +141,7 @@
           <span id="start-label" data-i18n="loading"></span>
         </button>
         <div class="title-meta">
+          <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
           <span id="title-best" class="meta-chip best"></span>
           <span id="ai-chip" class="meta-chip ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
@@ -186,6 +193,8 @@
           <div><dt data-i18n="statDist"></dt><dd id="st-dist"></dd></div>
           <div class="rank-stat">
             <dt data-i18n="statRank"></dt><dd id="st-rank"></dd>
+            <ol id="over-ladder" class="ladder"></ol>
+            <p id="over-next" class="ladder-note"></p>
             <svg id="st-curve" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" /><path class="line" /></svg>
           </div>
           <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
