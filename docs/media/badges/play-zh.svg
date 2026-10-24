@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="44" viewBox="0 0 164 44" role="img" aria-label="在浏览器中游玩">
+  <title>在浏览器中游玩</title>
+  <rect x=".5" y=".5" width="163" height="43" rx="10" fill="#F7E4DF" stroke="#E5B6AC"/>
+  <path d="M19 14.5v15l12-7.5z" fill="#8F2D22" stroke="#8F2D22" stroke-width="1.2" stroke-linejoin="round"/>
+  <text x="41" y="27" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" font-size="14" font-weight="600" fill="#8F2D22">在浏览器中游玩</text>
+</svg>

@@ -52,14 +52,17 @@ const { banner, card, themes } = require("./banner.cjs");
       await page.screenshot({ path: path.join(output, file), ...options });
       await page.close();
     };
-    for (const theme of Object.keys(themes)) {
-      await render(banner({ theme, ...parts }), { width: 1500, height: 500 }, theme === "light" ? "hero.png" : `hero-${theme}.png`);
+    for (const language of ["en", "zh"]) {
+      for (const theme of Object.keys(themes)) {
+        const name = ["hero", language === "en" ? "" : language, theme === "light" ? "" : theme].filter(Boolean).join("-");
+        await render(banner({ language, theme, ...parts }), { width: 1500, height: 500 }, `${name}.png`);
+      }
     }
     await render(card({ theme: "dark", ...parts }), { width: 1200, height: 630 }, "social-card.jpg", { type: "jpeg", quality: 90 });
   } finally {
     await browser.close();
   }
-  console.log("Generated hero.png, hero-dark.png and social-card.jpg in docs/media/ from real game captures.");
+  console.log("Generated the English and Chinese banners (light and dark) and social-card.jpg in docs/media/ from real game captures.");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

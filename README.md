@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <sub>by <a href="https://github.com/alextianyf"><strong>Alex Tian</strong></a> &nbsp;·&nbsp; <a href="https://alextianyf.github.io/Math-Run/">Play online</a> &nbsp;·&nbsp; <a href="#how-to-play">How to play</a> &nbsp;·&nbsp; <a href="https://github.com/alextianyf/Math-Run/issues">Feedback</a></sub>
+  <sub>by <a href="https://github.com/alextianyf"><strong>Alex Tian</strong></a> &nbsp;·&nbsp; <a href="https://alextianyf.github.io/Math-Run/">Play online</a> &nbsp;·&nbsp; <a href="#how-to-play">How to play</a> &nbsp;·&nbsp; <a href="https://github.com/alextianyf/Math-Run/issues">Feedback</a> &nbsp;·&nbsp; <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></sub>
 </p>
 
 ## Banish yokai with your handwriting
@@ -67,6 +67,42 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 
 ---
 
+## FAQ
+
+### What is Math Run?
+
+A free 3D math game that runs in the browser. Yokai walk toward you carrying math problems; you handwrite each answer (a digit from 0 to 9) on a talisman, and a neural network reads your handwriting to banish them. [Play it here](https://alextianyf.github.io/Math-Run/).
+
+### Do I need to install anything or create an account?
+
+No. It is a static web page: open the link in any modern browser — on a computer, tablet or phone — and play with a mouse, finger or pen. Nothing is installed, and there is no sign-up.
+
+### How does the game read my handwriting?
+
+A small neural network (an MLP trained on the MNIST handwritten-digit dataset, 98.28% test accuracy) runs inside your browser with TensorFlow.js. Your strokes are turned into a 28×28 image, the model scores each digit, and the game combines those scores with the answers currently on screen, so a slightly messy digit still counts when it matches a yokai.
+
+### Is my handwriting sent to a server?
+
+No. Recognition happens entirely on your device; the game has no backend at all.
+
+### How does the difficulty adapt?
+
+The game keeps an Elo-style rating of your skill and generates each problem to match it, aiming for about 85% success — hard enough to stretch you, easy enough to stay in flow. Difficulty rises gradually, a challenge problem follows a streak, an easier one follows two misses, and the pace of the yokai follows how fast you actually write.
+
+### What kinds of math problems are there?
+
+Every answer is a whole number from 0 to 9, but the problems grow with your rank: addition and subtraction first, then multiplication and division, brackets and multi-step problems, squares and square roots, and finally cubes, powers and cube roots. They are generated on the fly, so they don't repeat.
+
+### Who is it for?
+
+Anyone who wants quick mental-math practice — students, parents and teachers looking for a playful drill, or developers curious about running machine learning in the browser. It is free for personal, educational and research use.
+
+### Which languages are supported?
+
+English and Simplified Chinese; switch with the 中 / EN button in the game.
+
+---
+
 ## Project Motivation
 
 The motivation behind **Math Run** was to combine my interests in deep learning and practical application deployment into one interactive project.
@@ -84,6 +120,7 @@ With **Night Parade**, the second version, I wanted to go further: wrap the mode
 - [Banish yokai with your handwriting](#banish-yokai-with-your-handwriting)
 - [How to Play](#how-to-play)
 - [Highlights](#highlights)
+- [FAQ](#faq)
 - [Project Motivation](#project-motivation)
 - [File Structure](#file-structure)
 - [Quick Start (Local Run)](#quick-start-local-run)

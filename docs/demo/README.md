@@ -4,10 +4,10 @@ Everything in the README's header is made from the real game, so it can be rebui
 
 | File in `docs/media/` | What it is | Made by |
 | --- | --- | --- |
-| `hero.png`, `hero-dark.png` | 1500 × 500 banner, light and dark | `hero.cjs` |
+| `hero.png`, `hero-dark.png`, `hero-zh*.png` | 1500 × 500 banner, English and Chinese, light and dark | `hero.cjs` |
 | `social-card.jpg` | 1200 × 630 link-preview card (`og:image` in `index.html`) | `hero.cjs` |
 | `demo.webp`, `demo.png` | the demo animation, and a still of it | `record.cjs`, then `encode.py` |
-| `badges/*.svg` | the buttons and labels under the banner | hand-written SVG |
+| `badges/*.svg` | the buttons and labels under the banner (`-zh` for README.zh-CN.md) | hand-written SVG |
 
 ## Rebuild
 

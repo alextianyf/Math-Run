@@ -24,10 +24,18 @@ const themes = {
   },
 };
 
+const title = '<span class="zh">百鬼夜行</span> · Math Run';
 const copy = {
-  title: '<span class="zh">百鬼夜行</span> · Math Run',
-  lede: "Handwrite the answer. Banish the yokai.<br>An AI reads your pen, right in the browser.",
-  eyebrow: "A math game you play with a pen",
+  en: {
+    title,
+    lede: "Handwrite the answer. Banish the yokai.<br>An AI reads your pen, right in the browser.",
+    eyebrow: "A math game you play with a pen",
+  },
+  zh: {
+    title,
+    lede: "写下答案，降伏妖怪。<br>浏览器里的 AI，当场认出你的笔迹。",
+    eyebrow: "一款用笔来玩的数学游戏",
+  },
 };
 
 const base = (palette) => `*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI','Microsoft YaHei',sans-serif;color:${palette.ink}}
@@ -40,8 +48,9 @@ const base = (palette) => `*{box-sizing:border-box}body{margin:0;font-family:'Se
   .paper{position:absolute;filter:${palette.paperShadow}}`;
 
 // 1500 × 500 README banner. logo is an SVG data URI; shot and talisman are base64 PNGs.
-const banner = ({ theme, logo, shot, talisman }) => {
+const banner = ({ language = "en", theme, logo, shot, talisman }) => {
   const palette = themes[theme];
+  const text = copy[language];
   return `<style>${base(palette)}
     main{width:1500px;height:500px}
     .identity{position:absolute;left:78px;top:70px}.logo{width:76px;height:76px;margin-bottom:26px;border-radius:16px}
@@ -49,12 +58,13 @@ const banner = ({ theme, logo, shot, talisman }) => {
     .eyebrow{left:82px;bottom:53px;font-size:32px}
     .shot{left:850px;top:56px;width:590px;transform:rotate(4deg)}
     .paper{left:690px;top:118px;width:205px;transform:rotate(-8deg)}
-  </style><main><div class="identity"><img class="logo" src="${logo}"><h1>${copy.title}</h1><p>${copy.lede}</p></div><div class="eyebrow">${copy.eyebrow}</div><img class="shot" src="data:image/png;base64,${shot}"><img class="paper" src="data:image/png;base64,${talisman}"></main>`;
+  </style><main><div class="identity"><img class="logo" src="${logo}"><h1>${text.title}</h1><p>${text.lede}</p></div><div class="eyebrow">${text.eyebrow}</div><img class="shot" src="data:image/png;base64,${shot}"><img class="paper" src="data:image/png;base64,${talisman}"></main>`;
 };
 
 // 1200 × 630 link-preview card (Open Graph / X), same parts in a taller frame
 const card = ({ theme, logo, shot, talisman }) => {
   const palette = themes[theme];
+  const text = copy.en;
   return `<style>${base(palette)}
     main{width:1200px;height:630px}
     .identity{position:absolute;left:64px;top:64px;width:520px}.logo{width:68px;height:68px;margin-bottom:24px;border-radius:15px}
@@ -62,7 +72,7 @@ const card = ({ theme, logo, shot, talisman }) => {
     .eyebrow{left:68px;bottom:60px;font-size:28px}
     .shot{left:560px;top:150px;width:600px;transform:rotate(4deg)}
     .paper{left:470px;top:300px;width:170px;transform:rotate(-8deg)}
-  </style><main><div class="identity"><img class="logo" src="${logo}"><h1>${copy.title}</h1><p>${copy.lede}</p></div><div class="eyebrow">${copy.eyebrow}</div><img class="shot" src="data:image/png;base64,${shot}"><img class="paper" src="data:image/png;base64,${talisman}"></main>`;
+  </style><main><div class="identity"><img class="logo" src="${logo}"><h1>${text.title}</h1><p>${text.lede}</p></div><div class="eyebrow">${text.eyebrow}</div><img class="shot" src="data:image/png;base64,${shot}"><img class="paper" src="data:image/png;base64,${talisman}"></main>`;
 };
 
 module.exports = { banner, card, themes, copy };
