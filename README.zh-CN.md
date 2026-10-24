@@ -426,12 +426,9 @@ pip install -r requirements.txt
 
 ## 许可证
 
-本项目采用自定义许可证：
+Math Run 采用 [PolyForm Noncommercial License 1.0.0](LICENSE)（PolyForm 非商业许可证）发布。
 
-- 本项目使用的 **MNIST 数据集**是公开数据，可免费用于研究和教育（Yann LeCun 等）。
-- 本仓库中的所有**代码、游戏逻辑和素材**均由 **Alex Tian** 独立创作，主角的基础 3D 模型除外（CC0，见致谢）。
-- 你可以**出于个人、研究或教育目的**自由使用、复制或修改代码。
-- 未经作者事先书面许可，**严禁商业使用**。
-- 中英文表述如有出入，以英文版 [README.md](README.md) 和 [LICENSE](LICENSE) 为准。
-
-本软件按"原样"提供，不附带任何明示或暗示的担保。
+- **任何非商业用途都免费**：个人使用、学习、业余项目、研究，以及学校、公益组织和公共机构的使用。你可以使用、复制、修改和分享，但需要附上许可证及其中的 `Required Notice` 版权声明行。
+- **未经作者另行授权，不得用于商业用途**；如需商用，请通过 [GitHub](https://github.com/alextianyf) 联系。
+- 代码、游戏逻辑和原创素材由 **Alex Tian** 创作。第三方素材遵循各自的许可：MNIST 数据集（Yann LeCun 等）、主角的基础 3D 模型（CC0，见[致谢](#致谢)），以及从 CDN 加载的开源库（Three.js、three-vrm、TensorFlow.js）。
+- 以上为中文说明，具有法律效力的是英文原文 [LICENSE](LICENSE)。

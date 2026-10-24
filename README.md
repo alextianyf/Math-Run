@@ -454,11 +454,8 @@ While **Math Run** already shows a neural network working inside a complete game
 
 ## License
 
-This project is released under a custom license:
+Math Run is released under the [PolyForm Noncommercial License 1.0.0](LICENSE).
 
-- The **MNIST dataset** used in this project is publicly available and free to use for research and educational purposes (Yann LeCun et al.).  
-- All **code, game logic, and assets** in this repository were independently created by **Alex Tian**, except the hero's base 3D model (CC0, credited in Acknowledgments).  
-- You are free to use, copy, or modify the code **for personal, research, or educational purposes only**.  
-- **Commercial use is strictly prohibited** without prior written permission from the author.  
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+- **Free for any noncommercial purpose** — personal use, study, hobby projects, research, and use by schools, charities and public institutions. You may use, copy, modify and share it, as long as you pass on the license and its `Required Notice` line.
+- **Commercial use is not permitted** without a separate license from the author; get in touch through [GitHub](https://github.com/alextianyf).
+- The code, game logic and original assets were created by **Alex Tian**. Third-party materials keep their own licenses: the MNIST dataset (Yann LeCun et al.), the hero's base 3D model (CC0, see [Acknowledgments](#acknowledgments)) and the libraries loaded from CDNs (Three.js, three-vrm, TensorFlow.js).
