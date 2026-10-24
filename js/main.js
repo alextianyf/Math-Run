@@ -18,7 +18,7 @@ import { showRank, saveBest } from './game/progress.js';
 import { spawn, updateSpawner, updateEnemies } from './game/enemies.js';
 import { onTalisman, decide } from './game/handwriting.js';
 import { answer, cast, fizzle, playerHit, updateCombat } from './game/combat.js';
-import { coach, updateTutorial, tutorialWriting, tutorialAnswer, finishTutorial } from './game/tutorial.js';
+import { coach, updateTutorial, tutorialWriting, tutorialAnswer } from './game/tutorial.js';
 import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/capture.js';
 import { startGame, beginPlay, pause, resume, toTitle, showGameOver } from './game/flow.js';
 import { $, smooth01 } from './game/helpers.js';
@@ -55,11 +55,27 @@ onTalisman({
   read: (reading) => (S.tut ? tutorialAnswer(reading) : answer(reading)),
 });
 
-// Start stays disabled until everything is ready: the digit recogniser (warmed up),
-// the hero model, and every shader and model on the GPU (prewarm). If the hero
-// fails to load we still let the game start.
-Promise.all([initRecognizer(), hero.ready.catch(() => null)])
-  .then(() => {
+/* ===================== loading screen ===================== */
+// The loading screen stays up until everything is ready — the digit recogniser
+// (warmed up), the hero model, and every shader and model on the GPU (prewarm) — so
+// the title never stutters. If the hero fails to load we still let the game start.
+const loading = new Set(['bootAI', 'bootHero']);       // what is still on its way
+// the next painted frame — or a moment later in a background tab, which paints nothing
+const nextFrame = () => new Promise((resolve) => { requestAnimationFrame(() => resolve()); setTimeout(resolve, 100); });
+function bootStatus(fraction) {
+  $('loader-text').textContent = ui.t(loading.size ? [...loading][0] : 'bootScene');
+  $('loader-fill').style.width = `${Math.round(fraction * 100)}%`;
+}
+const loaded = (key) => () => { loading.delete(key); bootStatus((2 - loading.size) / 3); };
+bootStatus(0.05);
+
+Promise.all([
+  initRecognizer().then(loaded('bootAI')),
+  hero.ready.catch(() => null).then(loaded('bootHero')),
+])
+  .then(async () => {
+    await nextFrame();                       // let "Preparing the scene…" show first:
+    await nextFrame();                       // the prewarm frame below is a long one
     prewarm();
     $('btn-start').disabled = false;
     $('start-label').dataset.i18n = 'start';
@@ -69,9 +85,17 @@ Promise.all([initRecognizer(), hero.ready.catch(() => null)])
     $('ai-chip').classList.add('ready');
     ui.setAIMeta(aiInfo.backend);
     if (S.mode === 'loading') S.mode = 'title';
+    bootStatus(1);
+    await nextFrame();
+    $('loader').classList.add('done');       // fade out, and let the title card rise in
+    document.body.classList.remove('booting');
   })
   .catch((err) => {
     console.error('[math-run] model load failed', err);
+    $('loader-text').textContent = ui.t('loadFail');
+    $('loader-retry').textContent = ui.t('retry');
+    $('loader-retry').hidden = false;
+    $('loader-retry').addEventListener('click', () => location.reload());
     $('start-label').dataset.i18n = 'loadFail';
     $('start-label').textContent = ui.t('loadFail');
     $('ai-chip').classList.add('fail');
@@ -130,7 +154,6 @@ requestAnimationFrame(frame);
 const skip = () => { if (skipCapture()) showGameOver(); };
 
 $('btn-start').addEventListener('click', () => startGame(false));
-$('tut-skip').addEventListener('click', () => finishTutorial());
 $('btn-retry').addEventListener('click', () => startGame(true));
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);

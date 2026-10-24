@@ -32,7 +32,7 @@ async function openGame(browser, viewport = { width: 1280, height: 800 }) {
 async function startRun(page) {
   await page.click("#btn-start");
   await page.waitForFunction(() => window.__mathrun.S.tut?.step === "yokai");
-  await page.click("#tut-skip");
+  await page.getByRole("button", { name: "Skip tutorial" }).click();
   await page.waitForFunction(() => window.__mathrun.S.mode === "playing" && !window.__mathrun.S.tut, null, { timeout: 15000 });
 }
 

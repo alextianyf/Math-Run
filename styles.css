@@ -701,11 +701,6 @@ body.paused .tut { display: none; }
 .tut-head { display: flex; align-items: center; gap: 8px; }
 .tut-head .crest { flex: none; width: 18px; height: 18px; color: #ff5a46; filter: drop-shadow(0 0 5px rgba(255, 80, 60, 0.6)); }
 .tut-head b { flex: 1; font: 700 18px/1.2 var(--font-accent); color: var(--gold); letter-spacing: 0.04em; }
-.tut-skip {
-  flex: none; padding: 4px 2px; border: 0; background: none; cursor: pointer;
-  color: var(--dim); font-size: 12px; text-decoration: underline; text-underline-offset: 3px;
-}
-.tut-skip:hover { color: var(--ink); }
 #tut-text { margin: 8px 0 12px; font-size: 14.5px; line-height: 1.6; }
 .tut-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .tut-actions:empty { display: none; }
@@ -738,3 +733,30 @@ body.paused .tut { display: none; }
   100% { opacity: 0; scale: 0.85; }
 }
 
+
+/* ===================== loading screen ===================== */
+.loader {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: radial-gradient(ellipse at 50% 40%, #241b4a 0%, #140f2e 55%, #0a0718 100%);
+  color: var(--dim);
+  transition: opacity 0.6s ease, visibility 0s 0.6s;
+}
+.loader.done { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-crest { width: 64px; height: 64px; animation: crestSpin 3.2s linear infinite; filter: drop-shadow(0 0 18px rgba(216, 53, 43, 0.55)); }
+.loader-mark { position: relative; width: 104px; height: 104px; display: grid; place-items: center; }
+.loader-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid rgba(246, 201, 91, 0.14); border-top-color: var(--gold);
+  animation: crestSpin 1s linear infinite;
+}
+.loader-text { margin: 4px 0 0; font-size: 14px; letter-spacing: 0.06em; min-height: 1.4em; }
+.loader-bar { width: 180px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.loader-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #b9781f, var(--gold)); transition: width 0.4s ease; }
+.loader-retry { width: auto; padding: 8px 18px; }
+@keyframes crestSpin { to { transform: rotate(360deg); } }
+/* the title card plays its entrance only once the loading screen lifts */
+body.booting .title-card > * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .loader-crest, .loader-ring { animation-duration: 6s; }
+}

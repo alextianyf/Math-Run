@@ -54,7 +54,10 @@ function tutStep(step) {
   if (!S.tut) return;
   S.tut.step = step;
   sfx.coach();
-  const next = (to) => [{ label: ui.t('tutNext'), onClick: () => tutStep(to) }];
+  // "Skip tutorial" sits just left of each step's main button (none on the last step,
+  // whose "Keep running" already ends it)
+  const skip = { label: ui.t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() };
+  const next = (to) => [skip, { label: ui.t('tutNext'), onClick: () => tutStep(to) }];
   if (step === 'yokai') {
     coach.focus(yokaiSpot);
     coach.say({ title: ui.t('tutYokaiT'), text: ui.t('tutYokai'), buttons: next('equation') });
@@ -63,7 +66,7 @@ function tutStep(step) {
     coach.say({ title: ui.t('tutEqT'), text: ui.t('tutEq'), buttons: next('write') });
   } else if (step === 'write') {
     coach.focus(elSpot('talisman', 12));
-    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite') });
+    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite'), buttons: [skip] });
     coach.demo(true, () => $('pad').getBoundingClientRect());
     pad.setEnabled(true);
   } else if (step === 'nice') {

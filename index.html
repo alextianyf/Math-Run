@@ -70,9 +70,25 @@
   </script>
 </head>
 
-<body>
+<body class="booting">
+  <!-- loading screen: shown from the first paint until the AI, the hero and every
+       shader are ready, so the first thing players see never stutters -->
+  <div id="loader" class="loader" role="status" aria-live="polite">
+    <div class="loader-mark" aria-hidden="true">
+      <div class="loader-ring"></div>
+      <svg class="loader-crest" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="24.5" fill="#d8352b"/>
+        <circle cx="32" cy="32" r="24.5" fill="none" stroke="#f6c95b" stroke-width="1.6" opacity="0.85"/>
+        <path d="M32 15.5L41.7 45.35L16.31 26.9H47.69L22.3 45.35Z" fill="none" stroke="#fff3e2" stroke-width="4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p id="loader-text" class="loader-text">Loading · 加载中</p>
+    <div class="loader-bar" aria-hidden="true"><i id="loader-fill"></i></div>
+    <button id="loader-retry" class="btn ghost loader-retry" hidden></button>
+  </div>
   <!-- for visitors (and crawlers) without JavaScript -->
   <noscript>
+    <style>.loader{display:none}</style>
     <div class="noscript">
       <h2>Math Run · Night Parade 百鬼夜行</h2>
       <p>A free 3D math game: handwrite the answer on a talisman to banish yokai, while a neural network reads your handwriting right in the browser. Please turn on JavaScript to play.</p>
@@ -216,7 +232,6 @@
             <path d="M32 9L45.52 50.61L10.13 24.89H53.87L18.48 50.61Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round" />
           </svg>
           <b id="tut-title"></b>
-          <button id="tut-skip" class="tut-skip" data-i18n="tutSkip"></button>
         </div>
         <p id="tut-text"></p>
         <div id="tut-actions" class="tut-actions"></div>
