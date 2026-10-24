@@ -31,6 +31,26 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 
 ---
 
+## Table of Contents
+
+- [Banish yokai with your handwriting](#banish-yokai-with-your-handwriting)
+- [How to Play](#how-to-play)
+- [Highlights](#highlights)
+- [FAQ](#faq)
+- [Project Motivation](#project-motivation)
+- [File Structure](#file-structure)
+- [Quick Start (Local Run)](#quick-start-local-run)
+- [Training Environment Setup (Python)](#training-environment-setup-python)
+- [Tech Stack](#tech-stack)
+- [Model Pipeline Workflow](#model-pipeline-workflow)
+- [Model Performance](#model-performance)
+- [Broader Impact \& Applications](#broader-impact--applications)
+- [Future Improvements](#future-improvements)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+
+---
+
 ## How to Play
 
 - Every yokai carries an equation. Its answer is always a single digit, 0–9.
@@ -112,26 +132,6 @@ By training a simple neural network on the MNIST dataset and deploying it with T
 This project showcases both the end-to-end deep learning workflow (data → training → deployment) and my ability to build engaging, interactive web application.
 
 With **Night Parade**, the second version, I wanted to go further: wrap the model in a complete game, with a 3D world, a story and a difficulty system grounded in research on how people learn — while still running entirely in the browser.
-
----
-
-## Table of Contents
-
-- [Banish yokai with your handwriting](#banish-yokai-with-your-handwriting)
-- [How to Play](#how-to-play)
-- [Highlights](#highlights)
-- [FAQ](#faq)
-- [Project Motivation](#project-motivation)
-- [File Structure](#file-structure)
-- [Quick Start (Local Run)](#quick-start-local-run)
-- [Training Environment Setup (Python)](#training-environment-setup-python)
-- [Tech Stack](#tech-stack)
-- [Model Pipeline Workflow](#model-pipeline-workflow)
-- [Model Performance](#model-performance)
-- [Broader Impact \& Applications](#broader-impact--applications)
-- [Future Improvements](#future-improvements)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
 
 ---
 
