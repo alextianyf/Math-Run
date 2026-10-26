@@ -22,6 +22,7 @@ import { coach, updateTutorial, tutorialWriting, tutorialAnswer } from './game/t
 import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/capture.js';
 import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, shareRun, shareBest } from './game/flow.js';
 import { initCollection, refreshCollectionChip } from './game/collection.js';
+import { initShareCard } from './game/shareCard.js';
 import { $, smooth01 } from './game/helpers.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -40,6 +41,7 @@ ui.setHearts(MAX_HEARTS, MAX_HEARTS);
 ui.setBest(S.best);
 ui.setBestRank(S.bestRank);
 initCollection();
+initShareCard();      // a shared result link opens its card first
 showRank();
 ui.resetAI();
 // Creating the audio engine can block for half a second on some PCs, so it's done

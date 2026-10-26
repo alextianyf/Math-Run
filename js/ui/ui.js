@@ -65,6 +65,7 @@ export function setBest(n) {
 /* ===================== ranks ===================== */
 // one seal character per rank: 阴阳生 · 阴阳师 · 阴阳博士 · 阴阳头 · 晴明
 const SEALS = ['生', '师', '博', '头', '明'];
+export const rankSeal = (i) => SEALS[i] ?? SEALS[0];
 
 // HUD: the rank's seal and title, a thin bar toward the next trial (no numbers;
 // the rating waits for the game-over card) and a hint.

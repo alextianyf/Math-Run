@@ -247,6 +247,22 @@
       </div>
     </div>
 
+    <!-- A result card: the player's own (name it, copy its link), or one opened from a shared link -->
+    <section id="ov-card" class="overlay" hidden>
+      <div class="card share-panel">
+        <h2 id="share-title"></h2>
+        <div id="share-card" class="share-card"></div>
+        <div id="share-own" class="share-actions">
+          <input id="share-name" class="share-name" type="text" autocomplete="nickname" />
+          <button id="btn-card-copy" class="btn primary" data-i18n="cardCopy"></button>
+          <button id="btn-card-close" class="btn ghost" data-i18n="close"></button>
+        </div>
+        <div id="share-visit" class="share-actions" hidden>
+          <button id="btn-card-play" class="btn primary" data-i18n="cardPlay"></button>
+        </div>
+      </div>
+    </section>
+
     <!-- Collection: achievements, the bestiary, and moving progress to another device -->
     <section id="ov-collection" class="overlay" hidden>
       <div class="card collection-card">

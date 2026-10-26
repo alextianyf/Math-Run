@@ -12,6 +12,7 @@ import { endCapture } from './capture.js';
 import { pad } from './handwriting.js';
 import { coach, startTutorial } from './tutorial.js';
 import { emit } from './events.js';
+import { openShare } from './shareCard.js';
 import { $ } from './helpers.js';
 
 // a clean slate: no yokai, full hearts, zero score, a fresh director
@@ -56,35 +57,14 @@ export function startGame(retry = false) {
   if (!retry) startTutorial();
 }
 
-// a run as text to share (the phone's share sheet, or the clipboard); `button` shows "copied"
-async function share(r, button, { best = false, record = false } = {}) {
-  const lines = [
-    ui.t(record ? 'shareHeadBest' : 'shareHead'),
-    ui.t('shareScore', { s: r.score.toLocaleString('en') }) + (best ? ` · ${ui.t('shareBest')}` : ''),
-  ];
-  if (r.banished != null) lines.push(ui.t('shareStats', { b: r.banished, c: r.combo, d: r.distance }));
-  if (r.rank != null) lines.push(ui.t('shareRank', { r: ui.t(`rank${r.rank}`) }));
-  lines.push(ui.t('shareDare'), 'https://alextianyf.github.io/Math-Run/');
-  const text = lines.join('\n');
-  try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ text });
-    else {
-      await navigator.clipboard.writeText(text);
-      const label = button.textContent;
-      button.textContent = ui.t('shared');
-      setTimeout(() => { button.textContent = label; }, 2000);
-    }
-  } catch { /* the player closed the share sheet */ }
-}
-
-// the game-over card's Share
+// sharing: the run's own card and link (shareCard.js)
 let lastRun = null;
-export const shareRun = () => lastRun && share(lastRun, $('btn-share'), { best: lastRun.best });
+export const shareRun = () => lastRun && openShare(lastRun);
 // the title screen's Share: the record run (older records only know their score)
 export function shareBest() {
   if (!S.best) return;
   const r = ui.store.get('bestRun', null);
-  share(r && r.score === S.best ? r : { score: S.best, rank: S.bestRank }, $('btn-share-best'), { record: true });
+  openShare(r && r.score === S.best ? r : { score: S.best, rank: S.bestRank });
 }
 
 // the intro camera move has landed: the run is on
