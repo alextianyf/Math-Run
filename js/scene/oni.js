@@ -7,6 +7,8 @@ import { toon, glow, bake, joint, lathe, taperedTube, loft } from './toon.js';
 import { tigerTex, glowTex } from './textures.js';
 
 const smoothTo = (cur, target, k) => cur + (target - cur) * k;
+// hip height: long legs (~0.78 thigh + 0.78 shin and foot) under a shorter V-shaped torso
+const PELVIS_Y = 1.62;
 
 // Building an oni takes ~60 ms (a visible stutter), so a finished one is kept and
 // handed out again: the rank-trial boss and the capture scene both take it from here.
@@ -50,7 +52,7 @@ function createOni() {
 
   const root = new THREE.Group();
   const body = joint(root);
-  const pelvis = joint(body, 0, 1.35, 0);
+  const pelvis = joint(body, 0, PELVIS_Y, 0);
   const rows = (list) => list.map(([y, rx, rz, cz, e]) => ({ y, rx, rz, cz, e: 2, ef: e }));
 
   // ---------- tiger-skin loincloth ----------
@@ -59,7 +61,7 @@ function createOni() {
     const pts = [];
     for (let i = 0; i <= 40; i++) {
       const a = (i / 40) * Math.PI * 2, tw = a * 9 + phase;
-      const r = 0.47 + 0.028 * Math.cos(tw);
+      const r = 0.455 + 0.028 * Math.cos(tw);
       pts.push([Math.sin(a) * r, 0.12 + 0.028 * Math.sin(tw), Math.cos(a) * r * 0.87]);
     }
     return taperedTube(pts, 0.042, { tip: 1, segments: 120, radial: 6 });
@@ -68,10 +70,10 @@ function createOni() {
   const tufts = [];
   for (let i = 0; i < 18; i++) {
     const a = (i / 18) * Math.PI * 2 + 0.1, len = 0.13 + ((i * 5) % 3) * 0.04;
-    tufts.push({ geo: new THREE.ConeGeometry(0.075, len, 5), mat: M.tiger, p: [Math.sin(a) * 0.57, -0.42 - len / 2 + 0.03, Math.cos(a) * 0.57 * 0.86], r: [Math.PI, 0, 0] });
+    tufts.push({ geo: new THREE.ConeGeometry(0.07, len, 5), mat: M.tiger, p: [Math.sin(a) * 0.5, -0.32 - len / 2 + 0.03, Math.cos(a) * 0.5 * 0.86], r: [Math.PI, 0, 0] });
   }
   pelvis.add(bake([
-    { geo: lathe([[0.42, 0.14], [0.5, 0.0], [0.56, -0.22], [0.6, -0.42]], 22), mat: M.tiger, s: [1, 1, 0.86] },
+    { geo: lathe([[0.43, 0.14], [0.47, 0.0], [0.5, -0.18], [0.52, -0.32]], 22), mat: M.tiger, s: [1, 1, 0.86] },   // a pelt wrapped tight round the hips
     ...tufts,
     { geo: rope(0), mat: M.rope },
     { geo: rope(Math.PI), mat: M.rope },
@@ -83,26 +85,30 @@ function createOni() {
   ], { outline: 0.022 }));
 
   // ---------- torso: lofted V-shape — thick neck, wide traps and shoulders, barrel chest, belly ----------
-  const chest = joint(pelvis, 0, 0.12, 0);
+  // A hero's V: broad traps and shoulders over a deep chest, tapering hard through the
+  // ribs to a narrow waist that disappears into the rope belt.
+  const chest = joint(pelvis, 0, 0.1, 0);
   chest.add(bake([
     { geo: loft(rows([
-      [1.36, 0.27, 0.25, -0.03], [1.22, 0.5, 0.36, -0.02, 2.4], [1.04, 0.76, 0.44, 0.0, 2.6], [0.86, 0.74, 0.5, 0.04, 2.6],
-      [0.64, 0.64, 0.47, 0.06, 2.5], [0.44, 0.57, 0.49, 0.08, 2.4], [0.24, 0.57, 0.51, 0.08, 2.3], [0.04, 0.52, 0.45, 0.04, 2.2],
-      [-0.1, 0.44, 0.4, 0.0],
+      [1.02, 0.28, 0.25, -0.03], [0.93, 0.58, 0.36, -0.02, 2.4], [0.8, 0.8, 0.44, 0.0, 2.6], [0.64, 0.76, 0.5, 0.04, 2.6],
+      [0.46, 0.64, 0.48, 0.06, 2.5], [0.28, 0.52, 0.42, 0.06, 2.3], [0.1, 0.44, 0.36, 0.04, 2.2], [-0.04, 0.42, 0.34, 0.02, 2.2],
+      [-0.14, 0.44, 0.36, 0.0],
     ]), { segs: 28, front: 1 }), mat: M.skin },
-    { geo: new THREE.SphereGeometry(0.3, 18, 14), mat: M.skin, p: [-0.3, 0.84, 0.4], s: [1.05, 0.62, 0.45] },   // pecs
-    { geo: new THREE.SphereGeometry(0.3, 18, 14), mat: M.skin, p: [0.3, 0.84, 0.4], s: [1.05, 0.62, 0.45] },
-    { geo: new THREE.SphereGeometry(0.16, 12, 10), mat: M.skin, p: [-0.46, 1.08, 0.08], s: [1.2, 0.8, 1] },     // traps
-    { geo: new THREE.SphereGeometry(0.16, 12, 10), mat: M.skin, p: [0.46, 1.08, 0.08], s: [1.2, 0.8, 1] },
-    { geo: new THREE.CylinderGeometry(0.22, 0.27, 0.34, 16), mat: M.skin, p: [0, 1.3, -0.02] },                // neck
-    // a slab of abdominal muscle and the obliques
-    ...[0.52, 0.36, 0.2].flatMap((y, i) => [-1, 1].map((sx) => ({ geo: new THREE.SphereGeometry(0.12, 12, 10), mat: M.skin, p: [sx * 0.125, y, 0.5 - i * 0.015], s: [1, 0.72 - i * 0.04, 0.42] }))),
-    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [-0.42, 0.42, 0.28], s: [0.5, 1.2, 0.8] },
-    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0.42, 0.42, 0.28], s: [0.5, 1.2, 0.8] },
+    { geo: new THREE.SphereGeometry(0.29, 18, 14), mat: M.skin, p: [-0.27, 0.62, 0.42], s: [1.05, 0.6, 0.45], r: [0, 0, -0.12] },   // pecs
+    { geo: new THREE.SphereGeometry(0.29, 18, 14), mat: M.skin, p: [0.27, 0.62, 0.42], s: [1.05, 0.6, 0.45], r: [0, 0, 0.12] },
+    { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [-0.4, 0.92, 0.02], s: [1.25, 0.75, 1] },     // traps
+    { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [0.4, 0.92, 0.02], s: [1.25, 0.75, 1] },
+    { geo: new THREE.CylinderGeometry(0.22, 0.28, 0.32, 16), mat: M.skin, p: [0, 1.02, -0.02] },                 // neck
+    // six-pack, obliques and lats
+    ...[0.38, 0.23, 0.08].flatMap((y, i) => [-1, 1].map((sx) => ({ geo: new THREE.SphereGeometry(0.1, 12, 10), mat: M.skin, p: [sx * 0.105, y, 0.44 - i * 0.04], s: [1, 0.72, 0.4] }))),
+    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [-0.38, 0.18, 0.16], s: [0.45, 1.1, 0.8], r: [0, 0, 0.2] },
+    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0.38, 0.18, 0.16], s: [0.45, 1.1, 0.8], r: [0, 0, -0.2] },
+    { geo: new THREE.SphereGeometry(0.3, 12, 10), mat: M.skin, p: [-0.42, 0.5, -0.14], s: [0.6, 1.1, 0.8], r: [0, 0, 0.3] },
+    { geo: new THREE.SphereGeometry(0.3, 12, 10), mat: M.skin, p: [0.42, 0.5, -0.14], s: [0.6, 1.1, 0.8], r: [0, 0, -0.3] },
   ], { outline: 0.026 }));
 
   // ---------- head: heavy brow, deep-set eyes, broad nose, jutting jaw ----------
-  const head = joint(chest, 0, 1.44, 0.04);
+  const head = joint(chest, 0, 1.19, 0.04);
   // the mane: a thick mass of black curls over the back and top of the skull, spilling
   // down the neck to the shoulders, with a few heavier locks tossed up between the horns
   // the mane: a cap of hair over the skull, bristling with tapered locks that flare out
@@ -219,26 +225,27 @@ function createOni() {
     }
   };
   const arm = (sx) => {
-    const shoulder = joint(chest, sx * 0.7, 0.98, 0);
+    const shoulder = joint(chest, sx * 0.74, 0.76, 0);
     shoulder.add(bake([
-      { geo: new THREE.SphereGeometry(0.29, 16, 12), mat: M.skin, p: [0, 0.02, 0], s: [1.04, 0.95, 0.98] },
-      { geo: new THREE.CapsuleGeometry(0.2, 0.4, 6, 12), mat: M.skin, p: [0, -0.32, 0] },
-      { geo: new THREE.SphereGeometry(0.17, 14, 10), mat: M.skin, p: [0, -0.3, 0.08], s: [1, 1.45, 0.95] },      // biceps
-      { geo: new THREE.SphereGeometry(0.15, 12, 10), mat: M.skin, p: [0, -0.32, -0.08], s: [1, 1.4, 0.9] },     // triceps
+      // a round deltoid cap, then an upper arm that narrows to the elbow under big biceps/triceps
+      { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [sx * 0.02, 0.0, 0], s: [1.05, 1.05, 1] },
+      { geo: lathe([[0.2, -0.02], [0.19, -0.2], [0.15, -0.44], [0.12, -0.6]], 14), mat: M.skin },
+      { geo: new THREE.SphereGeometry(0.15, 14, 10), mat: M.skin, p: [0, -0.3, 0.07], s: [0.95, 1.5, 0.9] },     // biceps
+      { geo: new THREE.SphereGeometry(0.14, 12, 10), mat: M.skin, p: [0, -0.26, -0.07], s: [1, 1.5, 0.85] },    // triceps
     ], { outline: 0.024 }));
-    const elbow = joint(shoulder, 0, -0.64, 0);
+    const elbow = joint(shoulder, 0, -0.6, 0);
     elbow.add(bake([
-      { geo: new THREE.SphereGeometry(0.2, 14, 10), mat: M.skin, p: [0, -0.14, 0], s: [1.05, 1.2, 1.05] },
-      { geo: new THREE.CapsuleGeometry(0.16, 0.32, 6, 12), mat: M.skin, p: [0, -0.3, 0] },
-      { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [0, -0.2, 0.02], s: [1.05, 1.3, 1] },       // forearm swell
-      // an iron bracer bound in gold
-      { geo: new THREE.CylinderGeometry(0.19, 0.175, 0.2, 14), mat: M.iron, p: [0, -0.43, 0] },
-      { geo: new THREE.TorusGeometry(0.188, 0.025, 6, 18), mat: M.gold, p: [0, -0.335, 0], r: [Math.PI / 2, 0, 0] },
-      { geo: new THREE.TorusGeometry(0.175, 0.025, 6, 18), mat: M.gold, p: [0, -0.525, 0], r: [Math.PI / 2, 0, 0] },
+      // elbow, then a forearm thick below the elbow and tapering to the wrist
+      { geo: new THREE.SphereGeometry(0.13, 12, 10), mat: M.skin },
+      { geo: lathe([[0.125, 0.0], [0.16, -0.1], [0.15, -0.24], [0.115, -0.44], [0.11, -0.52]], 14), mat: M.skin },
+      // an iron bracer bound in gold, at the wrist
+      { geo: new THREE.CylinderGeometry(0.15, 0.14, 0.18, 14), mat: M.iron, p: [0, -0.42, 0] },
+      { geo: new THREE.TorusGeometry(0.15, 0.022, 6, 18), mat: M.gold, p: [0, -0.335, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.TorusGeometry(0.14, 0.022, 6, 18), mat: M.gold, p: [0, -0.505, 0], r: [Math.PI / 2, 0, 0] },
     ], { outline: 0.022 }));
     elbow.add(bake([0, 1, 2, 3, 4, 5].map((i) => {
       const a = (i / 6) * Math.PI * 2;
-      return { geo: new THREE.ConeGeometry(0.03, 0.07, 6), mat: M.stud, p: [Math.sin(a) * 0.2, -0.43, Math.cos(a) * 0.2], r: [Math.cos(a) * 1.57, 0, -Math.sin(a) * 1.57] };
+      return { geo: new THREE.ConeGeometry(0.026, 0.06, 6), mat: M.stud, p: [Math.sin(a) * 0.155, -0.42, Math.cos(a) * 0.155], r: [Math.cos(a) * 1.57, 0, -Math.sin(a) * 1.57] };
     }), { outline: 0 }));
     const hand = joint(elbow, 0, -0.55, 0);
     hand.add(bake([
@@ -276,28 +283,50 @@ function createOni() {
 
   // ---------- legs ----------
   const leg = (sx) => {
-    const hip = joint(pelvis, sx * 0.28, -0.06, 0);
-    hip.add(bake([{ geo: new THREE.CapsuleGeometry(0.28, 0.28, 6, 14), mat: M.skin, p: [0, -0.28, 0], s: [1, 1, 1.05] }], { outline: 0.024 }));
-    const knee = joint(hip, 0, -0.6, 0);
-    knee.add(bake([
-      { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0, -0.02, 0.08], s: [1, 0.85, 0.9] },     // kneecap
-      { geo: new THREE.CapsuleGeometry(0.23, 0.3, 6, 14), mat: M.skin, p: [0, -0.25, 0] },
-      { geo: new THREE.SphereGeometry(0.23, 12, 10), mat: M.skin, p: [0, -0.2, -0.08], s: [1.02, 1.25, 1] },   // calf
-      // iron anklets bound in gold
-      { geo: new THREE.CylinderGeometry(0.215, 0.225, 0.14, 14), mat: M.iron, p: [0, -0.44, 0] },
-      { geo: new THREE.TorusGeometry(0.218, 0.024, 6, 18), mat: M.gold, p: [0, -0.37, 0], r: [Math.PI / 2, 0, 0] },
-      { geo: new THREE.TorusGeometry(0.228, 0.024, 6, 18), mat: M.gold, p: [0, -0.51, 0], r: [Math.PI / 2, 0, 0] },
-      { geo: new THREE.SphereGeometry(0.24, 14, 10), mat: M.skin, p: [0, -0.6, 0.12], s: [1, 0.42, 1.45] },
-      ...[-0.12, -0.04, 0.04, 0.12].map((x) => ({ geo: new THREE.SphereGeometry(0.06, 8, 6), mat: M.skin, p: [x, -0.62, 0.42] })),
-      ...[-0.12, -0.04, 0.04, 0.12].map((x) => ({ geo: new THREE.ConeGeometry(0.03, 0.07, 6), mat: M.horn, p: [x, -0.63, 0.49], r: [Math.PI / 2, 0, 0] })),
+    const hip = joint(pelvis, sx * 0.29, -0.08, 0);
+    hip.add(bake([
+      // a thigh that is heavy at the hip and narrows to the knee, the quads bulging in front
+      { geo: lathe([[0.27, 0.04], [0.285, -0.14], [0.24, -0.45], [0.175, -0.72], [0.15, -0.8]], 16), mat: M.skin },
+      { geo: new THREE.SphereGeometry(0.27, 14, 10), mat: M.skin, p: [0, 0.0, 0], s: [1, 0.7, 1] },
+      { geo: new THREE.SphereGeometry(0.19, 12, 10), mat: M.skin, p: [sx * 0.03, -0.36, 0.08], s: [1, 1.7, 0.85] },   // quads
     ], { outline: 0.024 }));
+    const knee = joint(hip, 0, -0.78, 0);
+    knee.add(bake([
+      { geo: new THREE.SphereGeometry(0.165, 12, 10), mat: M.skin },
+      { geo: new THREE.SphereGeometry(0.11, 10, 8), mat: M.skin, p: [0, 0.0, 0.1], s: [1, 0.9, 0.7] },        // kneecap
+      // shin narrowing to the ankle, a big diamond calf behind it
+      { geo: lathe([[0.155, 0.0], [0.165, -0.12], [0.145, -0.36], [0.11, -0.56], [0.11, -0.64]], 14), mat: M.skin },
+      { geo: new THREE.SphereGeometry(0.18, 12, 10), mat: M.skin, p: [0, -0.2, -0.06], s: [1.05, 1.45, 1] },   // calf
+      // iron anklets bound in gold
+      { geo: new THREE.CylinderGeometry(0.14, 0.15, 0.12, 14), mat: M.iron, p: [0, -0.53, 0] },
+      { geo: new THREE.TorusGeometry(0.142, 0.02, 6, 18), mat: M.gold, p: [0, -0.47, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.TorusGeometry(0.152, 0.02, 6, 18), mat: M.gold, p: [0, -0.59, 0], r: [Math.PI / 2, 0, 0] },
+      // a bare foot: heel, a long arched sole, a ball of the foot and five graded toes with claws
+      { geo: new THREE.SphereGeometry(0.11, 12, 10), mat: M.skin, p: [0, -0.68, -0.04], s: [1, 0.8, 1.1] },
+      { geo: new THREE.SphereGeometry(0.14, 14, 10), mat: M.skin, p: [0, -0.7, 0.13], s: [0.95, 0.45, 1.5] },
+      { geo: new THREE.SphereGeometry(0.12, 12, 10), mat: M.skin, p: [-sx * 0.015, -0.71, 0.27], s: [1.15, 0.5, 0.8] },
+      ...[[0.085, 0.05, 0.36], [0.04, 0.04, 0.37], [0.0, 0.036, 0.36], [-0.04, 0.032, 0.34], [-0.078, 0.028, 0.32]].flatMap(([x, r, z]) => {
+        const px = -sx * x;                                  // big toe on the inside
+        return [
+          { geo: new THREE.CapsuleGeometry(r, 0.05, 4, 8), mat: M.skin, p: [px, -0.722, z], r: [Math.PI / 2, 0, 0] },
+          { geo: new THREE.ConeGeometry(r * 0.75, 0.06, 6), mat: M.horn, p: [px, -0.72, z + r + 0.04], r: [Math.PI / 2 + 0.25, 0, 0], s: [1, 1, 0.6] },
+        ];
+      }),
+    ], { outline: 0.022 }));
     return { hip, knee };
   };
   const legL = leg(1), legR = leg(-1);
 
+  // The ground mist is two additive planes at shin and knee height, drawn after every
+  // opaque mesh, so it washed everything below the knees pale pink. Drawing the oni in
+  // the transparent pass after it (still fully opaque, still writing depth) keeps the
+  // skin one red from head to toe.
+  for (const m of Object.values(M)) m.transparent = true;
+  root.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
+
   /* ===================== animation ===================== */
   const pose = {
-    pelvisY: 1.35, lean: 0, sway: 0, twist: 0, headX: 0, headY: 0, jaw: 0.05,
+    pelvisY: PELVIS_Y, lean: 0, sway: 0, twist: 0, headX: 0, headY: 0, jaw: 0.05,
     shRx: 0, shRz: -0.25, elR: -0.2, shLx: -0.5, shLz: 0.25, elL: -1.9,
     thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, curlR: 0.3,
   };
@@ -306,14 +335,14 @@ function createOni() {
   function target(t) {
     const tg = { ...pose };
     Object.assign(tg, {
-      pelvisY: 1.35 + 0.02 * Math.sin(t * 2), lean: 0.05, sway: 0, twist: 0, headX: 0.05, headY: 0, jaw: 0.08,
+      pelvisY: PELVIS_Y + 0.02 * Math.sin(t * 2), lean: 0.05, sway: 0, twist: 0, headX: 0.05, headY: 0, jaw: 0.08,
       shRx: 0.05, shRz: -0.28, elR: -0.25, shLx: -0.5, shLz: 0.28, elL: -1.9,
       thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, curlR: 0.4,
     });
     if (mode === 'walk') {
       const s = Math.sin(walkPhase), c = Math.cos(walkPhase);
       Object.assign(tg, {
-        pelvisY: 1.33 - 0.07 * Math.abs(s), sway: 0.07 * s, twist: 0.1 * s, lean: 0.12,
+        pelvisY: PELVIS_Y - 0.02 - 0.07 * Math.abs(s), sway: 0.07 * s, twist: 0.1 * s, lean: 0.12,
         thighL: 0.42 * s, thighR: -0.42 * s,
         kneeL: -0.7 * Math.max(0, c), kneeR: -0.7 * Math.max(0, -c),
         shRx: -0.35 * s, headY: -0.1 * s, headX: 0.12,
@@ -323,14 +352,14 @@ function createOni() {
     } else if (mode === 'reach' || mode === 'grab') {
       Object.assign(tg, {
         lean: 0.5, headX: 0.35, jaw: 0.18, shRx: -1.0, shRz: -0.02, elR: -0.3,
-        thighL: -0.25, kneeL: 0.0, thighR: 0.35, kneeR: -0.55, pelvisY: 1.22,
+        thighL: -0.25, kneeL: 0.0, thighR: 0.35, kneeR: -0.55, pelvisY: PELVIS_Y - 0.13,
         curlR: mode === 'grab' ? 1.45 : -0.2,
       });
     } else if (mode === 'lift' || mode === 'laugh') {
       const k = mode === 'laugh' ? Math.abs(Math.sin(t * 13)) : 0;
       Object.assign(tg, {
         lean: -0.08 - 0.05 * k, headX: -0.15 - 0.15 * k, jaw: 0.22 + (mode === 'laugh' ? 0.35 * k : 0),
-        shRx: -1.5, shRz: 0.12, elR: -1.15, curlR: 1.45, pelvisY: 1.35 + 0.03 * k,
+        shRx: -1.5, shRz: 0.12, elR: -1.15, curlR: 1.45, pelvisY: PELVIS_Y + 0.03 * k,
         headY: mode === 'laugh' ? 0.08 * Math.sin(t * 3) : 0,
       });
     }
