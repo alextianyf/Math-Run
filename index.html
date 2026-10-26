@@ -193,6 +193,8 @@
           <svg class="btn-crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L47.3 53.1L7.2 24H56.8L16.7 53.1Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round" /></svg>
           <span id="start-label" data-i18n="loading"></span>
         </button>
+        <!-- whether the handwriting AI is ready: what the Start button waits for -->
+        <div id="ai-chip" class="status-ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></div>
         <!-- everything else, as three tiles (line icons, so they don't read as rank seals): achievements & bestiary, how to play, share the best run -->
         <nav class="title-tiles">
           <button id="btn-collection" class="tile" data-i18n-label="collection">
@@ -208,10 +210,9 @@
             <span class="tile-text"><span data-i18n="shareShort"></span><small id="title-best"></small></span>
           </button>
         </nav>
-        <!-- one quiet line: the best rank reached, and whether the AI is ready -->
+        <!-- one quiet line: the best rank reached -->
         <div class="title-status">
           <span class="status-rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
-          <span id="ai-chip" class="status-ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
       </div>
     </section>
