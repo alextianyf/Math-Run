@@ -76,6 +76,8 @@ export function saveBest() {
   if (S.tut || S.score <= S.best) return false;
   S.best = S.score;
   ui.store.set('best', S.best);
+  // the record run's details, for sharing it from the title screen
+  ui.store.set('bestRun', { score: S.score, banished: S.banished, combo: S.maxCombo, distance: Math.floor(S.distance), rank: director.rank });
   ui.setBest(S.best);
   return true;
 }

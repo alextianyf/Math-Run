@@ -20,7 +20,7 @@ import { onTalisman, decide } from './game/handwriting.js';
 import { answer, cast, fizzle, playerHit, updateCombat } from './game/combat.js';
 import { coach, updateTutorial, tutorialWriting, tutorialAnswer } from './game/tutorial.js';
 import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/capture.js';
-import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, shareRun } from './game/flow.js';
+import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, shareRun, shareBest } from './game/flow.js';
 import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { $, smooth01 } from './game/helpers.js';
 
@@ -157,6 +157,7 @@ const skip = () => { if (skipCapture()) showGameOver(); };
 
 $('btn-start').addEventListener('click', () => startGame(false));
 $('btn-share').addEventListener('click', shareRun);
+$('btn-share-best').addEventListener('click', shareBest);
 $('btn-retry').addEventListener('click', retryRun);
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);

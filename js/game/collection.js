@@ -3,9 +3,10 @@
 // everything saved in this browser to another device — no server needed.
 import * as ui from '../ui/ui.js';
 import { ACHIEVEMENTS, YOKAI_TYPES, collection, progressOf, onUnlock } from './achievements.js';
+import { showYokai, hideYokai } from './bestiaryView.js';
 import { $ } from './helpers.js';
 
-const SAVED = ['best', 'bestRank', 'collection'];      // what a transfer code carries
+const SAVED = ['best', 'bestRun', 'bestRank', 'collection'];      // what a transfer code carries
 const YOKAI_LOOK = {
   onibi: ['火', '#4aa8e0'], chochin: ['灯', '#e8892e'], hitotsume: ['目', '#d2a640'], kappa: ['河', '#4fa65a'],
   kitsunebi: ['狐', '#8a6aff'], kasa: ['伞', '#e0457f'], ittan: ['布', '#8fb4d8'], hyakume: ['百', '#e0804a'], nekomata: ['猫', '#d8a860'],
@@ -30,14 +31,29 @@ function renderAchievements() {
   }).join('');
 }
 
+// the bestiary: one row per yokai (tap one to see it turning above the list)
+let shown = null;
 function renderBestiary() {
   const { seen } = collection();
   $('bestiary-list').innerHTML = YOKAI_TYPES.map((type) => {
     const [seal, color] = YOKAI_LOOK[type];
     const met = seen[type];
-    return `<li class="${met ? 'earned' : 'locked'}"><span class="stamp" style="background:${met ? color : ''}"><b>${met ? seal : '？'}</b></span>
+    return `<li class="${met ? 'earned' : 'locked'}${type === shown ? ' selected' : ''}" data-type="${type}" tabindex="0" role="button">
+      <span class="stamp" style="background:${met ? color : ''}"><b>${met ? seal : '？'}</b></span>
       <div><b>${met ? ui.t(`y_${type}`) : '？？？'}</b><p>${met ? ui.t(`yd_${type}`) : ui.t('notMet')}</p>${met ? `<small>${day(met)}</small>` : ''}</div></li>`;
   }).join('');
+}
+function view(type) {
+  const met = !!collection().seen[type];
+  shown = type;
+  showYokai($('bestiary-view'), type, met);
+  $('bestiary-caption').textContent = met ? ui.t(`y_${type}`) : ui.t('notMetView');
+  for (const li of $('bestiary-list').children) li.classList.toggle('selected', li.dataset.type === type);
+}
+function openBestiary() {
+  renderBestiary();
+  const { seen } = collection();
+  view(shown ?? YOKAI_TYPES.find((t) => seen[t]) ?? YOKAI_TYPES[0]);
 }
 
 /* ---------- moving progress to another device ---------- */
@@ -68,6 +84,7 @@ function importCode(code) {
 export function openCollection() {
   renderAchievements();
   renderBestiary();
+  if (!$('bestiary-pane').hidden) openBestiary();
   $('transfer-out').value = exportCode();
   $('transfer-in').placeholder = ui.t('transferPaste');
   $('transfer-msg').textContent = '';
@@ -82,15 +99,19 @@ export function initCollection() {
     refreshCollectionChip();
   });
   $('btn-collection').addEventListener('click', openCollection);
-  $('btn-collection-close').addEventListener('click', () => ui.show('ov-collection', false));
+  $('btn-collection-close').addEventListener('click', () => { hideYokai(); ui.show('ov-collection', false); });
   for (const tab of document.querySelectorAll('#ov-collection .tab')) {
     tab.addEventListener('click', () => {
       for (const other of document.querySelectorAll('#ov-collection .tab')) {
         other.classList.toggle('active', other === tab);
         $(other.dataset.tab).hidden = other !== tab;
       }
+      if (tab.dataset.tab === 'bestiary-pane') openBestiary(); else hideYokai();
     });
   }
+  const pick = (e) => { const li = e.target.closest('li[data-type]'); if (li) view(li.dataset.type); };
+  $('bestiary-list').addEventListener('click', pick);
+  $('bestiary-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });
   $('btn-transfer-copy').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText($('transfer-out').value); $('transfer-msg').textContent = ui.t('shared'); } catch { $('transfer-out').select(); }
   });

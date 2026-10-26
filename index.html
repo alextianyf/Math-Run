@@ -217,6 +217,8 @@
         <div class="title-meta">
           <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
           <span id="title-best" class="meta-chip best"></span>
+          <!-- share the record run -->
+          <button id="btn-share-best" class="meta-chip share-best" data-i18n="shareMine" hidden></button>
           <span id="ai-chip" class="meta-chip ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
       </div>
@@ -254,10 +256,17 @@
         </div>
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="achievement-list" role="tab" data-i18n="tabAchievements"></button>
-          <button class="tab" data-tab="bestiary-list" role="tab" data-i18n="tabBestiary"></button>
+          <button class="tab" data-tab="bestiary-pane" role="tab" data-i18n="tabBestiary"></button>
         </div>
         <ul id="achievement-list" class="collection-list"></ul>
-        <ul id="bestiary-list" class="collection-list" hidden></ul>
+        <div id="bestiary-pane" class="bestiary-pane" hidden>
+          <!-- the chosen yokai in 3D, turning (a silhouette until it has been met) -->
+          <div class="bestiary-stage">
+            <canvas id="bestiary-view" aria-hidden="true"></canvas>
+            <div id="bestiary-caption" class="bestiary-caption"></div>
+          </div>
+          <ul id="bestiary-list" class="collection-list"></ul>
+        </div>
         <details class="transfer">
           <summary data-i18n="transfer"></summary>
           <p data-i18n="transferHint"></p>

@@ -56,23 +56,35 @@ export function startGame(retry = false) {
   if (!retry) startTutorial();
 }
 
-// the game-over card as text to share: score, record, how far and how well
-let lastRun = null;
-export async function shareRun() {
-  if (!lastRun) return;
-  const r = lastRun;
-  const text = [
-    ui.t('shareHead'),
-    ui.t('shareScore', { s: r.score.toLocaleString('en') }) + (r.best ? ` · ${ui.t('shareBest')}` : ''),
-    ui.t('shareStats', { b: r.banished, c: r.combo, d: r.distance }),
-    ui.t('shareRank', { r: ui.t(`rank${r.rank}`) }),
-    ui.t('shareDare'),
-    'https://alextianyf.github.io/Math-Run/',
-  ].join('\n');
+// a run as text to share (the phone's share sheet, or the clipboard); `button` shows "copied"
+async function share(r, button, { best = false, record = false } = {}) {
+  const lines = [
+    ui.t(record ? 'shareHeadBest' : 'shareHead'),
+    ui.t('shareScore', { s: r.score.toLocaleString('en') }) + (best ? ` · ${ui.t('shareBest')}` : ''),
+  ];
+  if (r.banished != null) lines.push(ui.t('shareStats', { b: r.banished, c: r.combo, d: r.distance }));
+  if (r.rank != null) lines.push(ui.t('shareRank', { r: ui.t(`rank${r.rank}`) }));
+  lines.push(ui.t('shareDare'), 'https://alextianyf.github.io/Math-Run/');
+  const text = lines.join('\n');
   try {
     if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ text });
-    else { await navigator.clipboard.writeText(text); $('btn-share').textContent = ui.t('shared'); }
+    else {
+      await navigator.clipboard.writeText(text);
+      const label = button.textContent;
+      button.textContent = ui.t('shared');
+      setTimeout(() => { button.textContent = label; }, 2000);
+    }
   } catch { /* the player closed the share sheet */ }
+}
+
+// the game-over card's Share
+let lastRun = null;
+export const shareRun = () => lastRun && share(lastRun, $('btn-share'), { best: lastRun.best });
+// the title screen's Share: the record run (older records only know their score)
+export function shareBest() {
+  if (!S.best) return;
+  const r = ui.store.get('bestRun', null);
+  share(r && r.score === S.best ? r : { score: S.best, rank: S.bestRank }, $('btn-share-best'), { record: true });
 }
 
 // the intro camera move has landed: the run is on
