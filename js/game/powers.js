@@ -31,9 +31,10 @@ export const NIGHTS = {
   parade: { spawn: 0.6, alive: 1 },            // the parade: more yokai at once
   fox: { charge: 2 },                          // the fox's blessing: skills charge twice as fast
 };
-// a change of night: wait for the path to clear (at most CLEAR_S), blend the scene
-// over SHIFT_S with the night's name on screen, then a breath of CALM_S before yokai return
-const CLEAR_S = 8, SHIFT_S = 3.5, CALM_S = 1.8;
+// a change of night: no new yokai until every one on the path is gone (banished, or
+// it reached the hero), then the scene blends over SHIFT_S with the night's name on
+// screen, and a breath of CALM_S before yokai return
+const SHIFT_S = 3.5, CALM_S = 1.8;
 
 // the rules of the current night apply while it is on (and while the path clears for the next)
 const rules = () => (S.night.state === 'on' || S.night.state === 'clearing' ? NIGHTS[S.night.id] : NIGHTS.night);
@@ -54,7 +55,7 @@ function stepNight(dt) {
       Object.assign(n, { state: 'clearing', t: 0 });        // no new yokai from here
     }
   } else if (n.state === 'clearing') {
-    if (!targets().length || n.t > CLEAR_S) {
+    if (!S.enemies.some((o) => !o.dying)) {
       const id = CYCLE[(CYCLE.indexOf(n.id) + 1) % CYCLE.length];
       Object.assign(n, { id, state: 'shifting', t: 0 });
       world.setTheme(id, SHIFT_S);
@@ -78,12 +79,14 @@ function stepNight(dt) {
 /* ===================== skills ===================== */
 // The seal charges mostly by banishing yokai, and slowly with time; full, it offers
 // one skill, picked at random.
-const CHARGE_PER_KILL = 0.17, CHARGE_PER_SECOND = 1 / 150;
+// (about ten banished yokai fill it; the answers stay the heart of the game)
+const CHARGE_PER_KILL = 0.1, CHARGE_PER_SECOND = 1 / 150;
+// each skill has its own colour: the seal turns that colour when it is ready
 export const SKILLS = {
-  freeze: { ch: '停', color: 0x8fd8ff },        // time seal: every yokai stands still
-  thunder: { ch: '雷', color: 0xbfe6ff },       // thunder god: lightning banishes all on screen
-  barrier: { ch: '結', color: 0x7be0a0 },       // barrier: the next yokai to reach you is stopped
-  lucky: { ch: '福', color: 0xffd36b },         // good fortune: double points for a while
+  freeze: { ch: '停', color: 0x6fd0ff },        // time seal (ice blue): every yokai stands still
+  thunder: { ch: '雷', color: 0xb08cff },       // thunder god (violet): lightning banishes all on screen
+  barrier: { ch: '結', color: 0x6fe39a },       // barrier (green): the next yokai to reach you is stopped
+  lucky: { ch: '福', color: 0xffc83a },         // good fortune (gold): double points for a while
 };
 const FREEZE_S = 5, LUCKY_S = 12;
 let barrierFx = null;
@@ -257,11 +260,14 @@ export function resetPowers() {
 let shownPct = -1;
 function renderSkill() {
   const pct = S.skill ? 100 : Math.floor(S.charge * 100);
-  if (pct === shownPct) return;                  // the time trickle changes it a hair per frame
-  shownPct = pct;
+  const key = S.skill ?? pct;
+  if (key === shownPct) return;                  // the time trickle changes it a hair per frame
+  shownPct = key;
   const el = $('skill');
   el.style.setProperty('--k', S.skill ? '1' : S.charge.toFixed(3));
-  $('skill-box').classList.toggle('ready', !!S.skill);
+  const box = $('skill-box');
+  box.classList.toggle('ready', !!S.skill);
+  if (S.skill) box.dataset.skill = S.skill; else delete box.dataset.skill;
   el.disabled = !S.skill;
   $('skill-ch').textContent = S.skill ? SKILLS[S.skill].ch : '符';
   if (S.skill) {
