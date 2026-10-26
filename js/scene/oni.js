@@ -1,17 +1,192 @@
-// oni.js — the red oni (赤鬼) of the old pictures: a wild black mane, two thick horns,
-// tusks, a tiger-skin loincloth and an iron club. Boss of the parade and the one who
-// catches you. Faces +z (toward the hero). Fully jointed so it can walk, roar,
-// stagger, reach down, close its fist around the hero, lift him up and laugh.
+// oni.js — the red oni (赤鬼) of the old pictures, boss of the parade and the one who
+// catches you. Faces +z (toward the hero).
+//
+// The body is a real skinned character: the hero's VRM (models/hero.vrm, VRoid's CC0
+// sample) loaded a second time, stripped to its bare body and re-sculpted into a brute
+// at load time — every vertex is pushed out along its bones (a broad deep chest, thick
+// arms and hands, heavy long legs, a short thick neck) and the skeleton is re-bound to
+// the new proportions. The head is our own procedural oni head (mane, ridged horns,
+// glowing eyes, tusks) sitting on the head bone; the tiger pelt with its rope belt,
+// iron bracers and anklets and the studded kanabō ride on their bones too.
+//
+// Poses drive the humanoid bones directly (VRoid's bones all have identity rest
+// rotations, so no VRM runtime is needed): walk, roar, stagger, reach, grab, lift, laugh.
 import * as THREE from 'three';
-import { toon, glow, bake, joint, lathe, taperedTube, loft } from './toon.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { toon, glow, bake, joint, lathe, taperedTube, loft, addOutline } from './toon.js';
 import { tigerTex, glowTex } from './textures.js';
 
-const smoothTo = (cur, target, k) => cur + (target - cur) * k;
-// hip height: long legs (~0.78 thigh + 0.78 shin and foot) under a shorter V-shaped torso
-const PELVIS_Y = 1.62;
+const lerp = (a, b, k) => a + (b - a) * k;
 
-// Building an oni takes ~60 ms (a visible stutter), so a finished one is kept and
-// handed out again: the rank-trial boss and the capture scene both take it from here.
+/* ===================== the body template ===================== */
+// Oni units: the frame the procedural parts are built in (old oni scale, horn tips at
+// y ≈ 4.15). The VRM is scaled so its head bone lands under the procedural head.
+const HEAD_SCALE = 0.75;
+const HEAD_Y = 3.22;                        // procedural head origin: horn tips at 3.22 + 1.24 · 0.75 ≈ 4.15
+const HEAD_ABOVE_BONE = 0.26;                // ... above the VRM head bone
+
+// Bulk per bone: how much each bone's own segment is stretched along the model's axes
+// (x across, y up, z front-back; the model is in T-pose, so every segment is axis
+// aligned). Children are re-placed at the stretched ends of their parents, so the
+// skeleton grows with the flesh. Right-side bones use the left-side entries.
+const BULK = {
+  J_Bip_C_Hips: [1.7, 1.0, 1.6],
+  J_Bip_C_Spine: [2.8, 1.1, 2.5],            // a thick waist and belly
+  J_Bip_C_Chest: [3.3, 1.05, 2.5],
+  J_Bip_C_UpperChest: [3.8, 1.0, 2.45],
+  J_Bip_C_Neck: [3.4, 0.5, 3.0],               // a bull neck: trapezius mass under the head
+  J_Bip_C_Head: [3.4, 0.6, 3.0],
+  J_Bip_L_Shoulder: [3.5, 3.3, 2.9],           // long collarbones (broad shoulders), heavy traps
+  J_Bip_L_UpperArm: [1.35, 3.5, 3.3],
+  J_Bip_L_LowerArm: [1.3, 3.2, 3.0],
+  J_Bip_L_Hand: [1.5, 2.6, 2.5],
+  J_Bip_L_UpperLeg: [2.3, 1.0, 2.5],
+  J_Bip_L_LowerLeg: [2.25, 1.0, 2.3],
+  J_Bip_L_Foot: [2.0, 1.5, 1.6],
+};
+
+let template = null;
+const templateReady = new GLTFLoader().loadAsync('./models/hero.vrm')
+  .then((gltf) => { template = buildTemplate(gltf.scene); return template; })
+  .catch((err) => { console.error('[math-run] oni body failed to load', err); return null; });
+
+const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const ONE = new THREE.Vector3(1, 1, 1);
+
+function buildTemplate(scene) {
+  // keep the bare body, drop face, eyes, hair and clothes
+  const meshes = [], drop = [];
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.isSkinnedMesh && /Body_00_SKIN/.test([].concat(o.material)[0].name)) meshes.push(o);
+    else drop.push(o);
+  });
+  for (const o of drop) { o.removeFromParent(); o.geometry.dispose(); }
+  scene.updateMatrixWorld(true);
+
+  // per-bone stretch, and the bones' old and new rest positions (model space)
+  const bones = [];
+  scene.traverse((o) => { if (o.isBone) bones.push(o); });       // parents before children
+  const S = new Map(), oldP = new Map(), newP = new Map();
+  for (const b of bones) {
+    const s = BULK[b.name.replace('_R_', '_L_')];
+    S.set(b, s ? new THREE.Vector3(...s) : b.parent?.isBone ? S.get(b.parent) : new THREE.Vector3(1, 1, 1));
+    oldP.set(b, b.getWorldPosition(new THREE.Vector3()));
+  }
+  for (const b of bones) {
+    const p = b.parent?.isBone ? b.parent : null;
+    newP.set(b, p ? oldP.get(b).clone().sub(oldP.get(p)).multiply(S.get(p)).add(newP.get(p)) : oldP.get(b).clone());
+  }
+
+  // Each skin relates bind space to the scene by C = boneWorld · boneInverse (the same
+  // for every bone at rest). Move every vertex with its bones in scene space:
+  //   v' = Σ w · (newStart + S ⊙ (v − oldStart))
+  const C = new Map(), Cinv = new Map();
+  for (const mesh of meshes) {
+    const sk = mesh.skeleton, c = sk.bones[0].matrixWorld.clone().multiply(sk.boneInverses[0]);
+    C.set(mesh, c); Cinv.set(mesh, c.clone().invert());
+  }
+  const done = new Set();          // the body's primitives share one vertex buffer: move it once
+  for (const mesh of meshes) {
+    const g = mesh.geometry, pos = g.attributes.position, nor = g.attributes.normal;
+    g.userData.oniTemplate = true;
+    if (done.has(pos.array)) continue;
+    done.add(pos.array);
+    const skI = g.attributes.skinIndex, skW = g.attributes.skinWeight, sk = mesh.skeleton.bones;
+    const toWorld = C.get(mesh).clone().multiply(mesh.bindMatrix);
+    const toLocal = mesh.bindMatrixInverse.clone().multiply(Cinv.get(mesh));
+    for (let i = 0; i < pos.count; i++) {
+      _v.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
+      _a.set(0, 0, 0); _b.set(0, 0, 0);
+      if (nor) _n.fromBufferAttribute(nor, i);
+      let wsum = 0;
+      for (let k = 0; k < 4; k++) {
+        const w = skW.getComponent(i, k);
+        if (!w) continue;
+        const bone = sk[skI.getComponent(i, k)], s = S.get(bone) ?? ONE;
+        _a.addScaledVector(_v.clone().sub(oldP.get(bone)).multiply(s).add(newP.get(bone)), w);
+        if (nor) _b.addScaledVector(_n.clone().divide(s), w);
+        wsum += w;
+      }
+      _a.divideScalar(wsum || 1);
+      _a.applyMatrix4(toLocal);
+      pos.setXYZ(i, _a.x, _a.y, _a.z);
+      if (nor) { _b.normalize(); nor.setXYZ(i, _b.x, _b.y, _b.z); }
+    }
+    pos.needsUpdate = true;
+    if (nor) nor.needsUpdate = true;
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    g.userData.oniTemplate = true;
+  }
+  // re-place the bones and re-bind each skin to them (keeping its C)
+  for (const b of bones) {
+    b.position.copy(b.parent.worldToLocal(newP.get(b).clone()));
+    b.updateMatrixWorld(true);
+  }
+  for (const mesh of meshes) {
+    const sk = mesh.skeleton;
+    sk.boneInverses = sk.bones.map((bone) => bone.matrixWorld.clone().invert().multiply(C.get(mesh)));
+  }
+  for (const m of meshes) m.material = new THREE.MeshBasicMaterial();   // replaced per oni
+
+  // measurements the props are fitted to (model units, relative to the bones)
+  const byName = (n) => bones.find((b) => b.name === n);
+  const P = (n) => newP.get(byName(n));
+  const verts = [], seen = new Set();
+  for (const mesh of meshes) {
+    const g = mesh.geometry, pos = g.attributes.position, toWorld = C.get(mesh).clone().multiply(mesh.bindMatrix);
+    const skI = g.attributes.skinIndex, skW = g.attributes.skinWeight, sk = mesh.skeleton.bones;
+    const ids = g.index ? g.index.array : Array.from({ length: pos.count }, (_, i) => i);
+    for (const i of ids) {
+      if (seen.has(i)) continue;
+      seen.add(i);
+      const v = _v.fromBufferAttribute(pos, i).applyMatrix4(toWorld).clone();
+      let best = 0;
+      for (let q = 1; q < 4; q++) if (skW.getComponent(i, q) > skW.getComponent(i, best)) best = q;
+      v.bone = sk[skI.getComponent(i, best)].name;           // the bone that moves it most
+      verts.push(v);
+    }
+  }
+  const minY = Math.min(...verts.map((v) => v.y));          // the soles
+  // radius of the limb around the segment a→b at fraction t
+  const radius = (a, b, t) => {
+    const A = P(a), B = P(b), d = B.clone().sub(A), len = d.length();
+    d.divideScalar(len);
+    let r = 0;
+    const part = a.replace('J_Bip_', '');
+    for (const v of verts) {
+      if (!v.bone.includes(part)) continue;
+      const rel = v.clone().sub(A), ax = rel.dot(d) / len;
+      if (Math.abs(ax - t) > 0.06) continue;
+      const rad = rel.addScaledVector(d, -rel.dot(d)).length();
+      r = Math.max(r, rad);
+    }
+    return r;
+  };
+  // half-width and depth of the trunk at height y
+  const slice = (y, dy = 0.02, legs = false) => {
+    let rx = 0, z0 = Infinity, z1 = -Infinity;
+    for (const v of verts) {
+      if (Math.abs(v.y - y) >= dy || !(v.bone.includes('_C_') || (legs && v.bone.includes('UpperLeg')))) continue;
+      rx = Math.max(rx, Math.abs(v.x)); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z);
+    }
+    return { rx, z0, z1 };
+  };
+  const hipsY = P('J_Bip_C_Hips').y;
+  const k = (HEAD_Y - HEAD_ABOVE_BONE) / (P('J_Bip_C_Head').y - minY);    // model → oni units
+  return {
+    scene, k, minY,
+    P: Object.fromEntries(bones.map((b) => [b.name, newP.get(b)])),
+    pelt: [0.075, 0.04, 0.0, -0.04, -0.08, -0.12, -0.16, -0.2].map((dy) => ({ dy, ...slice(hipsY + dy, 0.025, true) })),
+    forearm: radius('J_Bip_L_LowerArm', 'J_Bip_L_Hand', 0.82),
+    shin: radius('J_Bip_L_LowerLeg', 'J_Bip_L_Foot', 0.82),
+  };
+}
+
+// Building an oni takes a moment (the props are baked, the body cloned), so a finished
+// one is kept and handed out again: the rank-trial boss and the capture scene both
+// take it from here.
 let spare = null;
 export function takeOni() {
   const oni = spare ?? createOni();
@@ -28,12 +203,26 @@ export function releaseOni(oni) {
   else spare = oni;
 }
 
+/* ===================== poses ===================== */
+// Euler angles per bone in the model's own frame (it faces -z): limbs that hang down
+// swing forward with +x, the spine and head tilt back with +x; arms are authored hanging
+// (the T-pose arm is lowered by ARM_BASE first), as in hero.js.
+const KEYS = ['hips', 'spine', 'chest', 'upper', 'neck', 'head', 'uaL', 'faL', 'hdL', 'uaR', 'faR', 'hdR', 'thL', 'shL', 'ftL', 'thR', 'shR', 'ftR'];
+const BONES = {
+  hips: 'C_Hips', spine: 'C_Spine', chest: 'C_Chest', upper: 'C_UpperChest', neck: 'C_Neck', head: 'C_Head',
+  uaL: 'L_UpperArm', faL: 'L_LowerArm', hdL: 'L_Hand', uaR: 'R_UpperArm', faR: 'R_LowerArm', hdR: 'R_Hand',
+  thL: 'L_UpperLeg', shL: 'L_LowerLeg', ftL: 'L_Foot', thR: 'R_UpperLeg', shR: 'R_LowerLeg', ftR: 'R_Foot',
+};
+const Zax = new THREE.Vector3(0, 0, 1);
+const ARM_BASE = { L: new THREE.Quaternion().setFromAxisAngle(Zax, 1.3), R: new THREE.Quaternion().setFromAxisAngle(Zax, -1.3) };
+const ARM_BASE_INV = { L: ARM_BASE.L.clone().invert(), R: ARM_BASE.R.clone().invert() };
+const blankPose = () => { const p = { hipsY: 0, jaw: 0.06, curlR: 0.4 }; for (const k of KEYS) p[k] = [0, 0, 0]; return p; };
+
 function createOni() {
   const tiger = tigerTex();
   tiger.repeat.set(2, 1);
   const M = {
     skin: toon(0xd63c33, { emissive: 0x2a0404 }),
-    dark: toon(0x9e2620),
     hair: toon(0x221820),
     horn: toon(0xe9dcb4),
     tiger: toon(0xffffff, { map: tiger }),
@@ -42,73 +231,59 @@ function createOni() {
     stud: toon(0xa29eb4),
     mouth: toon(0x2a070b),
     teeth: toon(0xfff8ea),
-    brow: toon(0x1a1014),
     eye: new THREE.MeshBasicMaterial({ color: glow(0xffd04a, 1.6) }),
     hornDark: toon(0x6e5a44),
     rope: toon(0xd9b561),
     cord: toon(0xb8202a),
     pupil: new THREE.MeshBasicMaterial({ color: 0x1a0608 }),
   };
-
-  const root = new THREE.Group();
-  const body = joint(root);
-  const pelvis = joint(body, 0, PELVIS_Y, 0);
   const rows = (list) => list.map(([y, rx, rz, cz, e]) => ({ y, rx, rz, cz, e: 2, ef: e }));
 
-  // ---------- tiger-skin loincloth ----------
-  // a twisted straw rope for a belt, knotted at the front with its ends hanging
-  const rope = (phase) => {
-    const pts = [];
-    for (let i = 0; i <= 40; i++) {
-      const a = (i / 40) * Math.PI * 2, tw = a * 9 + phase;
-      const r = 0.455 + 0.028 * Math.cos(tw);
-      pts.push([Math.sin(a) * r, 0.12 + 0.028 * Math.sin(tw), Math.cos(a) * r * 0.87]);
-    }
-    return taperedTube(pts, 0.042, { tip: 1, segments: 120, radial: 6 });
-  };
-  // the pelt's hem is ragged: a ring of tufts hanging off the skirt
-  const tufts = [];
-  for (let i = 0; i < 18; i++) {
-    const a = (i / 18) * Math.PI * 2 + 0.1, len = 0.13 + ((i * 5) % 3) * 0.04;
-    tufts.push({ geo: new THREE.ConeGeometry(0.07, len, 5), mat: M.tiger, p: [Math.sin(a) * 0.5, -0.32 - len / 2 + 0.03, Math.cos(a) * 0.5 * 0.86], r: [Math.PI, 0, 0] });
-  }
-  pelvis.add(bake([
-    { geo: lathe([[0.43, 0.14], [0.47, 0.0], [0.5, -0.18], [0.52, -0.32]], 22), mat: M.tiger, s: [1, 1, 0.86] },   // a pelt wrapped tight round the hips
-    ...tufts,
-    { geo: rope(0), mat: M.rope },
-    { geo: rope(Math.PI), mat: M.rope },
-    { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: M.rope, p: [0.12, 0.1, 0.42], s: [1.2, 1, 0.8] },
-    { geo: taperedTube([[0.12, 0.08, 0.44], [0.16, -0.12, 0.5], [0.12, -0.36, 0.52]], 0.04, { tip: 0.6 }), mat: M.rope },
-    { geo: taperedTube([[0.12, 0.08, 0.44], [0.22, -0.08, 0.48], [0.26, -0.28, 0.5]], 0.04, { tip: 0.6 }), mat: M.rope },
-    // the tiger's tail, still on the pelt, hanging at the hip
-    { geo: taperedTube([[-0.5, 0.0, 0.1], [-0.62, -0.3, 0.12], [-0.6, -0.62, 0.2], [-0.52, -0.82, 0.3]], 0.055, { tip: 0.5 }), mat: M.tiger },
-  ], { outline: 0.022 }));
+  const root = new THREE.Group();
+  const rig = joint(root);                  // everything visible; hidden until the body is in
+  rig.visible = false;
 
-  // ---------- torso: lofted V-shape — thick neck, wide traps and shoulders, barrel chest, belly ----------
-  // A hero's V: broad traps and shoulders over a deep chest, tapering hard through the
-  // ribs to a narrow waist that disappears into the rope belt.
-  const chest = joint(pelvis, 0, 0.1, 0);
-  chest.add(bake([
-    { geo: loft(rows([
-      [1.02, 0.28, 0.25, -0.03], [0.93, 0.58, 0.36, -0.02, 2.4], [0.8, 0.8, 0.44, 0.0, 2.6], [0.64, 0.76, 0.5, 0.04, 2.6],
-      [0.46, 0.64, 0.48, 0.06, 2.5], [0.28, 0.52, 0.42, 0.06, 2.3], [0.1, 0.44, 0.36, 0.04, 2.2], [-0.04, 0.42, 0.34, 0.02, 2.2],
-      [-0.14, 0.44, 0.36, 0.0],
-    ]), { segs: 28, front: 1 }), mat: M.skin },
-    { geo: new THREE.SphereGeometry(0.29, 18, 14), mat: M.skin, p: [-0.27, 0.62, 0.42], s: [1.05, 0.6, 0.45], r: [0, 0, -0.12] },   // pecs
-    { geo: new THREE.SphereGeometry(0.29, 18, 14), mat: M.skin, p: [0.27, 0.62, 0.42], s: [1.05, 0.6, 0.45], r: [0, 0, 0.12] },
-    { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [-0.4, 0.92, 0.02], s: [1.25, 0.75, 1] },     // traps
-    { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [0.4, 0.92, 0.02], s: [1.25, 0.75, 1] },
-    { geo: new THREE.CylinderGeometry(0.22, 0.28, 0.32, 16), mat: M.skin, p: [0, 1.02, -0.02] },                 // neck
-    // six-pack, obliques and lats
-    ...[0.38, 0.23, 0.08].flatMap((y, i) => [-1, 1].map((sx) => ({ geo: new THREE.SphereGeometry(0.1, 12, 10), mat: M.skin, p: [sx * 0.105, y, 0.44 - i * 0.04], s: [1, 0.72, 0.4] }))),
-    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [-0.38, 0.18, 0.16], s: [0.45, 1.1, 0.8], r: [0, 0, 0.2] },
-    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0.38, 0.18, 0.16], s: [0.45, 1.1, 0.8], r: [0, 0, -0.2] },
-    { geo: new THREE.SphereGeometry(0.3, 12, 10), mat: M.skin, p: [-0.42, 0.5, -0.14], s: [0.6, 1.1, 0.8], r: [0, 0, 0.3] },
-    { geo: new THREE.SphereGeometry(0.3, 12, 10), mat: M.skin, p: [0.42, 0.5, -0.14], s: [0.6, 1.1, 0.8], r: [0, 0, -0.3] },
-  ], { outline: 0.026 }));
+  /* ---------- props, built in oni units ---------- */
+  // tiger-skin loincloth: a skirt lofted through cross-sections of the oni's own hips and
+  // thighs (measured on the sculpted body, in oni units, relative to the hips bone) so it
+  // wraps them snugly, with a twisted straw rope belt bedded into its top edge, a knot and
+  // hanging ends at the front, a ragged hem and the tiger's tail at the hip
+  const buildPelt = (rows) => {
+    const top = rows[0], hem = rows[rows.length - 1];
+    const ring = (r, y, out, n, f) => {
+      const pts = [];
+      for (let i = 0; i <= n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        pts.push(f(a, Math.sin(a) * (r.rx + out), y, r.cz + Math.cos(a) * (r.rz + out)));
+      }
+      return pts;
+    };
+    const rope = (phase) => taperedTube(ring(top, top.y - 0.03, 0.0, 48, (a, x, y, z) => {
+      const tw = a * 11 + phase, d = 0.022 * Math.cos(tw);
+      return [x + Math.sin(a) * d, y + 0.022 * Math.sin(tw), z + Math.cos(a) * d];
+    }), 0.036, { tip: 1, segments: 144, radial: 6 });
+    const tufts = [];
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2 + 0.1, len = 0.12 + ((i * 5) % 3) * 0.035;
+      tufts.push({ geo: new THREE.ConeGeometry(0.065, len, 5), mat: M.tiger,
+        p: [Math.sin(a) * (hem.rx - 0.02), hem.y - len / 2 + 0.03, hem.cz + Math.cos(a) * (hem.rz - 0.02)], r: [Math.PI, 0, 0] });
+    }
+    const fx = 0.12, fz = top.cz + top.rz + 0.01;          // the knot, on the front of the belt
+    return bake([
+      { geo: loft(rows.map((r) => ({ y: r.y, rx: r.rx, rz: r.rz, cz: r.cz, e: 2.3 })), { segs: 32, uRep: 2 }), mat: M.tiger },
+      ...tufts,
+      { geo: rope(0), mat: M.rope },
+      { geo: rope(Math.PI), mat: M.rope },
+      { geo: new THREE.SphereGeometry(0.075, 10, 8), mat: M.rope, p: [fx, top.y - 0.03, fz], s: [1.2, 1, 0.8] },
+      { geo: taperedTube([[fx, top.y - 0.05, fz + 0.02], [fx + 0.04, top.y - 0.25, fz + 0.06], [fx, top.y - 0.48, fz + 0.07]], 0.035, { tip: 0.6 }), mat: M.rope },
+      { geo: taperedTube([[fx, top.y - 0.05, fz + 0.02], [fx + 0.1, top.y - 0.2, fz + 0.05], [fx + 0.14, top.y - 0.4, fz + 0.06]], 0.035, { tip: 0.6 }), mat: M.rope },
+      { geo: taperedTube([[-top.rx, top.y - 0.12, top.cz], [-hem.rx - 0.08, hem.y - 0.15, hem.cz + 0.02], [-hem.rx - 0.06, hem.y - 0.48, hem.cz + 0.1], [-hem.rx, hem.y - 0.68, hem.cz + 0.2]], 0.05, { tip: 0.5 }), mat: M.tiger },
+    ], { outline: 0.02 });
+  };
 
   // ---------- head: heavy brow, deep-set eyes, broad nose, jutting jaw ----------
-  const head = joint(chest, 0, 1.19, 0.04);
+  const head = new THREE.Group();
+  head.scale.setScalar(HEAD_SCALE);
   // the mane: a thick mass of black curls over the back and top of the skull, spilling
   // down the neck to the shoulders, with a few heavier locks tossed up between the horns
   // the mane: a cap of hair over the skull, bristling with tapered locks that flare out
@@ -211,58 +386,10 @@ function createOni() {
     ...[-0.1, 0, 0.1].map((x) => ({ geo: new THREE.ConeGeometry(0.03, 0.08, 6), mat: M.teeth, p: [x, 0.03, 0.4] })),
   ], { outline: 0.02 }));
 
-  // ---------- arms ----------
-  const fingerSet = (hand, curlList) => {
-    for (const [x, len] of [[-0.1, 0.11], [-0.035, 0.13], [0.035, 0.13], [0.1, 0.11]]) {
-      const j1 = joint(hand, x, -0.25, 0.0);
-      j1.add(bake([{ geo: new THREE.CapsuleGeometry(0.048, len, 4, 8), mat: M.skin, p: [0, -len / 2 - 0.02, 0] }], { outline: 0.012 }));
-      const j2 = joint(j1, 0, -len - 0.05, 0);
-      j2.add(bake([
-        { geo: new THREE.CapsuleGeometry(0.042, len * 0.8, 4, 8), mat: M.skin, p: [0, -len * 0.4 - 0.02, 0] },
-        { geo: new THREE.ConeGeometry(0.034, 0.1, 6), mat: M.horn, p: [0, -len * 0.8 - 0.07, 0.015], r: [Math.PI - 0.35, 0, 0] },
-      ], { outline: 0.012 }));
-      curlList.push([j1, j2]);
-    }
-  };
-  const arm = (sx) => {
-    const shoulder = joint(chest, sx * 0.74, 0.76, 0);
-    shoulder.add(bake([
-      // a round deltoid cap, then an upper arm that narrows to the elbow under big biceps/triceps
-      { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [sx * 0.02, 0.0, 0], s: [1.05, 1.05, 1] },
-      { geo: lathe([[0.2, -0.02], [0.19, -0.2], [0.15, -0.44], [0.12, -0.6]], 14), mat: M.skin },
-      { geo: new THREE.SphereGeometry(0.15, 14, 10), mat: M.skin, p: [0, -0.3, 0.07], s: [0.95, 1.5, 0.9] },     // biceps
-      { geo: new THREE.SphereGeometry(0.14, 12, 10), mat: M.skin, p: [0, -0.26, -0.07], s: [1, 1.5, 0.85] },    // triceps
-    ], { outline: 0.024 }));
-    const elbow = joint(shoulder, 0, -0.6, 0);
-    elbow.add(bake([
-      // elbow, then a forearm thick below the elbow and tapering to the wrist
-      { geo: new THREE.SphereGeometry(0.13, 12, 10), mat: M.skin },
-      { geo: lathe([[0.125, 0.0], [0.16, -0.1], [0.15, -0.24], [0.115, -0.44], [0.11, -0.52]], 14), mat: M.skin },
-      // an iron bracer bound in gold, at the wrist
-      { geo: new THREE.CylinderGeometry(0.15, 0.14, 0.18, 14), mat: M.iron, p: [0, -0.42, 0] },
-      { geo: new THREE.TorusGeometry(0.15, 0.022, 6, 18), mat: M.gold, p: [0, -0.335, 0], r: [Math.PI / 2, 0, 0] },
-      { geo: new THREE.TorusGeometry(0.14, 0.022, 6, 18), mat: M.gold, p: [0, -0.505, 0], r: [Math.PI / 2, 0, 0] },
-    ], { outline: 0.022 }));
-    elbow.add(bake([0, 1, 2, 3, 4, 5].map((i) => {
-      const a = (i / 6) * Math.PI * 2;
-      return { geo: new THREE.ConeGeometry(0.026, 0.06, 6), mat: M.stud, p: [Math.sin(a) * 0.155, -0.42, Math.cos(a) * 0.155], r: [Math.cos(a) * 1.57, 0, -Math.sin(a) * 1.57] };
-    }), { outline: 0 }));
-    const hand = joint(elbow, 0, -0.55, 0);
-    hand.add(bake([
-      { geo: new THREE.SphereGeometry(0.18, 16, 12), mat: M.skin, p: [0, -0.12, 0], s: [1.1, 1.15, 0.6] },
-      ...[-0.1, -0.035, 0.035, 0.1].map((x) => ({ geo: new THREE.SphereGeometry(0.055, 8, 6), mat: M.skin, p: [x, -0.23, -0.02] })),
-      { geo: new THREE.CapsuleGeometry(0.055, 0.1, 4, 8), mat: M.skin, p: [-sx * 0.17, -0.12, -0.06], r: [0.4, 0, -sx * 0.5] },
-    ], { outline: 0.016 }));
-    const curls = [];
-    fingerSet(hand, curls);
-    return { shoulder, elbow, hand, curls };
-  };
-  const armR = arm(-1);     // grabbing arm
-  const armL = arm(1);      // club arm
 
-  // kanabō (studded iron club) in the left fist, resting over the shoulder
-  const club = joint(armL.hand, 0, -0.22, -0.02);
-  club.rotation.x = 1.75;
+  // kanabō (studded iron club), gripped in the left fist and resting over the shoulder
+  const club = new THREE.Group();
+  club.position.set(0, -0.2, 0.0);
   club.add(bake([
     { geo: lathe([[0.07, -0.36], [0.055, -0.3], [0.055, 0.35], [0.1, 0.5], [0.19, 1.42], [0.15, 1.54], [0.0, 1.57]], 8), mat: M.iron },
     { geo: new THREE.TorusGeometry(0.08, 0.025, 6, 12), mat: M.gold, p: [0, 0.4, 0], r: [Math.PI / 2, 0, 0] },
@@ -281,105 +408,211 @@ function createOni() {
   }
   club.add(bake(studs, { outline: 0 }));
 
-  // ---------- legs ----------
-  const leg = (sx) => {
-    const hip = joint(pelvis, sx * 0.29, -0.08, 0);
-    hip.add(bake([
-      // a thigh that is heavy at the hip and narrows to the knee, the quads bulging in front
-      { geo: lathe([[0.27, 0.04], [0.285, -0.14], [0.24, -0.45], [0.175, -0.72], [0.15, -0.8]], 16), mat: M.skin },
-      { geo: new THREE.SphereGeometry(0.27, 14, 10), mat: M.skin, p: [0, 0.0, 0], s: [1, 0.7, 1] },
-      { geo: new THREE.SphereGeometry(0.19, 12, 10), mat: M.skin, p: [sx * 0.03, -0.36, 0.08], s: [1, 1.7, 0.85] },   // quads
-    ], { outline: 0.024 }));
-    const knee = joint(hip, 0, -0.78, 0);
-    knee.add(bake([
-      { geo: new THREE.SphereGeometry(0.165, 12, 10), mat: M.skin },
-      { geo: new THREE.SphereGeometry(0.11, 10, 8), mat: M.skin, p: [0, 0.0, 0.1], s: [1, 0.9, 0.7] },        // kneecap
-      // shin narrowing to the ankle, a big diamond calf behind it
-      { geo: lathe([[0.155, 0.0], [0.165, -0.12], [0.145, -0.36], [0.11, -0.56], [0.11, -0.64]], 14), mat: M.skin },
-      { geo: new THREE.SphereGeometry(0.18, 12, 10), mat: M.skin, p: [0, -0.2, -0.06], s: [1.05, 1.45, 1] },   // calf
-      // iron anklets bound in gold
-      { geo: new THREE.CylinderGeometry(0.14, 0.15, 0.12, 14), mat: M.iron, p: [0, -0.53, 0] },
-      { geo: new THREE.TorusGeometry(0.142, 0.02, 6, 18), mat: M.gold, p: [0, -0.47, 0], r: [Math.PI / 2, 0, 0] },
-      { geo: new THREE.TorusGeometry(0.152, 0.02, 6, 18), mat: M.gold, p: [0, -0.59, 0], r: [Math.PI / 2, 0, 0] },
-      // a bare foot: heel, a long arched sole, a ball of the foot and five graded toes with claws
-      { geo: new THREE.SphereGeometry(0.11, 12, 10), mat: M.skin, p: [0, -0.68, -0.04], s: [1, 0.8, 1.1] },
-      { geo: new THREE.SphereGeometry(0.14, 14, 10), mat: M.skin, p: [0, -0.7, 0.13], s: [0.95, 0.45, 1.5] },
-      { geo: new THREE.SphereGeometry(0.12, 12, 10), mat: M.skin, p: [-sx * 0.015, -0.71, 0.27], s: [1.15, 0.5, 0.8] },
-      ...[[0.085, 0.05, 0.36], [0.04, 0.04, 0.37], [0.0, 0.036, 0.36], [-0.04, 0.032, 0.34], [-0.078, 0.028, 0.32]].flatMap(([x, r, z]) => {
-        const px = -sx * x;                                  // big toe on the inside
-        return [
-          { geo: new THREE.CapsuleGeometry(r, 0.05, 4, 8), mat: M.skin, p: [px, -0.722, z], r: [Math.PI / 2, 0, 0] },
-          { geo: new THREE.ConeGeometry(r * 0.75, 0.06, 6), mat: M.horn, p: [px, -0.72, z + r + 0.04], r: [Math.PI / 2 + 0.25, 0, 0], s: [1, 1, 0.6] },
-        ];
-      }),
-    ], { outline: 0.022 }));
-    return { hip, knee };
+  // iron cuffs bound in gold, sized to the limb they close around (oni units)
+  const cuff = (r, h, studs) => {
+    const g = new THREE.Group();
+    g.add(bake([
+      { geo: new THREE.CylinderGeometry(r, r * 0.97, h, 16), mat: M.iron },
+      { geo: new THREE.TorusGeometry(r, 0.022, 6, 20), mat: M.gold, p: [0, h / 2, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.TorusGeometry(r * 0.97, 0.022, 6, 20), mat: M.gold, p: [0, -h / 2, 0], r: [Math.PI / 2, 0, 0] },
+    ], { outline: 0.02 }));
+    if (studs) {
+      g.add(bake([0, 1, 2, 3, 4, 5].map((i) => {
+        const a = (i / 6) * Math.PI * 2;
+        return { geo: new THREE.ConeGeometry(0.026, 0.06, 6), mat: M.stud, p: [Math.sin(a) * r, 0, Math.cos(a) * r], r: [Math.cos(a) * 1.57, 0, -Math.sin(a) * 1.57] };
+      }), { outline: 0 }));
+    }
+    return g;
   };
-  const legL = leg(1), legR = leg(-1);
+
+  // the grabbing hand's palm frame (-y runs down the fingers, oni units) — capture.js
+  // holds the hero at handR's (0, -0.16, 0). Parked roughly in place until the body is in.
+  const handR = new THREE.Object3D();
+  handR.position.set(-0.75, 1.2, 1.2);
+  rig.add(handR);
+
+  /* ---------- the body ---------- */
+  let B = null, hipsRest = 0, k = 1, chestNode = rig;
+  const curlBones = { L: [], R: [] }, thumbs = {};
+  // a child of `bone` whose axes are y = up, z = the oni's forward (model -z) — or, for a
+  // limb, -y running down the limb — and whose unit is one oni unit
+  const mount = (bone, obj, { down = null, at = null } = {}) => {
+    const f = new THREE.Object3D();
+    const y = down ? down.clone().negate().normalize() : new THREE.Vector3(0, 1, 0);
+    const z = new THREE.Vector3(0, 0, -1);
+    z.addScaledVector(y, -z.dot(y)).normalize();
+    const x = new THREE.Vector3().crossVectors(y, z);
+    f.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+    if (at) f.position.copy(at);
+    f.scale.setScalar(1 / k);
+    bone.add(f);
+    if (obj) f.add(obj);
+    return f;
+  };
+  function attachBody(t) {
+    if (!t || B) return;
+    k = t.k;
+    const body = cloneSkinned(t.scene);
+    body.rotation.y = Math.PI;                      // the model faces -z; the oni faces +z
+    body.scale.setScalar(k);
+    body.position.y = -t.minY * k;
+    const skins = [];
+    body.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
+    for (const o of skins) {
+      o.material = M.skin;
+      o.frustumCulled = false;
+      addOutline(o, 0.026 / k);
+    }
+    rig.add(body);
+    B = {};
+    for (const key of KEYS) B[key] = body.getObjectByName('J_Bip_' + BONES[key]);
+    hipsRest = B.hips.position.y;
+    chestNode = B.upper;
+    for (const side of ['L', 'R']) {
+      for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (let i = 1; i <= 3; i++) curlBones[side].push(body.getObjectByName(`J_Bip_${side}_${f}${i}`));
+      thumbs[side] = body.getObjectByName(`J_Bip_${side}_Thumb1`);
+    }
+    // bone-to-bone directions and lengths in the model's rest frame (= every bone's local frame)
+    const seg = (a, b) => t.P['J_Bip_' + b].clone().sub(t.P['J_Bip_' + a]);
+    const dir = (a, b) => seg(a, b).normalize();
+    const len = (a, b) => seg(a, b).length();
+
+    mount(B.head, head, { at: new THREE.Vector3(0, HEAD_ABOVE_BONE / k, -0.03 / k) });
+    // the pelt, lofted through the measured hips (oni units, around the hips bone)
+    const hz = t.P.J_Bip_C_Hips.z;
+    // (a skirt hangs from the widest point down: keep a running envelope of the slices)
+    let ex = 0, e0 = Infinity, e1 = -Infinity;
+    const rows = t.pelt.map((c, i) => {
+      if (c.rx > 0) { ex = Math.max(ex, c.rx); e0 = Math.min(e0, c.z0); e1 = Math.max(e1, c.z1); }
+      return { y: c.dy * k, rx: ex * k + 0.035 + 0.02 * i, rz: ((e1 - e0) / 2) * k + 0.035 + 0.02 * i, cz: -((e0 + e1) / 2 - hz) * k };
+    });
+    mount(B.hips, buildPelt(rows));
+    for (const side of ['L', 'R']) {
+      const fa = len(side + '_LowerArm', side + '_Hand');
+      mount(B['fa' + side], cuff(t.forearm * k * 1.08, 0.2, true), { down: dir(side + '_LowerArm', side + '_Hand'), at: dir(side + '_LowerArm', side + '_Hand').multiplyScalar(fa * 0.8) });
+      const sh = len(side + '_LowerLeg', side + '_Foot');
+      mount(B['sh' + side], cuff(t.shin * k * 1.08, 0.13, false), { down: dir(side + '_LowerLeg', side + '_Foot'), at: dir(side + '_LowerLeg', side + '_Foot').multiplyScalar(sh * 0.86) });
+    }
+    mount(B.hdL, club, { down: dir('L_Hand', 'L_Middle1') });
+    handR.removeFromParent();
+    handR.position.set(0, 0, 0);
+    mount(B.hdR, handR, { down: dir('R_Hand', 'R_Middle1') });
+    // the new meshes join the mist-proof draw order (see below)
+    rig.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
+    rig.visible = true;
+    // lay the club over the shoulder: in the idle pose its shaft runs from the fist up and
+    // back past the head (directions in the oni's own frame)
+    const was = mode;
+    mode = 'idle';
+    api.snap(0);
+    const rq = root.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const parentQ = rq.multiply(club.parent.getWorldQuaternion(new THREE.Quaternion()));
+    const want = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0.25, 0.55, -0.8).normalize());
+    club.quaternion.copy(parentQ.invert().multiply(want));
+    mode = was;
+    api.snap(lastT);
+  }
 
   // The ground mist is two additive planes at shin and knee height, drawn after every
   // opaque mesh, so it washed everything below the knees pale pink. Drawing the oni in
   // the transparent pass after it (still fully opaque, still writing depth) keeps the
   // skin one red from head to toe.
   for (const m of Object.values(M)) m.transparent = true;
-  root.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
+  rig.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
 
   /* ===================== animation ===================== */
-  const pose = {
-    pelvisY: PELVIS_Y, lean: 0, sway: 0, twist: 0, headX: 0, headY: 0, jaw: 0.05,
-    shRx: 0, shRz: -0.25, elR: -0.2, shLx: -0.5, shLz: 0.25, elL: -1.9,
-    thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, curlR: 0.3,
-  };
-  let mode = 'idle', staggerT = 0, flashT = 0, roarT = 0, walkPhase = 0;
+  const pose = blankPose();
+  let mode = 'idle', staggerT = 0, flashT = 0, roarT = 0, walkPhase = 0, lastT = 0;
 
   function target(t) {
-    const tg = { ...pose };
-    Object.assign(tg, {
-      pelvisY: PELVIS_Y + 0.02 * Math.sin(t * 2), lean: 0.05, sway: 0, twist: 0, headX: 0.05, headY: 0, jaw: 0.08,
-      shRx: 0.05, shRz: -0.28, elR: -0.25, shLx: -0.5, shLz: 0.28, elL: -1.9,
-      thighL: 0, thighR: 0, kneeL: 0, kneeR: 0, curlR: 0.4,
-    });
+    const p = blankPose();
+    const br = Math.sin(t * 2);
+    // idle: a hunched brute, weight low, the club resting on its left shoulder
+    p.hipsY = 0.02 * br;
+    p.hips = [0, 0, 0];
+    p.spine = [-0.1, 0, 0]; p.chest = [-0.06 + 0.02 * br, 0, 0]; p.upper = [-0.04, 0, 0];
+    p.neck = [0.12, 0, 0]; p.head = [0.12, 0, 0];
+    p.thL = [0.02, 0.1, -0.1]; p.shL = [-0.08, 0, 0]; p.ftL = [0.06, -0.1, 0.08];
+    p.thR = [0.02, -0.1, 0.1]; p.shR = [-0.08, 0, 0]; p.ftR = [0.06, 0.1, -0.08];
+    p.uaR = [0.1, 0, 0.32]; p.faR = [0.3, 0, 0]; p.hdR = [0, 0, 0];
+    p.uaL = [0.55, 0.3, -0.55]; p.faL = [2.15, 0.2, 0]; p.hdL = [0.2, 0, 0];
+    p.jaw = 0.08; p.curlR = 0.5;
     if (mode === 'walk') {
       const s = Math.sin(walkPhase), c = Math.cos(walkPhase);
-      Object.assign(tg, {
-        pelvisY: PELVIS_Y - 0.02 - 0.07 * Math.abs(s), sway: 0.07 * s, twist: 0.1 * s, lean: 0.12,
-        thighL: 0.42 * s, thighR: -0.42 * s,
-        kneeL: -0.7 * Math.max(0, c), kneeR: -0.7 * Math.max(0, -c),
-        shRx: -0.35 * s, headY: -0.1 * s, headX: 0.12,
-      });
+      p.hipsY = -0.04 - 0.08 * Math.abs(s);
+      p.hips = [0, 0.06 * s, 0.05 * s];
+      p.spine = [-0.16, -0.1 * s, 0]; p.chest = [-0.05, -0.06 * s, -0.03 * s];
+      p.head = [0.2, 0.1 * s, 0];
+      p.thL = [0.5 * s, 0, -0.15]; p.thR = [-0.5 * s, 0, 0.15];   // a wide, heavy stance
+      p.shL = [-0.12 - 0.9 * Math.max(0, c), 0, 0]; p.shR = [-0.12 - 0.9 * Math.max(0, -c), 0, 0];
+      p.ftL = [0.25 * Math.max(0, c) - 0.1 * s, 0, 0]; p.ftR = [0.25 * Math.max(0, -c) + 0.1 * s, 0, 0];
+      p.uaR = [0.4 * s, 0, 0.3]; p.faR = [0.35 + 0.2 * Math.max(0, s), 0, 0];
     } else if (mode === 'roar') {
-      Object.assign(tg, { lean: -0.2, headX: -0.4, jaw: 0.65, shRx: -0.9, shRz: -1.1, elR: -0.5, shLx: -1.1, shLz: 0.6 });
+      Object.assign(p, { spine: [0.18, 0, 0], chest: [0.12, 0, 0], head: [0.45, 0, 0], jaw: 0.65,
+        uaR: [0.5, 0, 1.45], faR: [0.7, 0, 0], uaL: [0.5, 0, -1.3], faL: [1.3, 0, 0] });
     } else if (mode === 'reach' || mode === 'grab') {
-      Object.assign(tg, {
-        lean: 0.5, headX: 0.35, jaw: 0.18, shRx: -1.0, shRz: -0.02, elR: -0.3,
-        thighL: -0.25, kneeL: 0.0, thighR: 0.35, kneeR: -0.55, pelvisY: PELVIS_Y - 0.13,
+      Object.assign(p, {
+        hipsY: -0.6, spine: [-0.6, 0, 0], chest: [-0.15, 0, 0], upper: [-0.05, 0, 0], head: [0.65, 0, 0], jaw: 0.18,
+        uaR: [1.2, 0, 0.1], faR: [0.1, 0, 0],
+        thR: [1.0, 0, 0.06], shR: [-1.5, 0, 0], ftR: [0.5, 0, 0],
+        thL: [-0.3, 0, -0.1], shL: [-0.4, 0, 0], ftL: [0.25, 0, 0],
         curlR: mode === 'grab' ? 1.45 : -0.2,
       });
     } else if (mode === 'lift' || mode === 'laugh') {
-      const k = mode === 'laugh' ? Math.abs(Math.sin(t * 13)) : 0;
-      Object.assign(tg, {
-        lean: -0.08 - 0.05 * k, headX: -0.15 - 0.15 * k, jaw: 0.22 + (mode === 'laugh' ? 0.35 * k : 0),
-        shRx: -1.5, shRz: 0.12, elR: -1.15, curlR: 1.45, pelvisY: PELVIS_Y + 0.03 * k,
-        headY: mode === 'laugh' ? 0.08 * Math.sin(t * 3) : 0,
+      const kk = mode === 'laugh' ? Math.abs(Math.sin(t * 13)) : 0;
+      Object.assign(p, {
+        spine: [0.06 + 0.05 * kk, 0, 0], chest: [0.04, 0, 0], head: [0.1 + 0.15 * kk, -0.4 + (mode === 'laugh' ? 0.08 * Math.sin(t * 3) : 0), 0],   // turned to the prize in its fist
+        jaw: 0.22 + (mode === 'laugh' ? 0.35 * kk : 0), hipsY: 0.03 * kk,
+        uaR: [1.45, 0, 0.45], faR: [0.5, 0, 0], curlR: 1.45,   // the fist held out beside the face, clear of it
       });
     }
     if (roarT > 0) {
       const w = Math.sin(Math.min(1, roarT) * Math.PI);
-      tg.headX -= 0.45 * w; tg.jaw += 0.55 * w; tg.lean -= 0.15 * w; tg.shRz -= 0.5 * w;
+      p.head = [p.head[0] + 0.45 * w, p.head[1], p.head[2]]; p.jaw += 0.55 * w;
+      p.spine = [p.spine[0] + 0.15 * w, p.spine[1], p.spine[2]];
+      p.uaR = [p.uaR[0], p.uaR[1], p.uaR[2] + 0.5 * w];
     }
-    if (staggerT > 0) { tg.lean -= 0.4 * staggerT; tg.headX -= 0.35 * staggerT; }
-    return tg;
+    if (staggerT > 0) {
+      p.spine = [p.spine[0] + 0.4 * staggerT, p.spine[1], p.spine[2]];
+      p.head = [p.head[0] + 0.35 * staggerT, p.head[1], p.head[2]];
+    }
+    return p;
   }
 
-  return {
-    root, body, head, chest,
-    handR: armR.hand,
+  const e = new THREE.Euler(), q = new THREE.Quaternion();
+  function blend(tg, kk) {
+    pose.hipsY = lerp(pose.hipsY, tg.hipsY, kk); pose.jaw = lerp(pose.jaw, tg.jaw, kk); pose.curlR = lerp(pose.curlR, tg.curlR, kk);
+    for (const key of KEYS) for (let i = 0; i < 3; i++) pose[key][i] = lerp(pose[key][i], tg[key][i], kk);
+  }
+  function apply() {
+    jaw.rotation.x = pose.jaw;
+    if (!B) return;
+    for (const key of KEYS) {
+      const node = B[key];
+      q.setFromEuler(e.set(pose[key][0], pose[key][1], pose[key][2]));
+      const side = key[2];
+      if (key.startsWith('ua')) node.quaternion.copy(q).multiply(ARM_BASE[side]);
+      else if (key.startsWith('fa') || key.startsWith('hd')) node.quaternion.copy(ARM_BASE_INV[side]).multiply(q).multiply(ARM_BASE[side]);
+      else node.quaternion.copy(q);
+    }
+    B.hips.position.y = hipsRest + pose.hipsY / k;
+    for (const n of curlBones.R) n.rotation.z = -pose.curlR;
+    for (const n of curlBones.L) n.rotation.z = 1.35;          // a fist round the club
+    thumbs.R.rotation.set(0, -0.5 * pose.curlR, -0.3 * pose.curlR);
+    thumbs.L.rotation.set(0, 0.6, 0.4);
+  }
+
+  const api = {
+    root, head,
+    handR,
+    get body() { return rig; },
+    get chest() { return chestNode; },
     get mode() { return mode; },
     setMode(m) { mode = m; },
     roar() { roarT = 1; },
     flash() { flashT = 1; staggerT = 1; },
     // jump every joint straight to the current mode's pose (for skipping cinematics)
-    snap(t = 0) { Object.assign(pose, target(t)); this.apply(); },
+    snap(t = 0) { blend(target(t), 1); apply(); root.updateMatrixWorld(true); },
     // back to a calm idle, as if new
     reset() {
       mode = 'idle'; staggerT = flashT = roarT = walkPhase = 0;
@@ -387,36 +620,25 @@ function createOni() {
       this.snap();
     },
     update(dt, t, walkSpeed = 0) {
+      lastT = t;
       walkPhase += dt * (1.2 + walkSpeed * 0.25) * Math.PI;
       staggerT = Math.max(0, staggerT - dt * 2.5);
       roarT = Math.max(0, roarT - dt * 0.9);
       flashT = Math.max(0, flashT - dt * 4);
-      const tg = target(t);
-      const k = 1 - Math.exp(-dt * (mode === 'grab' ? 14 : 7));
-      for (const key in tg) pose[key] = smoothTo(pose[key], tg[key], k);
+      blend(target(t), 1 - Math.exp(-dt * (mode === 'grab' ? 14 : 7)));
       M.skin.emissive.setRGB(0.17 + flashT * 0.9, 0.016 + flashT * 0.8, 0.016 + flashT * 0.6);
-      this.apply();
-    },
-    apply() {
-      pelvis.position.y = pose.pelvisY;
-      pelvis.rotation.set(0, pose.twist * 0.5, pose.sway);
-      chest.rotation.set(pose.lean, pose.twist, -pose.sway * 0.6);
-      head.rotation.set(pose.headX, pose.headY, 0);
-      jaw.rotation.x = pose.jaw;
-      armR.shoulder.rotation.set(pose.shRx, 0, pose.shRz);
-      armR.elbow.rotation.x = pose.elR;
-      armL.shoulder.rotation.set(pose.shLx, 0, pose.shLz);
-      armL.elbow.rotation.x = pose.elL;
-      legL.hip.rotation.x = pose.thighL; legR.hip.rotation.x = pose.thighR;
-      legL.knee.rotation.x = pose.kneeL; legR.knee.rotation.x = pose.kneeR;
-      for (const [j1, j2] of armR.curls) { j1.rotation.x = pose.curlR; j2.rotation.x = pose.curlR * 0.9; }
-      for (const [j1, j2] of armL.curls) { j1.rotation.x = 1.5; j2.rotation.x = 1.4; }
+      apply();
     },
     dispose() {
       root.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
+        if (o.geometry && !o.geometry.userData.oniTemplate) o.geometry.dispose();
+        if (o.isSkinnedMesh) o.skeleton.dispose();
         for (const m of [].concat(o.material || [])) if (!m.isShaderMaterial) m.dispose();   // keep the shared outline shader
       });
     },
   };
+  if (template) attachBody(template);
+  else templateReady.then(attachBody);
+  api.snap();
+  return api;
 }
