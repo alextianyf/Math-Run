@@ -1,12 +1,22 @@
-// recognizer.js — loads the MNIST MLP (TensorFlow.js GraphModel) and classifies
+// recognizer.js — loads the digit model (TensorFlow.js GraphModel) and classifies
 // talisman handwriting. Runs entirely in the browser — no server needed.
-import { preprocessToMNIST, tensorFrom28x28 } from './processing.js';
+//
+// The default model is a small CNN trained on MNIST plus MNIST digits redrawn with the
+// pad's pen (mlp_training/research/06_recognition.md): ~107k parameters, float16
+// weights, 223 KB, 96.9% on unseen synthetic writers (the MLP: 92.9%).
+// ?model=mlp brings back the original MNIST MLP (1.7 MB) for comparison.
+import { preprocessToMNIST } from './processing.js';
 import { softmax } from './utils.js';
 
-const MODEL_URL = new URL('../../mnist_tfjs_model/model.json', import.meta.url).href;
+const MODELS = {
+  cnn: { url: '../../digit_model/model.json', resample: 'area', name: 'CNN' },
+  mlp: { url: '../../mnist_tfjs_model/model.json', resample: 'nn', name: 'MLP', flat: true },
+};
+const choice = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('model') : null;
+export const modelSpec = MODELS[choice] ?? MODELS.cnn;
 
 let model = null;
-export const aiInfo = { backend: '—', ready: false, latency: 0 };
+export const aiInfo = { backend: '—', ready: false, latency: 0, model: modelSpec.name };
 
 // Prefer WASM (keeps the GPU free for Three.js), then WebGL, then CPU
 async function setupBackend() {
@@ -24,14 +34,14 @@ async function run(x) {
     const y = model.predict(x);
     return Array.isArray(y) ? y[0] : y;
   } catch {
-    const y = await model.executeAsync({ keras_tensor: x }, 'Identity');
+    const y = await model.executeAsync({ [model.inputs[0].name.replace(/:0$/, '')]: x }, 'Identity');
     return Array.isArray(y) ? y[0] : y;
   }
 }
 
 export async function initRecognizer() {
   await setupBackend();
-  model = await tf.loadGraphModel(MODEL_URL);
+  model = await tf.loadGraphModel(new URL(modelSpec.url, import.meta.url).href);
   // one full reading (preprocessing + model) of a made-up stroke, so the first
   // real one is as quick as all the others
   const size = 280, stroke = new Uint8ClampedArray(size * size * 4);
@@ -43,8 +53,8 @@ export async function initRecognizer() {
 // rgba: Uint8ClampedArray of a size×size white-on-black image
 // → { probs: number[10], img28: Float32Array(784) }
 export async function classify(rgba, size) {
-  const { img28 } = preprocessToMNIST(rgba, { srcW: size, srcH: size, roi: 'all', center: true, blur: false });
-  const x = tensorFrom28x28(img28);
+  const { img28 } = preprocessToMNIST(rgba, { srcW: size, srcH: size, roi: 'all', center: true, blur: false, resample: modelSpec.resample });
+  const x = tf.tensor(img28, modelSpec.flat ? [1, 784] : [1, 28, 28, 1], 'float32');
   const t0 = performance.now();
   const y = await run(x);
   const raw = Array.from(await y.data());

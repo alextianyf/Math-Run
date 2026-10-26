@@ -11,7 +11,8 @@ import { otsu, largestCC, foregroundBBox, computeCentroid, gaussianBlur1D } from
 
 // roi: 'lcc' = largest connected component (robust to noisy input)
 //      'all' = bounding box of all foreground pixels (clean, multi-stroke input)
-export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = true, roi: roiMode = 'lcc' }) {
+// resample: 'nn' = nearest neighbour, 'area' = box average (what the digit CNN is trained on)
+export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = true, roi: roiMode = 'lcc', resample = 'nn' }) {
   // 1) RGBA → Grayscale in [0,1]
   const gray = new Float32Array(srcW * srcH);
   for (let i = 0; i < srcW * srcH; i++) {
@@ -49,9 +50,10 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
     }
   }
 
-  // Nearest-neighbor scaling to newW × newH
-  const scaled = new Float32Array(newW * newH);
-  for (let yy = 0; yy < newH; yy++) {
+  // Scale to newW × newH: nearest neighbour, or 'area' (each target pixel averages the
+  // source pixels it covers, like PIL's BOX filter) — soft gray edges like MNIST
+  const scaled = resample === 'area' ? areaResize(crop, w, h, newW, newH) : new Float32Array(newW * newH);
+  for (let yy = 0; resample !== 'area' && yy < newH; yy++) {
     for (let xx = 0; xx < newW; xx++) {
       const sx = Math.min(w - 1, Math.round(xx / scale));
       const sy = Math.min(h - 1, Math.round(yy / scale));
@@ -105,6 +107,41 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
     img28: canvas28,
     debug: `th=${th.toFixed(3)} invert=${invert} roi=[${x0},${y0}..${x1},${y1}] w×h=${w}×${h} scale=${scale.toFixed(3)}`
   };
+}
+
+// Box-filter resize, separable: weights are the overlap of each source pixel with the
+// target pixel's footprint [x·w/newW, (x+1)·w/newW)
+function areaWeights(n, m) {
+  const out = [], f = n / m;
+  for (let t = 0; t < m; t++) {
+    const a = t * f, b = (t + 1) * f, taps = [];
+    for (let s = Math.floor(a); s < Math.min(n, Math.ceil(b)); s++) {
+      const wgt = Math.min(b, s + 1) - Math.max(a, s);
+      if (wgt > 0) taps.push([s, wgt / f]);
+    }
+    out.push(taps);
+  }
+  return out;
+}
+function areaResize(src, w, h, newW, newH) {
+  const wx = areaWeights(w, newW), wy = areaWeights(h, newH);
+  const tmp = new Float32Array(newW * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < newW; x++) {
+      let v = 0;
+      for (const [s, k] of wx[x]) v += src[y * w + s] * k;
+      tmp[y * newW + x] = v;
+    }
+  }
+  const out = new Float32Array(newW * newH);
+  for (let y = 0; y < newH; y++) {
+    for (let x = 0; x < newW; x++) {
+      let v = 0;
+      for (const [s, k] of wy[y]) v += tmp[s * newW + x] * k;
+      out[y * newW + x] = v;
+    }
+  }
+  return out;
 }
 
 // Convert 28×28 float array into a TF tensor shape [1, 784]

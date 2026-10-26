@@ -11,6 +11,64 @@ const INK = '#b3170f';
 // so that wait is longer; writing with a mouse is slower than with a finger or pen.
 const WAITS = { mouse: [1500, 1100], touch: [1100, 800], pen: [1100, 800] };
 
+function styleInk(c, width, color) {
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  c.lineWidth = width;
+  c.strokeStyle = color;
+  c.fillStyle = color;
+}
+
+// Draw one stroke. smooth=true curves through segment midpoints (nicer ink);
+// the model gets the raw polyline so sharp corners (4, 7) survive.
+function tracePath(c, pts, smooth = true) {
+  if (pts.length === 1) {
+    c.beginPath();
+    c.arc(pts[0][0], pts[0][1], c.lineWidth / 2, 0, Math.PI * 2);
+    c.fill();
+    return;
+  }
+  c.beginPath();
+  c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) {
+    if (!smooth) { c.lineTo(pts[i][0], pts[i][1]); continue; }
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+    c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+  }
+  const last = pts[pts.length - 1];
+  c.lineTo(last[0], last[1]);
+  c.stroke();
+}
+
+// Draw strokes (pad coordinates) white on black into a MODEL_SIZE² context, centred,
+// longest side MODEL_BOX, pen MODEL_LINE — what the model is shown.
+function renderStrokes(mctx, list) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const s of list) for (const [x, y] of s) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const scale = MODEL_BOX / Math.max(x1 - x0, y1 - y0, 1e-6);
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.fillStyle = '#000';
+  mctx.fillRect(0, 0, MODEL_SIZE, MODEL_SIZE);
+  mctx.setTransform(scale, 0, 0, scale,
+    MODEL_SIZE / 2 - ((x0 + x1) / 2) * scale,
+    MODEL_SIZE / 2 - ((y0 + y1) / 2) * scale);
+  styleInk(mctx, MODEL_LINE / scale, '#fff');
+  for (const s of list) tracePath(mctx, s, false);
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  return mctx.getImageData(0, 0, MODEL_SIZE, MODEL_SIZE).data;
+}
+
+// the same rendering without a pad (the research test pages): strokes → RGBA
+export function modelRenderer() {
+  const c = document.createElement('canvas');
+  c.width = c.height = MODEL_SIZE;
+  const mctx = c.getContext('2d', { willReadFrequently: true });
+  return (list) => renderStrokes(mctx, list);
+}
+
 // onArm(ms) fires when the submit countdown starts, onDisarm() when it's cancelled
 export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
   const ctx = canvas.getContext('2d');
@@ -40,35 +98,6 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     redraw();
-  }
-
-  function styleInk(c, width, color) {
-    c.lineCap = 'round';
-    c.lineJoin = 'round';
-    c.lineWidth = width;
-    c.strokeStyle = color;
-    c.fillStyle = color;
-  }
-
-  // Draw one stroke. smooth=true curves through segment midpoints (nicer ink);
-  // the model gets the raw polyline so sharp corners (4, 7) survive.
-  function tracePath(c, pts, smooth = true) {
-    if (pts.length === 1) {
-      c.beginPath();
-      c.arc(pts[0][0], pts[0][1], c.lineWidth / 2, 0, Math.PI * 2);
-      c.fill();
-      return;
-    }
-    c.beginPath();
-    c.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length - 1; i++) {
-      if (!smooth) { c.lineTo(pts[i][0], pts[i][1]); continue; }
-      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
-      c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-    }
-    const last = pts[pts.length - 1];
-    c.lineTo(last[0], last[1]);
-    c.stroke();
   }
 
   function redraw() {
@@ -148,19 +177,8 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     // Returns null when there's nothing meaningful written.
     renderForModel() {
       if (!strokes.length) return null;
-      const b = bbox();
-      if (b.ext < Math.min(w, h) * 0.06) return null;            // a stray dot
-      const scale = MODEL_BOX / b.ext;
-      mctx.setTransform(1, 0, 0, 1, 0, 0);
-      mctx.fillStyle = '#000';
-      mctx.fillRect(0, 0, MODEL_SIZE, MODEL_SIZE);
-      mctx.setTransform(scale, 0, 0, scale,
-        MODEL_SIZE / 2 - ((b.x0 + b.x1) / 2) * scale,
-        MODEL_SIZE / 2 - ((b.y0 + b.y1) / 2) * scale);
-      styleInk(mctx, MODEL_LINE / scale, '#fff');
-      for (const s of strokes) tracePath(mctx, s, false);
-      mctx.setTransform(1, 0, 0, 1, 0, 0);
-      return mctx.getImageData(0, 0, MODEL_SIZE, MODEL_SIZE).data;
+      if (bbox().ext < Math.min(w, h) * 0.06) return null;       // a stray dot
+      return renderStrokes(mctx, strokes);
     },
 
     // A small paper-talisman image of what was written (for the flying talisman)

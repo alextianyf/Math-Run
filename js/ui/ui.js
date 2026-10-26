@@ -255,7 +255,7 @@ export function resetAI() {
   $('ai-top').innerHTML = '';
   setAIVerdict(t('aiIdle'));
 }
-export function setAIMeta(text) { $('ai-meta').textContent = text; }
+export function setAIMeta(text, title = '') { $('ai-meta').textContent = text; $('ai-meta').title = title; }
 
 /* ===================== overlays ===================== */
 export function show(id, v = true) { $(id).hidden = !v; }

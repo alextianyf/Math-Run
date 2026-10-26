@@ -86,5 +86,5 @@ async function readTalisman() {
 
   const dec = decide(result.probs);
   onRead({ dec, result, paper, pct: Math.round(dec.p * 100) });
-  ui.setAIMeta(`${aiInfo.backend} · ${aiInfo.latency.toFixed(1)} ms`);
+  ui.setAIMeta(`${aiInfo.backend} · ${aiInfo.latency.toFixed(1)} ms`, `${aiInfo.model} on ${aiInfo.backend}`);
 }
