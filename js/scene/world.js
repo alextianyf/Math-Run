@@ -7,6 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createEnvironment, FOG_COLOR } from './environment.js';
 import { createHero } from './hero.js';
+import { createThemer } from './themes.js';
 
 export const LANES = [-1.9, 0, 1.9];
 
@@ -30,7 +31,8 @@ export function createWorld(canvas) {
 
   // Lights: cool moonlight from ahead, a warm key from behind the camera so the
   // hero's back and the yokai's faces read clearly, plus a lantern-coloured fill.
-  scene.add(new THREE.HemisphereLight(0x8783f2, 0x2a1838, 1.3));
+  const hemi = new THREE.HemisphereLight(0x8783f2, 0x2a1838, 1.3);
+  scene.add(hemi);
   const moon = new THREE.DirectionalLight(0xc8ceff, 1.8);
   moon.position.set(-30, 40, -60);
   const key = new THREE.DirectionalLight(0xffc796, 1.5);
@@ -54,6 +56,9 @@ export function createWorld(canvas) {
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   let quality = 2;
+
+  // the night's look (themes.js): blended in place when a run moves on to another night
+  const themer = createThemer({ scene, look: env.look, hemi, moonLight: moon, renderer, bloom });
 
   /* ---------- camera rig ---------- */
   let presets = null;
@@ -193,7 +198,10 @@ export function createWorld(canvas) {
     shake(amount) {
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) rig.shake = Math.max(rig.shake, amount);
     },
+    // blend to another night (themes.js) over `seconds`
+    setTheme(name, seconds) { themer.set(name, seconds); },
     update(dt, speed, t) {
+      themer.update(dt);
       env.step(speed * dt, t, dt);
       hero.update(dt, speed, t, camera);
       updateCamera(dt, t);

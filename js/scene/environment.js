@@ -193,6 +193,8 @@ function buildSky(scene) {
   })));
 
   return {
+    // what a change of night recolours (world.js themes)
+    look: { sky: sky.material.uniforms, moon, halo, clouds },
     step(dt) {
       for (const c of clouds) {
         c.position.x += c.userData.speed * dt;
@@ -445,6 +447,7 @@ function buildParticles(scene, { count, area, size, color, additive, map = glowT
   pts.frustumCulled = false;
   scene.add(pts);
   return {
+    material: pts.material,
     step(dz, t, dt) {
       for (let i = 0; i < count; i++) {
         let z = base[i * 3 + 2] + dz;
@@ -476,9 +479,10 @@ function buildMist(scene) {
     m.rotation.x = -Math.PI / 2;
     m.position.set(0, y, -55);
     scene.add(m);
-    return { t, k };
+    return { t, k, m };
   });
   return {
+    materials: layers.map((L) => L.m.material),
     step(dz, t) {
       for (const L of layers) {
         L.t.offset.y += (dz * 7 * L.k) / 150;           // one texture tile = 150 / (7k) world units
@@ -493,7 +497,8 @@ function buildMist(scene) {
 export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
-  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), buildMist(scene)];
+  const mist = buildMist(scene);
+  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist];
   const particles = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
@@ -509,6 +514,8 @@ export function createEnvironment(scene) {
     }),
   ];
   return {
+    // what a change of night recolours: sky, moon, clouds, ground mist and fireflies
+    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material },
     // arches overhead would fill the play camera's view right after passing the runner
     set hideToriiBeyond(z) { torii.hideZ = z; },
     step(dz, t, dt) {

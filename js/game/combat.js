@@ -13,7 +13,7 @@ import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
 import { emit } from './events.js';
 import { rand } from './helpers.js';
-import { chargeCast, scoreMult, blockHit, finisher, later } from './powers.js';
+import { chargeKill, scoreMult, blockHit, finisher, later } from './powers.js';
 
 // combo aura tiers: [min combo, colour] — the talismans and sparks take this colour
 const AURA = [[20, 0xc77dff], [10, 0x6fd8ff], [5, 0xffc84a]];
@@ -78,7 +78,6 @@ export function cast(digit, paper) {
     ui.banner(ui.t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
     sfx.multi(n);
   }
-  if (!S.tut) chargeCast(n);
   const style = S.tut ? 'talisman' : STYLES[Math.floor(Math.random() * STYLES.length)];
   victims.forEach((e, i) => {
     e.locked = true;
@@ -183,6 +182,7 @@ function impact(e, n) {
     e.tag.classList.remove('locked');
     e.z = Math.max(Math.min(e.z, SPAWN_Z * 0.8), e.z - (e.boss ? 7 : 4));   // knock back, never pull forward
     e.locked = false;
+    chargeKill(0.5);
     const pts = Math.round((e.boss ? 200 : 100) * comboMult() * scoreMult());
     addScore(pts);
     ui.popup(`+${pts}`, e.sx, e.sy, 'gold');
@@ -199,6 +199,7 @@ function impact(e, n) {
   addScore(pts);
   ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 || e.boss ? 'gold big' : 'gold');
   record(e, true);
+  chargeKill(1);
   emit('banish', { type: e.yokai.type, combo: S.combo });
   e.yokai.flash();
   e.dying = 0.0001;

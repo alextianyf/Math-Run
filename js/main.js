@@ -24,7 +24,7 @@ import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, s
 import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { initShareCard } from './game/shareCard.js';
 import { initRules } from './game/rules.js';
-import { updatePowers, useSkill, resetPowers, charge, later } from './game/powers.js';
+import { updatePowers, useSkill, charge, later, refreshSkillText } from './game/powers.js';
 import { $, smooth01 } from './game/helpers.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -194,6 +194,7 @@ $('btn-lang').addEventListener('click', () => {
   ui.setBestRank(S.bestRank);
   ui.setCombo(S.combo);
   refreshCollectionChip();
+  refreshSkillText();
   if (aiInfo.ready) $('ai-status').textContent = ui.t('ready');
 });
 stage.addEventListener('pointerdown', skip);
@@ -213,7 +214,7 @@ document.addEventListener('keydown', (e) => {
   } else if (DEBUG && S.mode === 'playing' && e.key === 'k') {
     charge(1);                                   // ?debug: a skill now
   } else if (DEBUG && S.mode === 'playing' && e.key === 'e') {
-    if (S.event) S.event.t = S.event.dur; else S.nextEventAt = 0;    // ?debug: next night event
+    S.nextNightAt = S.distance;                  // ?debug: on to the next night
   } else if (DEBUG && S.mode === 'playing' && e.key === 'b') {
     S.pendingBoss = true;                        // ?debug: a rank trial
   }

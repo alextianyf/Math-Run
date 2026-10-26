@@ -139,7 +139,7 @@ function setEquation(el, text) {
 const tagLayer = () => $('labels');
 
 // stretch: a problem a notch above the player's level, marked with a small badge;
-// trait: what this yokai does (enemies.js TRAITS), as a badge of its own
+// trait: what this yokai does (yokaiInfo.js TRAITS), as a badge of its own
 export function createTag(text, { boss = false, hp = 0, stretch = false, trait = null } = {}) {
   const el = document.createElement('div');
   el.className = 'tag' + (boss ? ' boss' : '') + (stretch ? ' stretch' : '');

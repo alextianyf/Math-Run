@@ -105,6 +105,16 @@
       <div id="banner" class="banner" aria-live="polite"></div>
       <div id="skip-hint" class="skip-hint" data-i18n="skip"></div>
       <div id="countdown" class="countdown" aria-live="assertive"></div>
+      <!-- a yokai's trick, pointed out the first few times it shows up -->
+      <div id="hint" class="hint" role="status" hidden>
+        <span class="stamp"><b id="hint-seal"></b></span>
+        <div><b id="hint-title"></b><span id="hint-text"></span></div>
+      </div>
+      <!-- the skill seal, bottom left: charges as yokai are banished; full, a random skill (tap or Space) -->
+      <div id="skill-box" class="skill-box">
+        <button id="skill" class="skill" disabled><b id="skill-ch" class="skill-ch">符</b></button>
+        <div class="skill-info"><b id="skill-title"></b><span id="skill-desc"></span></div>
+      </div>
 
       <header id="hud">
         <div class="hud-left">
@@ -150,11 +160,6 @@
         </div>
         <div id="ai-verdict" class="ai-verdict"></div>
       </aside>
-
-      <!-- the skill the talisman charges: a ring filling up, then the skill's seal (tap or Space) -->
-      <button id="skill" class="skill" disabled>
-        <b id="skill-ch" class="skill-ch">符</b><small id="skill-name" class="skill-name"></small><kbd class="skill-key">Space</kbd>
-      </button>
 
       <div id="talisman" class="talisman">
         <div class="tal-head" aria-hidden="true">敕令</div>

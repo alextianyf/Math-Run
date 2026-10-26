@@ -1,5 +1,5 @@
 // enemies.js — the yokai on the path: when and where they appear, how they move
-// toward the hero (some in their own way: see TRAITS), and the equation tags that
+// toward the hero (some in their own way: see yokaiInfo.js TRAITS), and the equation tags that
 // float above them.
 import * as THREE from 'three';
 import { LANES } from '../scene/world.js';
@@ -11,7 +11,8 @@ import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
 import { emit } from './events.js';
 import { rand, easeOutBack, smooth01 } from './helpers.js';
-import { paceMult, spawnMult, aliveBonus, frozen, tagVisibility } from './powers.js';
+import { paceMult, spawnMult, aliveBonus, frozen, holdSpawns, tagVisibility, yokaiHint } from './powers.js';
+import { TRAITS } from './yokaiInfo.js';
 
 // × travel time: the slower ones give a little more thinking time
 const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0,
@@ -24,15 +25,7 @@ const ROSTER = [
   { type: 'nopperabo', weight: 1.2, from: 9 }, { type: 'tengu', weight: 1.2, from: 11 },
   { type: 'kamaitachi', weight: 1.1, from: 13 }, { type: 'rokurokubi', weight: 1, from: 15 },
 ];
-// what some yokai do besides walking up the path (shown as a badge on their tag):
-//   sway      ittan: the cloth weaves from side to side
-//   blink     kitsunebi: halfway, it vanishes and reappears in another lane
-//   faceless  nopperabo: its equation fades away — remember it — and comes back only up close
-//   trio      kamaitachi: come three at once, one answer for all three
-//   dash      tengu: dawdles, then swoops in on its wings
-//   lives     nekomata: two lives, two problems
-//   late      rokurokubi: worth more the nearer it gets (instead of the farther)
-export const TRAITS = { ittan: 'sway', kitsunebi: 'blink', nopperabo: 'faceless', kamaitachi: 'trio', tengu: 'dash', nekomata: 'lives', rokurokubi: 'late' };
+const FACE_SHOWN = 3.5;          // seconds the nopperabo shows its equation before hiding it
 // the tengu's pace along the path: slow, a swoop, then steady (about the usual time overall)
 const dashPace = (near) => (near < 0.35 ? 0.7 : near < 0.6 ? 2.1 : 0.85);
 
@@ -90,6 +83,7 @@ export function spawn(boss = false, forced = null, pack = null) {
   measureTag(e);
   S.enemies.push(e);
   emit('meet', { type });
+  if (trait && !pack && !S.tut) yokaiHint(type, trait);
   // the kamaitachi's two companions: the other lanes, a little behind, the same answer
   if (trait === 'trio' && !pack) {
     [0, 1, 2].filter((l) => l !== lane).forEach((l, i) => spawn(false, null, { type, lane: l, answer: prob.answer, z: z0 - 3 - i * 3 }));
@@ -130,7 +124,7 @@ export function clearEnemies() {
 export function updateSpawner(dt) {
   const bossAlive = S.enemies.some((e) => e.boss && !e.dying);
   const alive = S.enemies.filter((e) => !e.dying).length;
-  if (frozen() || S.slowmo > 0) return;       // the time seal (and the oni's finisher) hold the spawns too
+  if (frozen() || S.slowmo > 0 || holdSpawns()) return;   // the time seal, the finisher and a change of night hold the spawns
   if (alive === 0) S.spawnTimer = Math.min(S.spawnTimer, 0.8);
   S.spawnTimer -= dt;
   S.trialHold -= dt;
@@ -216,7 +210,7 @@ function traitStep(e, near) {
   // the faceless one: its equation is there for a moment, then only up close
   if (e.trait === 'faceless' && e.tag) {
     const left = (HIT_Z - e.z) / e.speed;
-    e.tag.classList.toggle('veiled', e.age - e.qStart > 1.8 && left > 1.6 && !e.locked);
+    e.tag.classList.toggle('veiled', e.age - e.qStart > FACE_SHOWN && left > 1.6 && !e.locked);
   }
 }
 

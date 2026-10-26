@@ -1,7 +1,9 @@
-// powers.js — what makes a run more than answering: the talisman charges a random
-// skill (time seal, thunder god, barrier, good fortune), night events come and go
-// along the path (full moon, mist, a parade rush, the fox's blessing), and the
-// trial oni goes down with a finisher. None of it runs during the tutorial.
+// powers.js — what makes a run more than answering: banishing yokai charges a random
+// skill (time seal, thunder god, barrier, good fortune), every NIGHT_EVERY metres the
+// run moves on to another night (full moon, mist, the parade, the fox's blessing —
+// the scene changes while the path is quiet), a hint card points out a yokai's trick
+// the first few times it shows up, and the trial oni goes down with a finisher.
+// None of it runs during the tutorial.
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
@@ -9,6 +11,7 @@ import { S, targets } from './state.js';
 import { world, hero, fx } from './stage.js';
 import { banishFree } from './combat.js';
 import { emit } from './events.js';
+import { YOKAI_LOOK } from './yokaiInfo.js';
 import { $, rand } from './helpers.js';
 
 /* ===================== timing helpers ===================== */
@@ -16,47 +19,66 @@ import { $, rand } from './helpers.js';
 const queue = [];
 export function later(delay, fn) { queue.push({ t: delay, fn }); }
 
-/* ===================== night events ===================== */
-// every EVENT_EVERY metres the night changes for EVENT_DUR seconds
-const FIRST_EVENT = 300, EVENT_EVERY = 420, EVENT_DUR = 24;
-export const EVENTS = {
+/* ===================== nights ===================== */
+// the run cycles through these, one every NIGHT_EVERY metres; each changes the scene
+// (scene/themes.js) and one rule while it lasts
+const NIGHT_EVERY = 1000;
+const CYCLE = ['night', 'moon', 'fog', 'parade', 'fox'];
+export const NIGHTS = {
+  night: {},                                   // the usual festival night
   moon: { score: 2, pace: 1.25 },              // full moon: double points, faster yokai
   fog: { fog: true },                          // mist: equations only show up close
-  parade: { spawn: 0.45, alive: 2 },           // a parade rush: many more yokai at once
+  parade: { spawn: 0.6, alive: 1 },            // the parade: more yokai at once
   fox: { charge: 2 },                          // the fox's blessing: skills charge twice as fast
 };
-const EVENT_IDS = Object.keys(EVENTS);
-const ev = () => (S.event ? EVENTS[S.event.id] : {});
+// a change of night: wait for the path to clear (at most CLEAR_S), blend the scene
+// over SHIFT_S with the night's name on screen, then a breath of CALM_S before yokai return
+const CLEAR_S = 8, SHIFT_S = 3.5, CALM_S = 1.8;
 
-function startEvent() {
-  const pool = EVENT_IDS.filter((id) => id !== S.lastEvent);
-  const id = pool[Math.floor(Math.random() * pool.length)];
-  S.event = { id, t: 0, dur: EVENT_DUR };
-  S.lastEvent = id;
-  document.body.dataset.event = id;
-  ui.banner('', 'event', 1, { html: `<span class="ev-title">${ui.t(`ev_${id}`)}</span><span class="ev-sub">${ui.t(`evd_${id}`)}</span>`, ms: 2400 });
-  sfx.event();
-  emit('event', { id });
-  if (id === 'fox') charge(0.4);
-}
-function endEvent() {
-  S.event = null;
-  delete document.body.dataset.event;
-  S.nextEventAt = S.distance + EVENT_EVERY;
-}
-
-// what the night (and the good-fortune skill) does to the numbers
-export const scoreMult = () => (ev().score ?? 1) * (S.lucky > 0 ? 2 : 1);
-export const paceMult = () => (S.freeze > 0 ? 0 : ev().pace ?? 1);
-export const spawnMult = () => ev().spawn ?? 1;
-export const aliveBonus = () => ev().alive ?? 0;
+// the rules of the current night apply while it is on (and while the path clears for the next)
+const rules = () => (S.night.state === 'on' || S.night.state === 'clearing' ? NIGHTS[S.night.id] : NIGHTS.night);
+export const scoreMult = () => (rules().score ?? 1) * (S.lucky > 0 ? 2 : 1);
+export const paceMult = () => (S.freeze > 0 ? 0 : rules().pace ?? 1);
+export const spawnMult = () => rules().spawn ?? 1;
+export const aliveBonus = () => rules().alive ?? 0;
 export const frozen = () => S.freeze > 0;
+export const holdSpawns = () => !S.tut && S.night.state !== 'on';
 // in the mist an equation fades in only as its yokai comes near (0 far → 1 at the hero)
-export const tagVisibility = (near) => (ev().fog ? THREE.MathUtils.smoothstep(near, 0.32, 0.55) : 1);
+export const tagVisibility = (near) => (rules().fog ? THREE.MathUtils.smoothstep(near, 0.32, 0.55) : 1);
+
+function stepNight(dt) {
+  const n = S.night;
+  n.t += dt;
+  if (n.state === 'on') {
+    if (S.distance >= S.nextNightAt && !S.pendingBoss && !S.enemies.some((o) => o.boss && !o.dying)) {
+      Object.assign(n, { state: 'clearing', t: 0 });        // no new yokai from here
+    }
+  } else if (n.state === 'clearing') {
+    if (!targets().length || n.t > CLEAR_S) {
+      const id = CYCLE[(CYCLE.indexOf(n.id) + 1) % CYCLE.length];
+      Object.assign(n, { id, state: 'shifting', t: 0 });
+      world.setTheme(id, SHIFT_S);
+      document.body.dataset.night = id;
+      later(0.6, () => {
+        ui.banner('', 'event', 1, { html: `<span class="ev-kicker">${ui.t('nightEnter')}</span><span class="ev-title">${ui.t(`ev_${id}`)}</span><span class="ev-sub">${ui.t(`evd_${id}`)}</span>`, ms: 3400 });
+        sfx.event();
+      });
+      emit('night', { id });
+    }
+  } else if (n.state === 'shifting' && n.t >= SHIFT_S) {
+    Object.assign(n, { state: 'calm', t: 0 });
+  } else if (n.state === 'calm' && n.t >= CALM_S) {
+    Object.assign(n, { state: 'on', t: 0 });
+    S.nextNightAt = S.distance + NIGHT_EVERY;
+    S.spawnTimer = Math.min(S.spawnTimer, 0.6);
+    if (n.id === 'fox') charge(0.3);
+  }
+}
 
 /* ===================== skills ===================== */
-// right answers charge the talisman; full, it offers one skill, picked at random
-const CHARGE_PER_CAST = 0.2;
+// The seal charges mostly by banishing yokai, and slowly with time; full, it offers
+// one skill, picked at random.
+const CHARGE_PER_KILL = 0.17, CHARGE_PER_SECOND = 1 / 150;
 export const SKILLS = {
   freeze: { ch: '停', color: 0x8fd8ff },        // time seal: every yokai stands still
   thunder: { ch: '雷', color: 0xbfe6ff },       // thunder god: lightning banishes all on screen
@@ -68,17 +90,16 @@ let barrierFx = null;
 
 export function charge(amount) {
   if (S.tut || S.skill) return;
-  S.charge = Math.min(1, S.charge + amount * (ev().charge ?? 1));
+  S.charge = Math.min(1, S.charge + amount * (rules().charge ?? 1));
   if (S.charge >= 1) {
     const pool = Object.keys(SKILLS).filter((id) => !(id === 'barrier' && S.barrier));
     S.skill = pool[Math.floor(Math.random() * pool.length)];
     sfx.skillReady();
-    ui.padToast(ui.t('skillReady', { s: ui.t(`sk_${S.skill}`) }), 'skill');
   }
   renderSkill();
 }
-// a right answer: n yokai hit at once charge a little more
-export const chargeCast = (n) => charge(CHARGE_PER_CAST * (1 + 0.25 * (n - 1)));
+// n yokai banished by one answer (a boss or nekomata hit counts for less)
+export const chargeKill = (n = 1) => charge(CHARGE_PER_KILL * n);
 
 export function useSkill() {
   if (S.mode !== 'playing' || S.tut || !S.skill) return;
@@ -128,8 +149,32 @@ export function blockHit(p) {
   ui.padToast(ui.t('blocked'), 'ok');
   sfx.pillar();
   world.shake(0.25);
-  renderEffects();
   return true;
+}
+
+/* ===================== yokai hints ===================== */
+// The first few times a yokai with a trick appears, a small card says what to watch
+// for: once per run per trick, and only in a player's first HINT_RUNS runs with it.
+const HINT_RUNS = 3, HINT_MS = 4200;
+const hinted = new Set();
+let hintTimer = 0;
+export function yokaiHint(type, trait) {
+  if (hinted.has(trait)) return;
+  const seen = ui.store.get('hints', {});
+  if ((seen[trait] ?? 0) >= HINT_RUNS || !$('hint').hidden) return;
+  hinted.add(trait);
+  seen[trait] = (seen[trait] ?? 0) + 1;
+  ui.store.set('hints', seen);
+  const [seal, color] = YOKAI_LOOK[type];
+  $('hint-seal').textContent = seal;
+  $('hint-seal').parentElement.style.background = color;
+  $('hint-title').textContent = ui.t('hintLook', { y: ui.t(`y_${type}`) });
+  $('hint-text').textContent = ui.t(`tip_${trait}`);
+  const el = $('hint');
+  el.hidden = false;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { el.hidden = true; }, HINT_MS);
 }
 
 /* ===================== the oni's finisher ===================== */
@@ -169,61 +214,74 @@ export function finisher(e, then) {
 }
 
 /* ===================== per frame ===================== */
+let hudT = 0;
 export function updatePowers(dt) {
   for (let i = queue.length - 1; i >= 0; i--) {
     if ((queue[i].t -= dt) <= 0) { const { fn } = queue[i]; queue.splice(i, 1); fn(); }
   }
-  $('skill').hidden = !!S.tut;
+  const box = $('skill-box');
+  if (box.hidden !== !!S.tut) box.hidden = !!S.tut;
   if (S.tut) return;
   if (S.freeze > 0 && (S.freeze -= dt) <= 0) { S.freeze = 0; document.body.classList.remove('frozen'); }
   if (S.lucky > 0) {
     if ((S.lucky -= dt) <= 0) { S.lucky = 0; document.body.classList.remove('lucky'); }
     else if (Math.random() < dt * 12) fx.emit(new THREE.Vector3(rand(-0.5, 0.5), rand(0.2, 1.8), rand(-0.3, 0.4)), { count: 1, color: 0xffd36b, color2: 0xffffff, bright: 2, speed: 0.4, life: 0.8, size: 0.16, gravity: 1.5 });
   }
-  if (S.event) {
-    S.event.t += dt;
-    if (S.event.t >= S.event.dur) endEvent();
-  } else if (S.distance >= S.nextEventAt && !S.pendingBoss && !S.enemies.some((o) => o.boss && !o.dying)) {
-    startEvent();
-  }
-  // the mist rolls in and out
-  const fog = world.scene.fog;
-  const want = ev().fog ? [6, 40] : [24, 95];
-  fog.near += (want[0] - fog.near) * Math.min(1, dt * 1.5);
-  fog.far += (want[1] - fog.far) * Math.min(1, dt * 1.5);
-  renderEffects();
+  stepNight(dt);
+  // time charges the seal too, slowly (not while the path is quiet between nights)
+  if (S.mode === 'playing' && S.night.state === 'on') charge(CHARGE_PER_SECOND * dt);
+  // the HUD's draining bars don't need every frame
+  if ((hudT -= dt) <= 0) { hudT = 0.12; renderEffects(); }
 }
 
 // a clean slate for a new run (or the title screen)
 export function resetPowers() {
   queue.length = 0;
-  Object.assign(S, { charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false, slowmo: 0, event: null, lastEvent: null, nextEventAt: FIRST_EVENT });
+  hinted.clear();
+  Object.assign(S, {
+    charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false, slowmo: 0,
+    night: { id: 'night', state: 'on', t: 0 }, nextNightAt: NIGHT_EVERY,
+  });
   barrierFx = null;
   document.body.classList.remove('frozen', 'lucky');
-  delete document.body.dataset.event;
-  world.scene.fog.near = 24;
-  world.scene.fog.far = 95;
+  delete document.body.dataset.night;
+  world.setTheme('night', 1.2);
+  shownPct = -1;
   renderSkill();
   renderEffects();
 }
 
 /* ===================== HUD ===================== */
-// the skill seal by the talisman: a ring filling as it charges, the skill's kanji when ready
+// The skill seal, bottom left: a ring filling as it charges, with a line on how it
+// charges; when full, the skill's seal, its name and what it does.
+let shownPct = -1;
 function renderSkill() {
+  const pct = S.skill ? 100 : Math.floor(S.charge * 100);
+  if (pct === shownPct) return;                  // the time trickle changes it a hair per frame
+  shownPct = pct;
   const el = $('skill');
-  el.style.setProperty('--k', S.charge.toFixed(3));
-  el.classList.toggle('ready', !!S.skill);
-  $('skill-ch').textContent = S.skill ? SKILLS[S.skill].ch : '符';
-  $('skill-name').textContent = S.skill ? ui.t(`sk_${S.skill}`) : '';
-  el.setAttribute('aria-label', S.skill ? ui.t('skillUse', { s: ui.t(`sk_${S.skill}`) }) : ui.t('skillCharging'));
+  el.style.setProperty('--k', S.skill ? '1' : S.charge.toFixed(3));
+  $('skill-box').classList.toggle('ready', !!S.skill);
   el.disabled = !S.skill;
+  $('skill-ch').textContent = S.skill ? SKILLS[S.skill].ch : '符';
+  if (S.skill) {
+    $('skill-title').innerHTML = `${ui.t(`sk_${S.skill}`)} <small>${ui.t(matchMedia('(pointer: coarse)').matches ? 'skTap' : 'skKey')}</small>`;
+    $('skill-desc').textContent = ui.t(`skd_${S.skill}`);
+    el.setAttribute('aria-label', ui.t('skillUse', { s: ui.t(`sk_${S.skill}`) }));
+  } else {
+    $('skill-title').textContent = ui.t('skCharging', { p: pct });
+    $('skill-desc').textContent = ui.t('skChargingSub');
+    el.setAttribute('aria-label', ui.t('skCharging', { p: pct }));
+  }
 }
+export function refreshSkillText() { shownPct = -1; renderSkill(); }
 
-// chips under the combo: the night event and any skill still running, each draining
+// chips under the combo: the night (and how far to the next) and any skill still running
 let shown = '';
 function renderEffects() {
   const list = [];
-  if (S.event) list.push(['ev', S.event.id, ui.t(`ev_${S.event.id}`), 1 - S.event.t / S.event.dur]);
+  const n = S.night;
+  if (n && n.id !== 'night' && n.state === 'on') list.push(['ev', n.id, ui.t(`ev_${n.id}`), (S.nextNightAt - S.distance) / NIGHT_EVERY]);
   if (S.freeze > 0) list.push(['sk', 'freeze', ui.t('sk_freeze'), S.freeze / FREEZE_S]);
   if (S.lucky > 0) list.push(['sk', 'lucky', ui.t('sk_lucky'), S.lucky / LUCKY_S]);
   if (S.barrier) list.push(['sk', 'barrier', ui.t('sk_barrier'), 1]);
