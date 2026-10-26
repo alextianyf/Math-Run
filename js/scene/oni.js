@@ -223,12 +223,15 @@ const blankPose = () => { const p = { hipsY: 0, jaw: 0.06, curlR: 0.4 }; for (co
 // +x is the palm's normal, z runs across the knuckles). The hero is upright along the
 // knuckle line with the palm against the side of his waist and facing the way the fingers
 // point, so they close round his front while the thumb wraps his back. curl: per finger
-// joint at full grip (curlR = 1) — a wrap, not a fist; thumb: Thumb1..3 Euler at full grip.
+// joint at full grip (curlR = 1) — a wrap, not a fist. thumb: at full grip Thumb1 swings
+// across under the palm (opposition, about the fingers' axis) and every thumb joint flexes
+// toward the palm, the distal ones most — each about its own bend axis, since the thumb
+// lies at an angle to the fingers.
 const GRIP = {
   at: [0.16, -0.15, 0],              // waist centre in the hand frame
   waistY: 0.92,                      // hero units: feet to waist
   curl: [0.5, 0.45, 0.35],
-  thumb: [[-1.5, 0, -0.6], [0, 0, -0.4], [0, 0, -0.3]],
+  thumb: { opp: -0.7, flex: [0.5, 0.9, 1.1] },
 };
 
 function createOni() {
@@ -446,7 +449,8 @@ function createOni() {
 
   /* ---------- the body ---------- */
   let B = null, hipsRest = 0, k = 1, chestNode = rig;
-  const curlBones = { L: [], R: [] }, thumbs = { L: [], R: [] };
+  const curlBones = { L: [], R: [] }, thumbs = { L: [], R: [] }, thumbAxes = [];
+  const _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), X_AXIS = new THREE.Vector3(1, 0, 0), PALM = new THREE.Vector3(0, -1, 0);
   // a child of `bone` whose axes are y = up, z = the oni's forward (model -z) — or, for a
   // limb, -y running down the limb — and whose unit is one oni unit
   const mount = (bone, obj, { down = null, at = null } = {}) => {
@@ -484,6 +488,11 @@ function createOni() {
     for (const side of ['L', 'R']) {
       for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (let i = 1; i <= 3; i++) curlBones[side].push([body.getObjectByName(`J_Bip_${side}_${f}${i}`), i - 1]);
       for (let i = 1; i <= 3; i++) thumbs[side].push(body.getObjectByName(`J_Bip_${side}_Thumb${i}`));
+      if (side === 'R') {
+        // each thumb joint bends toward the palm (model -y) about the axis across its own segment
+        const ends = [...thumbs.R.slice(1), body.getObjectByName('J_Bip_R_Thumb3_end')];
+        ends.forEach((child) => thumbAxes.push(child.position.clone().normalize().cross(PALM).normalize()));
+      }
     }
     // bone-to-bone directions and lengths in the model's rest frame (= every bone's local frame)
     const seg = (a, b) => t.P['J_Bip_' + b].clone().sub(t.P['J_Bip_' + a]);
@@ -614,7 +623,12 @@ function createOni() {
     for (const [n, i] of curlBones.R) n.rotation.z = -pose.curlR * GRIP.curl[i];
     for (const [n] of curlBones.L) n.rotation.z = 1.35;          // a fist round the club
     const g = Math.max(0, pose.curlR);
-    thumbs.R.forEach((n, i) => n.rotation.set(GRIP.thumb[i][0] * g, GRIP.thumb[i][1] * g, GRIP.thumb[i][2] * g));
+    // the thumb closes with the fingers (curlR blends in with the pose, so it never snaps)
+    thumbs.R.forEach((n, i) => {
+      _tq.setFromAxisAngle(thumbAxes[i], GRIP.thumb.flex[i] * g);
+      if (i === 0) n.quaternion.copy(_tq2.setFromAxisAngle(X_AXIS, GRIP.thumb.opp * g)).multiply(_tq);
+      else n.quaternion.copy(_tq);
+    });
     thumbs.L[0].rotation.set(0, 0.6, 0.4);
   }
 
