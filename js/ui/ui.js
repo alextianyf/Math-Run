@@ -58,8 +58,8 @@ export function setScore(n) { $('score').textContent = n.toLocaleString(); }
 export function setDistance(m) { $('dist').textContent = Math.floor(m).toLocaleString(); }
 export function setBest(n) {
   $('best').textContent = n.toLocaleString();
-  $('title-best').textContent = n ? `${t('best')} ${n.toLocaleString()}` : '';
-  $('btn-share-best').hidden = !n;            // no record yet: nothing to share
+  $('title-best').textContent = n ? `${t('best')} ${n.toLocaleString()}` : t('noBest');
+  $('btn-share-best').disabled = !n;          // no record yet: the tile stays, but there's nothing to share
 }
 /* ===================== ranks ===================== */
 // one seal character per rank: 阴阳生 · 阴阳师 · 阴阳博士 · 阴阳头 · 晴明
