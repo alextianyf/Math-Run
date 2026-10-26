@@ -117,6 +117,8 @@
             </div>
           </div>
           <div id="combo" class="combo"></div>
+          <!-- the night event and any skill still running -->
+          <div id="effects" class="effects" aria-live="polite"></div>
         </div>
         <div class="hud-right">
           <div class="score-box">
@@ -148,6 +150,11 @@
         </div>
         <div id="ai-verdict" class="ai-verdict"></div>
       </aside>
+
+      <!-- the skill the talisman charges: a ring filling up, then the skill's seal (tap or Space) -->
+      <button id="skill" class="skill" disabled>
+        <b id="skill-ch" class="skill-ch">符</b><small id="skill-name" class="skill-name"></small><kbd class="skill-key">Space</kbd>
+      </button>
 
       <div id="talisman" class="talisman">
         <div class="tal-head" aria-hidden="true">敕令</div>

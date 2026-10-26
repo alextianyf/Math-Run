@@ -61,7 +61,7 @@ export function createWorld(canvas) {
     mode: 'title', k: 1, dur: 1.4,
     fromPos: new THREE.Vector3(), fromLook: new THREE.Vector3(),
     pos: new THREE.Vector3(), look: new THREE.Vector3(),
-    shake: 0,
+    shake: 0, zoom: 1,
   };
   function computePresets(aspect) {
     const portrait = aspect < 1, wide = aspect >= 1.45;
@@ -127,6 +127,14 @@ export function createWorld(canvas) {
     }
     camera.position.copy(camPos);
     camera.lookAt(camLook);
+    // a zoom punch (the oni's finisher) eases back out
+    if (rig.zoom !== 1 || camera.zoom !== 1) {
+      rig.zoom += (1 - rig.zoom) * Math.min(1, dt * 1.6);
+      if (Math.abs(rig.zoom - 1) < 0.002) rig.zoom = 1;
+      camera.zoom += (rig.zoom - camera.zoom) * Math.min(1, dt * 9);
+      if (rig.zoom === 1 && Math.abs(camera.zoom - 1) < 0.001) camera.zoom = 1;
+      camera.updateProjectionMatrix();
+    }
   }
 
   /* ---------- public API ---------- */
@@ -177,6 +185,10 @@ export function createWorld(canvas) {
     debugView(pos, look) {
       presets.debug = { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) };
       setCameraMode('debug', true);
+    },
+    // push the camera in by a factor (eases back on its own)
+    punch(zoom) {
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) rig.zoom = zoom;
     },
     shake(amount) {
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) rig.shake = Math.max(rig.shake, amount);

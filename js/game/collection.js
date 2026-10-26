@@ -4,6 +4,7 @@
 import * as ui from '../ui/ui.js';
 import { ACHIEVEMENTS, YOKAI_TYPES, collection, progressOf, onUnlock } from './achievements.js';
 import { showYokai, hideYokai } from './bestiaryView.js';
+import { TRAITS } from './enemies.js';
 import { $ } from './helpers.js';
 
 const SAVED = ['best', 'bestRun', 'bestRank', 'collection'];      // what a transfer code carries
@@ -40,7 +41,7 @@ function renderBestiary() {
     const met = seen[type];
     return `<li class="${met ? 'earned' : 'locked'}${type === shown ? ' selected' : ''}" data-type="${type}" tabindex="0" role="button">
       <span class="stamp" style="background:${met ? color : ''}"><b>${met ? seal : '？'}</b></span>
-      <div><b>${met ? ui.t(`y_${type}`) : '？？？'}</b><p>${met ? ui.t(`yd_${type}`) : ui.t('notMet')}</p>${met ? `<small>${day(met)}</small>` : ''}</div></li>`;
+      <div><b>${met ? ui.t(`y_${type}`) : '？？？'}</b><p>${met ? ui.t(`yd_${type}`) : ui.t('notMet')}</p>${met && TRAITS[type] ? `<p class="trait"><span class="badge">${ui.t(`tr_${TRAITS[type]}`)}</span>${ui.t(`yt_${TRAITS[type]}`)}</p>` : ''}${met ? `<small>${day(met)}</small>` : ''}</div></li>`;
   }).join('');
 }
 function view(type) {

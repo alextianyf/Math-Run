@@ -13,6 +13,7 @@ import { pad } from './handwriting.js';
 import { coach, startTutorial } from './tutorial.js';
 import { emit } from './events.js';
 import { openShare } from './shareCard.js';
+import { resetPowers } from './powers.js';
 import { $ } from './helpers.js';
 
 // a clean slate: no yokai, full hearts, zero score, a fresh director
@@ -35,6 +36,7 @@ function resetRun() {
   setTempo(director.tempo());
   S.tut = null;
   coach.show(false);
+  resetPowers();
 }
 
 // retry = "Run again" from the game-over card: skips the tutorial and the long intro.

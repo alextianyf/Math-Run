@@ -1,6 +1,7 @@
 // fx.js — spell effects: pooled HDR particles (one draw call), shock rings,
 // flying talismans with light trails (textured with the digit the player wrote),
-// onmyōji magic circles and the red 滅 seal stamped on banished yokai.
+// foxfire orbs, lightning bolts, pillars of light, a barrier dome, onmyōji magic
+// circles and the red 滅 seal stamped on banished yokai.
 import * as THREE from 'three';
 import { glow } from './toon.js';
 import { glowTex, ringTex, magicCircleTex, sealTex } from './textures.js';
@@ -166,11 +167,11 @@ export function createFx(scene, camera) {
   }
 
   // 滅 seal: pops in big, settles, then fades — sized to read the same at any distance
-  function seal(p, ch = '滅') {
+  function seal(p, ch = '滅', scale = 1) {
     const s = new THREE.Sprite(sealMat(ch));
     s.position.copy(p);
     s.renderOrder = 10;
-    const base = camera.position.distanceTo(p) * 0.11;
+    const base = camera.position.distanceTo(p) * 0.11 * scale;
     const rot = (Math.random() - 0.5) * 0.5;
     addTimed(s, 0.85, (k, o) => {
       const pop = k < 0.15 ? 2.1 - (k / 0.15) * 1.1 : 1;
@@ -218,16 +219,17 @@ export function createFx(scene, camera) {
     tr.g.attributes.ta.needsUpdate = true;
   }
 
-  // texture: CanvasTexture shared by all talismans of one cast (ref-counted)
-  function talisman(texture, from, getTarget, { dur = 0.34, side: bend = 0, onHit, color = 0xffc84a } = {}) {
-    texture.userData.refs = (texture.userData.refs || 0) + 1;
-    const mesh = new THREE.Mesh(talGeo, paperMat(texture));
+  // texture: CanvasTexture shared by all talismans of one cast (ref-counted);
+  // null flies a bare orb of foxfire instead of paper
+  function talisman(texture, from, getTarget, { dur = 0.34, side: bend = 0, lift = 1.5, onHit, color = 0xffc84a } = {}) {
+    if (texture) texture.userData.refs = (texture.userData.refs || 0) + 1;
+    const mesh = texture ? new THREE.Mesh(talGeo, paperMat(texture)) : new THREE.Object3D();
     const halo = new THREE.Sprite(haloMat(color));
-    halo.scale.setScalar(1.4);
+    halo.scale.setScalar(texture ? 1.4 : 1.1);
     mesh.add(halo);
     mesh.position.copy(from);
     scene.add(mesh);
-    flights.push({ mesh, halo, texture, trail: makeTrail(color), from: from.clone(), getTarget, t: 0, dur, bend, onHit, color, spin: (Math.random() - 0.5) * 10 });
+    flights.push({ mesh, halo, texture, trail: makeTrail(color), from: from.clone(), getTarget, t: 0, dur, bend, lift, onHit, color, spin: (Math.random() - 0.5) * 10 });
   }
 
   function updateFlights(dt) {
@@ -238,7 +240,7 @@ export function createFx(scene, camera) {
       p0.copy(f.from);
       f.getTarget(p2);
       p1.lerpVectors(p0, p2, 0.5);
-      p1.y += 1.5;
+      p1.y += f.lift;
       p1.x += f.bend;
       cur.copy(p0).multiplyScalar((1 - e) * (1 - e)).addScaledVector(p1, 2 * (1 - e) * e).addScaledVector(p2, e * e);
       f.mesh.position.copy(cur);
@@ -248,9 +250,9 @@ export function createFx(scene, camera) {
       emit(cur, { count: 2, color: f.color, color2: 0xff7a3a, speed: 0.8, life: 0.35, size: 0.16, gravity: 0, up: 0 });
       if (f.t >= 1) {
         scene.remove(f.mesh);
-        f.mesh.material.dispose();
+        f.mesh.material?.dispose();
         f.halo.material.dispose();
-        if (--f.texture.userData.refs <= 0) f.texture.dispose();
+        if (f.texture && --f.texture.userData.refs <= 0) f.texture.dispose();
         fading.push({ trail: f.trail, head: cur.clone(), k: 1 });
         flights.splice(i, 1);
         f.onHit?.(cur.clone());
@@ -264,6 +266,99 @@ export function createFx(scene, camera) {
       if (fd.k <= 0) disposeTrail(fd.trail), fading.splice(i, 1);
     }
   }
+  /* ===================== lightning, pillars, barrier ===================== */
+  // a jagged bolt from `from` down to `to`: a ribbon, re-jittered while it lives
+  const bolts = [];
+  const bA = new THREE.Vector3();
+  function bolt(from, to, { color = 0xbfe6ff, dur = 0.32, width = 0.16, jag = 0.55, sparks = 26 } = {}) {
+    bolts.push({ tr: makeTrail(color), from: from.clone(), to: to.clone(), t: 0, dur, width, jag, next: 0 });
+    emit(to, { count: sparks, color: 0xffffff, color2: color, bright: 2.4, speed: 6, life: 0.4, size: 0.22, gravity: -2 });
+  }
+  function shapeBolt(b) {
+    const tr = b.tr;
+    for (let i = 0; i < TRAIL_N; i++) {
+      const k = i / (TRAIL_N - 1);
+      bA.lerpVectors(b.to, b.from, k);
+      const j = Math.sin(Math.PI * k) * b.jag;
+      bA.x += (Math.random() - 0.5) * j * 2;
+      bA.z += (Math.random() - 0.5) * j;
+      const a = bA, w = b.width * (1 - 0.6 * k);
+      tan.set(0, 1, 0);
+      view.subVectors(camera.position, a);
+      side.crossVectors(tan, view).normalize().multiplyScalar(w);
+      tr.tp.set([a.x + side.x, a.y + side.y, a.z + side.z, a.x - side.x, a.y - side.y, a.z - side.z], i * 6);
+      tr.ta[i * 2] = 1; tr.ta[i * 2 + 1] = 1;
+    }
+    tr.g.attributes.position.needsUpdate = true;
+    tr.g.attributes.ta.needsUpdate = true;
+  }
+  function updateBolts(dt) {
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i];
+      b.t += dt / b.dur;
+      if ((b.next -= dt) <= 0) { shapeBolt(b); b.next = 0.045; }
+      const flicker = b.t < 0.5 ? 1 : (1 - b.t) * 2 * (0.6 + Math.random() * 0.4);
+      b.tr.mesh.material.uniforms.fade.value = Math.max(0, flicker) * 1.6;
+      if (b.t >= 1) { disposeTrail(b.tr); bolts.splice(i, 1); }
+    }
+  }
+
+  // a pillar of light rising from the ground at p, over a magic circle
+  const beamGeo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true).translate(0, 0.5, 0);
+  const beamMat = (color) => new THREE.ShaderMaterial({
+    uniforms: { color: { value: glow(color, 2.2) }, fade: { value: 1 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 color; uniform float fade; varying vec2 vUv; void main(){ float a = pow(1.0 - vUv.y, 1.6) * (0.55 + 0.45 * sin(vUv.x * 62.83 + vUv.y * 9.0)); gl_FragColor = vec4(color, a * fade); }',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  function pillar(p, { color = 0xffd36b, radius = 0.9, height = 9, dur = 0.7 } = {}) {
+    const m = new THREE.Mesh(beamGeo, beamMat(color));
+    m.position.set(p.x, 0.02, p.z);
+    addTimed(m, dur, (k, o) => {
+      const grow = 1 - Math.pow(1 - Math.min(1, k * 3), 3);
+      const r = radius * (1.25 - 0.5 * k);
+      o.scale.set(r, height * grow, r);
+      o.rotation.y = k * 3;
+      o.material.uniforms.fade.value = k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
+    });
+    magicCircle(new THREE.Vector3(p.x, 0.05, p.z), { color, scale: radius * 3.2, dur: dur * 1.2, ground: true, spin: 2 });
+  }
+
+  // the barrier: a dome of light around a point, kept until dropped
+  const domeGeo = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  const domeMat = (color) => new THREE.ShaderMaterial({
+    uniforms: { color: { value: glow(color, 1.8) }, fade: { value: 1 }, time: { value: 0 } },
+    vertexShader: 'varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vY = position.y; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 color; uniform float fade; uniform float time; varying vec3 vN; varying vec3 vV; varying float vY; void main(){ float rim = pow(1.0 - abs(dot(vN, vV)), 2.2); float bands = 0.5 + 0.5 * sin(vY * 22.0 - time * 3.0); gl_FragColor = vec4(color, (rim * 0.85 + bands * 0.08) * fade); }',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const domes = [];
+  function dome(p, { color = 0x8fe8ff, radius = 1.6 } = {}) {
+    const m = new THREE.Mesh(domeGeo, domeMat(color));
+    m.position.copy(p);
+    m.scale.setScalar(0.01);
+    scene.add(m);
+    const d = { m, t: 0, k: 0, dropping: false, radius, flash: 0 };
+    domes.push(d);
+    return {
+      drop() { d.dropping = true; },
+      flash() { d.flash = 1; },
+    };
+  }
+  function updateDomes(dt) {
+    for (let i = domes.length - 1; i >= 0; i--) {
+      const d = domes[i];
+      d.t += dt;
+      d.k = d.dropping ? d.k - dt / 0.35 : Math.min(1, d.k + dt / 0.35);
+      d.flash = Math.max(0, d.flash - dt * 2.5);
+      const e = 1 - Math.pow(1 - Math.max(0, d.k), 3);
+      d.m.scale.setScalar(d.radius * (d.dropping ? 1 + (1 - d.k) * 0.6 : e) * (1 + d.flash * 0.15));
+      d.m.material.uniforms.time.value = d.t;
+      d.m.material.uniforms.fade.value = Math.max(0, d.k) * (1 + d.flash * 2);
+      if (d.dropping && d.k <= 0) { scene.remove(d.m); d.m.material.dispose(); domes.splice(i, 1); }
+    }
+  }
+
   function disposeTrail(tr) {
     scene.remove(tr.mesh);
     tr.g.dispose();
@@ -271,7 +366,7 @@ export function createFx(scene, camera) {
   }
 
   return {
-    emit, ring, talisman, magicCircle, seal,
+    emit, ring, talisman, magicCircle, seal, bolt, pillar, dome,
     setScale(px) { uniforms.uScale.value = px; },
     // one object per effect material, to be compiled once and then kept (hidden)
     warmObjects() {
@@ -284,10 +379,14 @@ export function createFx(scene, camera) {
         new THREE.Mesh(circleGeo, circleMat(0xffffff, 1)),
         new THREE.Mesh(talGeo, paperMat(paper)),
         new THREE.Mesh(talGeo, trailMat(0xffffff)),
+        new THREE.Mesh(beamGeo, beamMat(0xffffff)),
+        new THREE.Mesh(domeGeo, domeMat(0xffffff)),
       ];
     },
     update(dt) {
       updateFlights(dt);
+      updateBolts(dt);
+      updateDomes(dt);
       updateTimed(dt);
       updateParticles(dt);
     },
@@ -295,6 +394,8 @@ export function createFx(scene, camera) {
       life.fill(0);
       for (const f of flights.splice(0)) { scene.remove(f.mesh); disposeTrail(f.trail); }
       for (const fd of fading.splice(0)) disposeTrail(fd.trail);
+      for (const b of bolts.splice(0)) disposeTrail(b.tr);
+      for (const d of domes.splice(0)) { scene.remove(d.m); d.m.material.dispose(); }
       for (const it of timed.splice(0)) scene.remove(it.obj);
     },
   };

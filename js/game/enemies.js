@@ -1,5 +1,6 @@
 // enemies.js — the yokai on the path: when and where they appear, how they move
-// toward the hero, and the equation tags that float above them.
+// toward the hero (some in their own way: see TRAITS), and the equation tags that
+// float above them.
 import * as THREE from 'three';
 import { LANES } from '../scene/world.js';
 import { createYokai } from '../scene/yokai.js';
@@ -10,6 +11,7 @@ import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
 import { emit } from './events.js';
 import { rand, easeOutBack, smooth01 } from './helpers.js';
+import { paceMult, spawnMult, aliveBonus, frozen, tagVisibility } from './powers.js';
 
 // × travel time: the slower ones give a little more thinking time
 const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0,
@@ -22,6 +24,18 @@ const ROSTER = [
   { type: 'nopperabo', weight: 1.2, from: 9 }, { type: 'tengu', weight: 1.2, from: 11 },
   { type: 'kamaitachi', weight: 1.1, from: 13 }, { type: 'rokurokubi', weight: 1, from: 15 },
 ];
+// what some yokai do besides walking up the path (shown as a badge on their tag):
+//   sway      ittan: the cloth weaves from side to side
+//   blink     kitsunebi: halfway, it vanishes and reappears in another lane
+//   faceless  nopperabo: its equation fades away — remember it — and comes back only up close
+//   trio      kamaitachi: come three at once, one answer for all three
+//   dash      tengu: dawdles, then swoops in on its wings
+//   lives     nekomata: two lives, two problems
+//   late      rokurokubi: worth more the nearer it gets (instead of the farther)
+export const TRAITS = { ittan: 'sway', kitsunebi: 'blink', nopperabo: 'faceless', kamaitachi: 'trio', tengu: 'dash', nekomata: 'lives', rokurokubi: 'late' };
+// the tengu's pace along the path: slow, a swoop, then steady (about the usual time overall)
+const dashPace = (near) => (near < 0.35 ? 0.7 : near < 0.6 ? 2.1 : 0.85);
+
 const tmp = new THREE.Vector3();
 const scr = { x: 0, y: 0, visible: true };
 
@@ -41,14 +55,16 @@ function chooseLane() {
 
 // boss: a rank-trial oni (several problems in a row).
 // forced: { type, lane, text, answer, z, speed, x? } — a scripted yokai (the tutorial)
-export function spawn(boss = false, forced = null) {
-  const type = forced?.type ?? (boss ? 'oni' : pickType());
-  const lane = forced?.lane ?? (boss ? 1 : chooseLane());
+// pack: { type, lane, answer, z } — one of a trio of kamaitachi
+export function spawn(boss = false, forced = null, pack = null) {
+  const type = forced?.type ?? pack?.type ?? (boss ? 'oni' : pickType());
+  const lane = forced?.lane ?? pack?.lane ?? (boss ? 1 : chooseLane());
   const live = targets();
   // ~30%: reuse an answer already on screen (different expression) → multi-banish chance
-  const reuse = live.length && Math.random() < 0.3 ? live[Math.floor(Math.random() * live.length)].answer : undefined;
+  const reuse = pack ? pack.answer : live.length && Math.random() < 0.3 ? live[Math.floor(Math.random() * live.length)].answer : undefined;
   const prob = forced ?? director.nextProblem({ answer: reuse, avoid: new Set(live.map((e) => e.text)), boss });
-  const z0 = forced?.z ?? SPAWN_Z;
+  const z0 = forced?.z ?? pack?.z ?? SPAWN_Z;
+  const trait = forced || boss ? null : TRAITS[type] ?? null;
 
   // drift in from the forest on either side, settling into the lane as it approaches
   // (keeps far-away tags apart, where perspective squeezes the lanes together)
@@ -59,21 +75,25 @@ export function spawn(boss = false, forced = null) {
   yokai.root.scale.setScalar(0.01);
   world.scene.add(yokai.root);
 
-  const hpTotal = boss ? 3 + (director.rank >= 3 ? 1 : 0) : 1;
+  const hpTotal = boss ? 3 + (director.rank >= 3 ? 1 : 0) : trait === 'lives' ? 2 : 1;
   const qTravel = forced ? 1 : director.travelTime(prob);     // thinking time this problem deserves
   const e = {
-    yokai, lane, boss, x0,
+    yokai, lane, boss, x0, trait,
     z: z0,
     speed: forced?.speed ?? (HIT_Z - SPAWN_Z) / (qTravel * TYPE_PACE[type]),
     problem: prob, qStart: 0, qTravel,
     answer: prob.answer, text: prob.text,
-    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch }),
+    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && ui.t(`tr_${trait}`) }),
     hpDone: 0, hpTotal,
-    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0,
+    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0, phase: Math.random() * 6.3, blinked: false, dashing: false,
   };
   measureTag(e);
   S.enemies.push(e);
   emit('meet', { type });
+  // the kamaitachi's two companions: the other lanes, a little behind, the same answer
+  if (trait === 'trio' && !pack) {
+    [0, 1, 2].filter((l) => l !== lane).forEach((l, i) => spawn(false, null, { type, lane: l, answer: prob.answer, z: z0 - 3 - i * 3 }));
+  }
   fx.emit(yokai.center(tmp), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
@@ -110,6 +130,7 @@ export function clearEnemies() {
 export function updateSpawner(dt) {
   const bossAlive = S.enemies.some((e) => e.boss && !e.dying);
   const alive = S.enemies.filter((e) => !e.dying).length;
+  if (frozen() || S.slowmo > 0) return;       // the time seal (and the oni's finisher) hold the spawns too
   if (alive === 0) S.spawnTimer = Math.min(S.spawnTimer, 0.8);
   S.spawnTimer -= dt;
   S.trialHold -= dt;
@@ -117,22 +138,25 @@ export function updateSpawner(dt) {
     S.pendingBoss = false;
     spawn(true);
     S.spawnTimer = director.spawnInterval() * 1.5;
-  } else if (S.spawnTimer <= 0 && alive < director.maxAlive() - (bossAlive ? 1 : 0)) {
+  } else if (S.spawnTimer <= 0 && alive < director.maxAlive() + aliveBonus() - (bossAlive ? 1 : 0)) {
     spawn(false);
-    S.spawnTimer = director.spawnInterval() * rand(0.85, 1.2);
+    S.spawnTimer = director.spawnInterval() * spawnMult() * rand(0.85, 1.2);
   }
 }
 
 // Move every yokai and its tag. onReachHero(e) is called when one gets through.
 export function updateEnemies(dt, onReachHero) {
   const moving = (S.mode === 'playing' || (S.mode === 'intro' && S.tut)) && !S.tut?.frozen;
+  const still = moving && frozen();             // the time seal: they hang where they are
+  const pace = paceMult();
   const shown = [];
   for (const e of [...S.enemies]) {
-    e.yokai.update(dt, S.t);
+    e.yokai.update(still && !e.dying ? dt * 0.04 : dt, S.t);
     const root = e.yokai.root;
     if (e.dying) {
-      // banished: spin, swell and shrink away
-      e.dying += dt / 0.35;
+      // banished: spin, swell and shrink away (the oni more slowly, rising)
+      e.dying += dt / (e.boss ? 0.9 : 0.35);
+      if (e.boss) root.position.y += dt * 2.5;
       const k = Math.min(1, e.dying);
       root.scale.setScalar((1 + 0.4 * Math.sin(Math.PI * k)) * (1 - k * k));
       root.rotation.y += dt * 14;
@@ -153,18 +177,47 @@ export function updateEnemies(dt, onReachHero) {
       root.rotation.y = Math.atan2(-root.position.x, -root.position.z);
       continue;
     }
+    let near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);     // 0 at spawn → 1 at the hero
     if (moving) {
-      e.z += e.speed * dt;
+      e.z += e.speed * dt * pace * (e.trait === 'dash' ? dashPace(near) : 1);
       if (!e.locked && e.z >= HIT_Z) { onReachHero(e); continue; }
+      near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);
+      if (!still) traitStep(e, near);
     }
-    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
     root.position.z = e.z;
     root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
+    if (e.trait === 'sway') root.position.x += Math.sin(e.age * 2.1 + e.phase) * 1.25 * (1 - 0.45 * near);
     if (!e.tag) continue;
     world.project(e.yokai.labelAnchor(tmp), scr);
-    shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible });
+    shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible, near });
   }
   placeTags(shown, dt, moving);
+}
+
+// the moments some traits act on, as a yokai comes up the path
+function traitStep(e, near) {
+  if (e.trait === 'blink' && !e.blinked && near > 0.42 && !e.locked) {
+    // the foxfire winks out and lights again in another lane
+    e.blinked = true;
+    fx.emit(e.yokai.center(tmp), { count: 30, color: 0xa88aff, color2: 0x2a1060, bright: 1.6, speed: 3, life: 0.6, size: 0.35, gravity: 0 });
+    const lanes = [0, 1, 2].filter((l) => l !== e.lane);
+    e.lane = lanes[Math.floor(Math.random() * lanes.length)];
+    e.x0 = LANES[e.lane];
+    e.yokai.root.position.x = e.x0;
+    fx.emit(e.yokai.center(tmp), { count: 30, color: 0xa88aff, color2: 0xffffff, bright: 2, speed: 2.5, life: 0.6, size: 0.3, gravity: 0 });
+    sfx.blink();
+    if (e.tag) { e.tag.classList.remove('swap'); void e.tag.offsetWidth; e.tag.classList.add('swap'); }
+  } else if (e.trait === 'dash' && !e.dashing && near > 0.35 && near < 0.6) {
+    e.dashing = true;
+    fx.emit(e.yokai.center(tmp), { count: 24, color: 0x2a2a44, color2: 0x8a9cff, bright: 1, speed: 3, life: 0.8, size: 0.3, gravity: 1 });
+  } else if (e.trait === 'dash' && e.dashing && near >= 0.6) {
+    e.dashing = false;
+  }
+  // the faceless one: its equation is there for a moment, then only up close
+  if (e.trait === 'faceless' && e.tag) {
+    const left = (HIT_Z - e.z) / e.speed;
+    e.tag.classList.toggle('veiled', e.age - e.qStart > 1.8 && left > 1.6 && !e.locked);
+  }
 }
 
 // Keep equation tags readable: the nearest yokai keep their spot, farther tags
@@ -192,7 +245,7 @@ function placeTags(shown, dt, moving) {
     const e = v.e;
     e.sx = v.x; e.sy = v.y + e.offY;
     const timeLeft = (HIT_Z - e.z) / e.speed;
-    ui.placeTag(e.tag, e.sx, e.sy, v.scale, v.visible ? Math.min(1, e.age / 0.6) : 0,
+    ui.placeTag(e.tag, e.sx, e.sy, v.scale, v.visible ? Math.min(1, e.age / 0.6) * tagVisibility(v.near) : 0,
       moving && !e.locked && timeLeft < 2.3);
   }
 }

@@ -1,5 +1,5 @@
 // rules.js — the "How to play" screen: hearts and how to win them back, the ranks
-// and their trials, scoring, and the fair-play rules. The numbers here are the
+// and their trials, scoring, skills and night events, and the fair-play rules. The numbers here are the
 // game's own (progress.js, combat.js, enemies.js); keep them in step.
 import * as ui from '../ui/ui.js';
 import { RANKS } from '../difficulty/adaptive.js';
@@ -19,6 +19,7 @@ function render() {
     `<section><h3>${ui.t('rulesRanksT')}</h3><p>${ui.t('rulesRanks1')}</p><ol class="rules-ranks">${ranks}</ol><ul>
       <li>${ui.t('rulesRanks2')}</li><li>${ui.t('rulesRanks3')}</li><li>${ui.t('rulesRanks4')}</li></ul></section>`,
     section('rulesScoreT', ['rulesScore1', 'rulesScore2', 'rulesScore3', 'rulesScore4']),
+    section('rulesSkillsT', ['rulesSkills1', 'rulesSkills2', 'rulesSkills3', 'rulesSkills4']),
     section('rulesFairT', ['rulesFair1', 'rulesFair2', 'rulesFair3']),
   ].join('');
 }

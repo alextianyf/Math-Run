@@ -1,6 +1,7 @@
-// combat.js — what a reading of the talisman does: a talisman flies at every yokai
-// whose answer matches (the more at once, the more points), a wrong digit fizzles,
-// and a yokai that reaches the hero costs a heart.
+// combat.js — what a reading of the talisman does: a spell (a talisman, foxfire,
+// lightning or a pillar of light, picked at random) strikes every yokai whose answer
+// matches (the more at once, the more points), a wrong digit fizzles, and a yokai
+// that reaches the hero costs a heart.
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
@@ -12,6 +13,7 @@ import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
 import { emit } from './events.js';
 import { rand } from './helpers.js';
+import { chargeCast, scoreMult, blockHit, finisher, later } from './powers.js';
 
 // combo aura tiers: [min combo, colour] — the talismans and sparks take this colour
 const AURA = [[20, 0xc77dff], [10, 0x6fd8ff], [5, 0xffc84a]];
@@ -76,17 +78,57 @@ export function cast(digit, paper) {
     ui.banner(ui.t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
     sfx.multi(n);
   }
+  if (!S.tut) chargeCast(n);
+  const style = S.tut ? 'talisman' : STYLES[Math.floor(Math.random() * STYLES.length)];
   victims.forEach((e, i) => {
     e.locked = true;
     ui.setTagState(e.tag, 'locked');
-    fx.talisman(tex, from, (out) => e.yokai.center(out), {
-      dur: 0.3 + i * 0.06,
-      side: (i - (n - 1) / 2) * 1.6,
-      color,
-      onHit: () => impact(e, n),
-    });
+    SPELLS[style](e, i, n, { tex, from, color });
   });
+  if (style !== 'talisman' && tex) tex.dispose();      // only the paper talisman carries the writing
 }
+
+// the shapes a cast can take; each strikes yokai e (i of n) and then calls impact()
+const STYLES = ['talisman', 'talisman', 'foxfire', 'thunder', 'pillar'];
+const SPELLS = {
+  // the written talisman itself flies
+  talisman(e, i, n, { tex, from, color }) {
+    fx.talisman(tex, from, (out) => e.yokai.center(out), {
+      dur: 0.3 + i * 0.06, side: (i - (n - 1) / 2) * 1.6, color, onHit: () => impact(e, n),
+    });
+  },
+  // three foxfire orbs curl in from either side
+  foxfire(e, i, n, { from }) {
+    for (let k = 0; k < 3; k++) {
+      fx.talisman(null, from, (out) => e.yokai.center(out), {
+        dur: 0.36 + i * 0.06 + k * 0.05, side: (k - 1) * 3.2, lift: 2.2 - k * 0.6, color: k === 1 ? 0xb47dff : 0x6fd8ff,
+        onHit: k === 2 ? () => impact(e, n) : (p) => fx.emit(p, { count: 12, color: 0x8fe8ff, color2: 0xb47dff, bright: 2, speed: 3, life: 0.4, size: 0.2 }),
+      });
+    }
+  },
+  // lightning out of the sky, a beat after the cast
+  thunder(e, i, n) {
+    const p = e.yokai.center(new THREE.Vector3());
+    fx.magicCircle(tmp.set(p.x, p.y + 3.2, p.z), { color: 0xbfe6ff, scale: 2.2, dur: 0.4, ground: true, spin: 6 });
+    later(0.16 + i * 0.07, () => {
+      if (!S.enemies.includes(e)) return;
+      const q = e.yokai.center(new THREE.Vector3());
+      fx.bolt(new THREE.Vector3(q.x + rand(-0.6, 0.6), q.y + 9, q.z - 1.5), q);
+      sfx.thunder();
+      impact(e, n);
+    });
+  },
+  // a circle opens under it and a pillar of light goes up
+  pillar(e, i, n) {
+    const p = e.yokai.center(new THREE.Vector3());
+    later(0.1 + i * 0.07, () => {
+      if (!S.enemies.includes(e)) return;
+      fx.pillar(e.yokai.center(p), { color: 0xffd36b, radius: 0.8, height: 7, dur: 0.6 });
+      sfx.pillar();
+      later(0.12, () => impact(e, n));
+    });
+  },
+};
 
 // the talisman flies off and burns out. penalize: a clearly written wrong digit —
 // it counts as a wrong answer to the most urgent problem and locks the pad briefly
@@ -126,47 +168,73 @@ function impact(e, n) {
   fx.ring(p, { color: 0xffd36b, scale: e.boss ? 6.5 : 3.4 });
   sfx.hit(S.combo);
 
-  if (e.boss && e.hpDone + 1 < e.hpTotal) {
-    // boss takes a hit: staggers, gets a new equation and is knocked back
+  if (e.hpDone + 1 < e.hpTotal) {
+    // a boss (or the two-lived nekomata) takes a hit: staggers, gets a new
+    // equation and is knocked back
     e.hpDone++;
     e.yokai.flash();
-    world.shake(0.25);
+    world.shake(e.boss ? 0.25 : 0.1);
     record(e, true);
-    const prob = director.nextProblem({ avoid: new Set(targets().map((o) => o.text)), boss: true });
+    const prob = director.nextProblem({ avoid: new Set(targets().map((o) => o.text)), boss: e.boss });
     Object.assign(e, { problem: prob, qStart: e.age, qTravel: director.travelTime(prob), answer: prob.answer, text: prob.text });
     ui.setTagText(e.tag, prob.text);
     ui.setTagHp(e.tag, e.hpDone, e.hpTotal);
     measureTag(e);
     e.tag.classList.remove('locked');
-    e.z = Math.max(Math.min(e.z, SPAWN_Z * 0.8), e.z - 7);   // knock back, never pull forward
+    e.z = Math.max(Math.min(e.z, SPAWN_Z * 0.8), e.z - (e.boss ? 7 : 4));   // knock back, never pull forward
     e.locked = false;
-    const pts = Math.round(200 * comboMult());
+    const pts = Math.round((e.boss ? 200 : 100) * comboMult() * scoreMult());
     addScore(pts);
     ui.popup(`+${pts}`, e.sx, e.sy, 'gold');
     return;
   }
 
-  // banished: more points the farther away it was, and for several at once
-  fx.seal(p);
+  // banished: more points the farther away it was (the rokurokubi: the nearer), and
+  // for several at once
+  if (!e.boss) fx.seal(p);
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
+  const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
-  const pts = Math.round(((e.boss ? 1000 : 100) + 60 * far) * (1 + multiBonus) * comboMult());
+  const pts = Math.round(((e.boss ? 1000 : 100) + timing) * (1 + multiBonus) * comboMult() * scoreMult());
   addScore(pts);
-  ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 ? 'gold big' : 'gold');
+  ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 || e.boss ? 'gold big' : 'gold');
   record(e, true);
-  if (e.boss) {
-    ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
-    world.shake(0.4);
-    promote();
-  }
   emit('banish', { type: e.yokai.type, combo: S.combo });
   e.yokai.flash();
   e.dying = 0.0001;
-  if (e.boss) showRank();
   ui.setTagState(e.tag, 'hit');
+  if (e.boss) {
+    // the trial is passed: the finisher first, then the promotion
+    ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
+    finisher(e, () => { promote(); showRank(); });
+  }
   ui.removeTag(e.tag, 600);
   e.tag = null;
   advance(e.boss ? 3 : 1);
+}
+
+// banished by a skill or the finisher's shockwave rather than an answer: points,
+// but the problem never counts toward the rating. A boss is only knocked back.
+export function banishFree(e) {
+  if (!S.enemies.includes(e) || e.dying || e.swarm) return;
+  const p = e.yokai.center(new THREE.Vector3());
+  fx.emit(p, { count: 40, color: 0xffe28a, color2: e.yokai.info.color, bright: 2, speed: 6, life: 0.8, size: 0.3 });
+  fx.ring(p, { color: 0xbfe6ff, scale: 3.4 });
+  e.yokai.flash();
+  if (e.boss) {
+    e.z = Math.max(Math.min(e.z, SPAWN_Z * 0.8), e.z - 10);
+    world.shake(0.3);
+    return;
+  }
+  fx.seal(p);
+  const pts = Math.round(100 * comboMult() * scoreMult());
+  addScore(pts);
+  ui.popup(`+${pts}`, e.sx, e.sy, 'gold');
+  emit('banish', { type: e.yokai.type, combo: S.combo, free: true });
+  e.dying = 0.0001;
+  e.locked = true;
+  if (e.tag) { ui.setTagState(e.tag, 'hit'); ui.removeTag(e.tag, 600); e.tag = null; }
+  advance(1);
 }
 
 // a yokai got through to the hero: one heart (a failed rank trial too, never more)
@@ -178,7 +246,7 @@ export function playerHit(e) {
   if (!S.tut) director.hit();
   removeEnemy(e);
   if (e.boss) showRank();                   // the trial failed: back to the bar
-  if (S.invuln > 0) return;
+  if (S.invuln > 0 || blockHit(p)) return;
 
   S.hearts = Math.max(0, S.hearts - 1);
   S.invuln = 0.8;

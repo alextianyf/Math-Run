@@ -4,7 +4,7 @@
 // Yokai drift down the shrine path, each carrying an equation. The player
 // handwrites a digit on the talisman; the MNIST model reads it and a talisman
 // flies at EVERY yokai whose answer matches. Where things live:
-//   js/game/        the rules: yokai, casting, scoring, tutorial, capture, run flow
+//   js/game/        the rules: yokai, casting, skills and night events, scoring, tutorial, capture, run flow
 //   js/difficulty/  adaptive difficulty: the director and the problem generator
 //   js/ai/          handwritten-digit recognition (TensorFlow.js)
 //   js/scene/       the 3D world, characters and spell effects (Three.js)
@@ -24,6 +24,7 @@ import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, s
 import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { initShareCard } from './game/shareCard.js';
 import { initRules } from './game/rules.js';
+import { updatePowers, useSkill, resetPowers, charge, later } from './game/powers.js';
 import { $, smooth01 } from './game/helpers.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -129,9 +130,11 @@ function step(dt, realDt) {
 
   if (S.mode === 'intro') {
     S.introT += dt;
+    updatePowers(dt);
     if (S.tut) updateTutorial(dt);
     if (S.introT > 1.45) beginPlay();
   } else if (S.mode === 'playing') {
+    updatePowers(dt);
     updatePlaying(dt);
     world.sampleFrame(realDt);
   } else if (S.mode === 'caught') {
@@ -146,8 +149,12 @@ function frame(now) {
   const realDt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (S.mode !== 'paused') {
-    // brief slow motion as the last heart is lost
-    const slow = S.mode === 'caught' && S.caughtT < 0.7 ? 0.25 + 0.75 * smooth01((S.caughtT - 0.3) / 0.4) : 1;
+    // brief slow motion as the last heart is lost, and through the oni's finisher
+    let slow = S.mode === 'caught' && S.caughtT < 0.7 ? 0.25 + 0.75 * smooth01((S.caughtT - 0.3) / 0.4) : 1;
+    if (S.slowmo > 0) {
+      S.slowmo -= realDt;
+      slow = Math.min(slow, 0.3 + 0.7 * smooth01(1 - S.slowmo / 0.5));
+    }
     const dt = realDt * slow;
     S.t += dt;
     step(dt, realDt);
@@ -163,6 +170,7 @@ $('btn-start').addEventListener('click', () => startGame(false));
 $('btn-share').addEventListener('click', shareRun);
 $('btn-share-best').addEventListener('click', shareBest);
 $('btn-retry').addEventListener('click', retryRun);
+$('skill').addEventListener('click', useSkill);
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
 $('btn-over-title').addEventListener('click', toTitle);
@@ -194,11 +202,20 @@ document.addEventListener('keydown', (e) => {
   if (S.mode === 'caught') { skip(); return; }
   if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
     if (S.mode === 'playing') pause(); else if (S.mode === 'paused') resume();
+  } else if (e.key === ' ' && S.mode === 'playing') {
+    e.preventDefault();
+    useSkill();
   } else if ((e.key === 'Enter' || e.key === ' ') && (S.mode === 'title' || S.mode === 'over') && document.activeElement?.tagName !== 'BUTTON') {
     e.preventDefault();
     startGame(S.mode === 'over');
   } else if (DEBUG && S.mode === 'playing' && /^[0-9]$/.test(e.key)) {
     debugCast(Number(e.key));
+  } else if (DEBUG && S.mode === 'playing' && e.key === 'k') {
+    charge(1);                                   // ?debug: a skill now
+  } else if (DEBUG && S.mode === 'playing' && e.key === 'e') {
+    if (S.event) S.event.t = S.event.dur; else S.nextEventAt = 0;    // ?debug: next night event
+  } else if (DEBUG && S.mode === 'playing' && e.key === 'b') {
+    S.pendingBoss = true;                        // ?debug: a rank trial
   }
 });
 // leaving the page pauses the run (the problems are replaced when it goes on, see resume())
@@ -215,4 +232,4 @@ function debugCast(d) {
   g.fillStyle = '#b3170f'; g.font = 'bold 120px serif'; g.textAlign = 'center'; g.fillText(String(d), 64, 140);
   if (targets().some((t) => t.answer === d)) cast(d, c); else fizzle(d, c, targets().length > 0);
 }
-if (DEBUG) window.__mathrun = { S, world, fx, hero, spawn, decide, director, beginCapture, skipCapture, coach };
+if (DEBUG) window.__mathrun = { S, world, fx, hero, spawn, decide, director, beginCapture, skipCapture, coach, charge, useSkill, later };

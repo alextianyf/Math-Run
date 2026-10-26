@@ -23,6 +23,10 @@ export const S = {
   best: store.get('best', 0),
   bestRank: store.get('bestRank', 0),       // a record only: every run starts at the lowest rank
   tut: null,                       // the tutorial while it runs (see tutorial.js)
+  // powers.js: the skill charge (0–1) and the skill it offers, skills still running,
+  // the night event, and the finisher's slow motion
+  charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false,
+  event: null, lastEvent: null, nextEventAt: 0, slowmo: 0,
 };
 
 // yokai the player can still answer: not dying, not already hit, not in the capture scene

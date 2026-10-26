@@ -114,6 +114,33 @@ export const sfx = {
   heal() { if (ok()) [4, 5, 7].forEach((k, i) => bell(SCALE[k], now() + i * 0.1, 0.18, 1.2)); },
   over() { if (ok()) [5, 4, 2, 0].forEach((k, i) => pluck(SCALE[k], now() + i * 0.22, 0.25, sfxBus)); },
   click() { if (ok()) pluck(880, now(), 0.08, sfxBus); },
+  // spells, skills, night events and the oni's finisher
+  thunder() {
+    if (!ok()) return;
+    noiseBurst(now(), 0.5, { type: 'lowpass', f0: 5000, f1: 200, vol: 0.4 });
+    drum(now() + 0.02, { f0: 110, f1: 40, vol: 0.5, dur: 0.5 });
+  },
+  pillar() { if (ok()) { noiseBurst(now(), 0.6, { f0: 300, f1: 4000, q: 2, vol: 0.2 }); bell(SCALE[5], now(), 0.18, 1.2); } },
+  blink() { if (ok()) noiseBurst(now(), 0.18, { f0: 2400, f1: 600, q: 4, vol: 0.12 }); },
+  skillReady() { if (ok()) [2, 4, 6, 7].forEach((k, i) => bell(SCALE[k], now() + i * 0.06, 0.16, 1.4)); },
+  skill() {
+    if (!ok()) return;
+    drum(now(), { f0: 140, f1: 50, vol: 0.7, dur: 0.5 });
+    [7, 5, 4].forEach((k, i) => bell(SCALE[k], now() + 0.05 + i * 0.05, 0.22, 1.8));
+  },
+  event() {
+    if (!ok()) return;
+    drum(now(), { f0: 100, f1: 45, vol: 0.5, dur: 0.6 });
+    [0, 3, 5].forEach((k, i) => pluck(SCALE[k], now() + 0.1 + i * 0.14, 0.2, sfxBus));
+  },
+  finisher() {
+    if (!ok()) return;
+    const t = now();
+    drum(t, { f0: 80, f1: 30, vol: 1, dur: 1.4 });
+    noiseBurst(t, 1.4, { f0: 200, f1: 6000, q: 1.5, vol: 0.35 });
+    [0, 2, 4, 5, 7].forEach((k, i) => bell(SCALE[k] * 0.5, t + 0.25 + i * 0.09, 0.3, 2.6));
+    [0, 0.35, 0.7].forEach((d) => drum(t + 0.6 + d, { f0: 120, f1: 45, vol: 0.7, dur: 0.4 }));
+  },
   // tutorial
   coach() { if (ok()) [4, 6].forEach((k, i) => pluck(SCALE[k] * 2, now() + i * 0.07, 0.1, sfxBus)); },
   countdown(i, last) {

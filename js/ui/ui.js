@@ -138,13 +138,15 @@ function setEquation(el, text) {
 }
 const tagLayer = () => $('labels');
 
-// stretch: a problem a notch above the player's level, marked with a small badge
-export function createTag(text, { boss = false, hp = 0, stretch = false } = {}) {
+// stretch: a problem a notch above the player's level, marked with a small badge;
+// trait: what this yokai does (enemies.js TRAITS), as a badge of its own
+export function createTag(text, { boss = false, hp = 0, stretch = false, trait = null } = {}) {
   const el = document.createElement('div');
   el.className = 'tag' + (boss ? ' boss' : '') + (stretch ? ' stretch' : '');
-  el.innerHTML = `<div class="tag-in"><span class="eq"></span>${boss ? '<span class="hp"></span>' : ''}${stretch ? `<span class="badge">${t('stretch')}</span>` : ''}</div>`;
+  el.innerHTML = `<div class="tag-in"><span class="eq"></span>${hp > 1 ? '<span class="hp"></span>' : ''}`
+    + `${stretch ? `<span class="badge">${t('stretch')}</span>` : ''}${trait ? `<span class="badge trait">${trait}</span>` : ''}</div>`;
   setEquation(el.querySelector('.eq'), text);
-  if (boss) setTagHp(el, 0, hp);
+  if (hp > 1) setTagHp(el, 0, hp);
   tagLayer().appendChild(el);
   return el;
 }
