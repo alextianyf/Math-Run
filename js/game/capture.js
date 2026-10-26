@@ -18,8 +18,10 @@ const ORDER = Object.keys(CAPTURE);
 
 const captor = { oni: null, step: 0, holding: false };
 const portalPos = new THREE.Vector3(0, 0.06, -3);
-const palm = new THREE.Vector3();
 const tmp = new THREE.Vector3();
+// the hero in the fist: where the grip puts him, and where he was snatched from
+const hold = { t: 1, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), fromPos: new THREE.Vector3(), fromQuat: new THREE.Quaternion() };
+const twist = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0);
 
 export function beginCapture() {
   S.mode = 'caught';
@@ -59,14 +61,14 @@ function spawnCaptor() {
   captor.oni = oni;
   oni.root.scale.setScalar(CAPTOR_SCALE);
   world.scene.add(oni.root);
-  // place the oni so that its grabbing hand lands right on the kneeling hero
+  // place the oni so that its closing fist lands right round the kneeling hero's waist
   oni.setMode('grab');
   oni.snap(S.t);
   oni.root.position.set(0, 0, -3);
   oni.root.updateMatrixWorld(true);
-  const hand = oni.handR.localToWorld(new THREE.Vector3(0, -0.2, 0));
-  oni.root.position.x -= hand.x;
-  oni.root.position.z -= hand.z - 0.05;
+  const feet = oni.holdTransform(new THREE.Vector3(), new THREE.Quaternion());
+  oni.root.position.x -= feet.x - hero.root.position.x;
+  oni.root.position.z -= feet.z - hero.root.position.z;
   oni.setMode('idle');
   oni.snap(S.t);
 }
@@ -75,6 +77,10 @@ function spawnCaptor() {
 function grabHero() {
   captor.holding = true;
   hero.setMode('grabbed');
+  // snatched up off his knees into the closing fist over a quarter second
+  hold.t = 0;
+  hold.fromPos.copy(hero.root.position);
+  hold.fromQuat.copy(hero.root.quaternion);
 }
 
 // Plays the timeline; returns true once it's time for the game-over card.
@@ -114,9 +120,13 @@ export function animateCaptor(dt) {
   if (!captor.oni) return;
   captor.oni.update(dt, S.t);
   if (captor.holding) {
-    captor.oni.handR.localToWorld(palm.set(0, -0.16, 0));
-    hero.root.position.set(palm.x, palm.y - 1.08, palm.z + 0.12);
-    hero.root.rotation.set(0, 0, Math.sin(S.t * 3.1) * 0.12);
+    // waist in the palm, fingers round his front, thumb round his back (see oni.js GRIP)
+    captor.oni.holdTransform(hold.pos, hold.quat);
+    hold.quat.multiply(twist.setFromAxisAngle(UP, Math.sin(S.t * 3.1) * 0.1));   // squirming
+    hold.t = Math.min(1, hold.t + dt / 0.25);
+    const k = easeOut(hold.t);
+    hero.root.position.lerpVectors(hold.fromPos, hold.pos, k);
+    hero.root.quaternion.slerpQuaternions(hold.fromQuat, hold.quat, k);
   }
 }
 
@@ -130,6 +140,7 @@ export function skipCapture() {
   captor.oni.setMode('grab');
   captor.oni.snap(S.t);
   grabHero();
+  hold.t = 1;
   captor.oni.setMode('laugh');
   captor.oni.snap(S.t);
   world.setCameraMode('held', true);

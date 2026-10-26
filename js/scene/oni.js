@@ -53,6 +53,7 @@ const templateReady = new GLTFLoader().loadAsync('./models/hero.vrm')
 
 const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
 const ONE = new THREE.Vector3(1, 1, 1);
+const _hx = new THREE.Vector3(), _hy = new THREE.Vector3(), _hz = new THREE.Vector3(), _hw = new THREE.Vector3(), _hm = new THREE.Matrix4();
 
 function buildTemplate(scene) {
   // keep the bare body, drop face, eyes, hair and clothes
@@ -217,6 +218,18 @@ const Zax = new THREE.Vector3(0, 0, 1);
 const ARM_BASE = { L: new THREE.Quaternion().setFromAxisAngle(Zax, 1.3), R: new THREE.Quaternion().setFromAxisAngle(Zax, -1.3) };
 const ARM_BASE_INV = { L: ARM_BASE.L.clone().invert(), R: ARM_BASE.R.clone().invert() };
 const blankPose = () => { const p = { hipsY: 0, jaw: 0.06, curlR: 0.4 }; for (const k of KEYS) p[k] = [0, 0, 0]; return p; };
+
+// How the grabbing hand holds the hero. Frame: handR (oni units; -y runs down the fingers,
+// +x is the palm's normal, z runs across the knuckles). The hero is upright along the
+// knuckle line with the palm against the side of his waist and facing the way the fingers
+// point, so they close round his front while the thumb wraps his back. curl: per finger
+// joint at full grip (curlR = 1) — a wrap, not a fist; thumb: Thumb1..3 Euler at full grip.
+const GRIP = {
+  at: [0.16, -0.15, 0],              // waist centre in the hand frame
+  waistY: 0.92,                      // hero units: feet to waist
+  curl: [0.5, 0.45, 0.35],
+  thumb: [[-1.5, 0, -0.6], [0, 0, -0.4], [0, 0, -0.3]],
+};
 
 function createOni() {
   const tiger = tigerTex();
@@ -433,7 +446,7 @@ function createOni() {
 
   /* ---------- the body ---------- */
   let B = null, hipsRest = 0, k = 1, chestNode = rig;
-  const curlBones = { L: [], R: [] }, thumbs = {};
+  const curlBones = { L: [], R: [] }, thumbs = { L: [], R: [] };
   // a child of `bone` whose axes are y = up, z = the oni's forward (model -z) — or, for a
   // limb, -y running down the limb — and whose unit is one oni unit
   const mount = (bone, obj, { down = null, at = null } = {}) => {
@@ -469,8 +482,8 @@ function createOni() {
     hipsRest = B.hips.position.y;
     chestNode = B.upper;
     for (const side of ['L', 'R']) {
-      for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (let i = 1; i <= 3; i++) curlBones[side].push(body.getObjectByName(`J_Bip_${side}_${f}${i}`));
-      thumbs[side] = body.getObjectByName(`J_Bip_${side}_Thumb1`);
+      for (const f of ['Index', 'Middle', 'Ring', 'Little']) for (let i = 1; i <= 3; i++) curlBones[side].push([body.getObjectByName(`J_Bip_${side}_${f}${i}`), i - 1]);
+      for (let i = 1; i <= 3; i++) thumbs[side].push(body.getObjectByName(`J_Bip_${side}_Thumb${i}`));
     }
     // bone-to-bone directions and lengths in the model's rest frame (= every bone's local frame)
     const seg = (a, b) => t.P['J_Bip_' + b].clone().sub(t.P['J_Bip_' + a]);
@@ -536,7 +549,7 @@ function createOni() {
     p.thR = [0.02, -0.1, 0.1]; p.shR = [-0.08, 0, 0]; p.ftR = [0.06, 0.1, -0.08];
     p.uaR = [0.1, 0, 0.32]; p.faR = [0.3, 0, 0]; p.hdR = [0, 0, 0];
     p.uaL = [0.55, 0.3, -0.55]; p.faL = [2.15, 0.2, 0]; p.hdL = [0.2, 0, 0];
-    p.jaw = 0.08; p.curlR = 0.5;
+    p.jaw = 0.08; p.curlR = 0.45;
     if (mode === 'walk') {
       const s = Math.sin(walkPhase), c = Math.cos(walkPhase);
       p.hipsY = -0.04 - 0.08 * Math.abs(s);
@@ -552,18 +565,20 @@ function createOni() {
         uaR: [0.5, 0, 1.45], faR: [0.7, 0, 0], uaL: [0.5, 0, -1.3], faL: [1.3, 0, 0] });
     } else if (mode === 'reach' || mode === 'grab') {
       Object.assign(p, {
-        hipsY: -0.6, spine: [-0.6, 0, 0], chest: [-0.15, 0, 0], upper: [-0.05, 0, 0], head: [0.65, 0, 0], jaw: 0.18,
-        uaR: [1.2, 0, 0.1], faR: [0.1, 0, 0],
-        thR: [1.0, 0, 0.06], shR: [-1.5, 0, 0], ftR: [0.5, 0, 0],
-        thL: [-0.3, 0, -0.1], shL: [-0.4, 0, 0], ftL: [0.25, 0, 0],
-        curlR: mode === 'grab' ? 1.45 : -0.2,
+        // a deep crouch, so the fist closes round the kneeling hero's waist (knuckles upright,
+        // fingers pointing forward past him)
+        hipsY: -0.9, spine: [-0.95, 0, 0], chest: [-0.15, 0, 0], upper: [-0.05, 0, 0], head: [0.75, 0, 0], jaw: 0.18,
+        uaR: [1.0, 0, 0.1], faR: [0.1, 0, 0], hdR: [0.8, 0, -0.4],
+        thR: [1.3, 0, 0.1], shR: [-1.9, 0, 0], ftR: [0.6, 0, 0],
+        thL: [-0.1, 0, -0.15], shL: [-1.1, 0, 0], ftL: [0.5, 0, 0],
+        curlR: mode === 'grab' ? 1 : -0.2,
       });
     } else if (mode === 'lift' || mode === 'laugh') {
       const kk = mode === 'laugh' ? Math.abs(Math.sin(t * 13)) : 0;
       Object.assign(p, {
         spine: [0.06 + 0.05 * kk, 0, 0], chest: [0.04, 0, 0], head: [0.1 + 0.15 * kk, -0.4 + (mode === 'laugh' ? 0.08 * Math.sin(t * 3) : 0), 0],   // turned to the prize in its fist
         jaw: 0.22 + (mode === 'laugh' ? 0.35 * kk : 0), hipsY: 0.03 * kk,
-        uaR: [1.45, 0, 0.45], faR: [0.5, 0, 0], curlR: 1.45,   // the fist held out beside the face, clear of it
+        uaR: [1.5, 0, 0.9], faR: [0.6, 0, 0], hdR: [-0.4, 0, -0.4], curlR: 1,   // the fist held out beside the face, the hero upright in it
       });
     }
     if (roarT > 0) {
@@ -596,10 +611,11 @@ function createOni() {
       else node.quaternion.copy(q);
     }
     B.hips.position.y = hipsRest + pose.hipsY / k;
-    for (const n of curlBones.R) n.rotation.z = -pose.curlR;
-    for (const n of curlBones.L) n.rotation.z = 1.35;          // a fist round the club
-    thumbs.R.rotation.set(0, -0.5 * pose.curlR, -0.3 * pose.curlR);
-    thumbs.L.rotation.set(0, 0.6, 0.4);
+    for (const [n, i] of curlBones.R) n.rotation.z = -pose.curlR * GRIP.curl[i];
+    for (const [n] of curlBones.L) n.rotation.z = 1.35;          // a fist round the club
+    const g = Math.max(0, pose.curlR);
+    thumbs.R.forEach((n, i) => n.rotation.set(GRIP.thumb[i][0] * g, GRIP.thumb[i][1] * g, GRIP.thumb[i][2] * g));
+    thumbs.L[0].rotation.set(0, 0.6, 0.4);
   }
 
   const api = {
@@ -611,6 +627,21 @@ function createOni() {
     setMode(m) { mode = m; },
     roar() { roarT = 1; },
     flash() { flashT = 1; staggerT = 1; },
+    // where a held hero goes: its feet position and orientation (world), so that its waist
+    // sits in the palm and the fingers close round it (see GRIP)
+    holdTransform(pos, quat) {
+      handR.updateWorldMatrix(true, false);
+      const m = handR.matrixWorld.elements;
+      const ax = _hx.set(m[0], m[1], m[2]).normalize(), az = _hz.set(m[8], m[9], m[10]).normalize();
+      // palm on his right side (or left, if the hand is upside down); he faces down the fingers
+      const flip = az.y < 0;
+      const up = flip ? az.negate() : az;
+      const xh = ax.multiplyScalar(flip ? 1 : -1).addScaledVector(up, -ax.dot(up)).normalize();
+      const zh = _hy.crossVectors(xh, up);
+      quat.setFromRotationMatrix(_hm.makeBasis(xh, up, zh));
+      handR.localToWorld(pos.set(...GRIP.at)).addScaledVector(up, -GRIP.waistY);
+      return pos;
+    },
     // jump every joint straight to the current mode's pose (for skipping cinematics)
     snap(t = 0) { blend(target(t), 1); apply(); root.updateMatrixWorld(true); },
     // back to a calm idle, as if new
