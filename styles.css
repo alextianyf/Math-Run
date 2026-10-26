@@ -608,6 +608,7 @@ body.ai-open #ai-panel { display: block; }
   .how-icon { width: 32px; height: 32px; padding: 6px; }
   .title-card .how { text-align: left; }
   .title-card .btn { width: 100%; }
+  .title-actions .btn.start { flex: 1; width: auto; }
   .title-meta { justify-content: center; }
   .tagline { font-size: 14px; }
   .score { font-size: 24px; }
@@ -763,9 +764,18 @@ body.booting .title-card > * { animation-play-state: paused; }
 }
 
 /* ===================== collection: achievements, bestiary, transfer ===================== */
-/* the title's second button: achievements and bestiary, with the count earned */
-.btn.collection-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 10px; }
-.btn.collection-btn b { color: var(--gold); font-variant-numeric: tabular-nums; }
+/* Start, with the achievements & bestiary seal beside it (the earned count under its name) */
+.title-actions { display: flex; align-items: stretch; gap: 10px; }
+.collection-btn {
+  flex: none; display: flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 16px 0 10px;
+  border-radius: 14px; border: 1px solid rgba(246, 201, 91, 0.35); background: rgba(20, 14, 46, 0.55);
+  color: var(--ink); font: 700 14px/1.1 var(--font-ui); cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+}
+.collection-btn:hover { border-color: var(--gold); }
+.collection-btn:active { transform: scale(0.97); }
+.collection-btn .stamp { width: 32px; height: 32px; font-size: 18px; }
+.collection-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.collection-text b { font: 800 12px/1 var(--font-ui); color: var(--gold); font-variant-numeric: tabular-nums; }
 /* the game-over card's share button */
 .btn.share { margin-top: 0; }
 /* paused: the problems are hidden (and replaced when the run goes on) */

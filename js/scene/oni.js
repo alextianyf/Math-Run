@@ -4,7 +4,7 @@
 // stagger, reach down, close its fist around the hero, lift him up and laugh.
 import * as THREE from 'three';
 import { toon, glow, bake, joint, lathe, taperedTube, loft } from './toon.js';
-import { tigerTex } from './textures.js';
+import { tigerTex, glowTex } from './textures.js';
 
 const smoothTo = (cur, target, k) => cur + (target - cur) * k;
 
@@ -41,7 +41,10 @@ function createOni() {
     mouth: toon(0x2a070b),
     teeth: toon(0xfff8ea),
     brow: toon(0x1a1014),
-    eye: new THREE.MeshBasicMaterial({ color: glow(0xffc83a, 1.25) }),
+    eye: new THREE.MeshBasicMaterial({ color: glow(0xffd04a, 1.6) }),
+    hornDark: toon(0x6e5a44),
+    rope: toon(0xd9b561),
+    cord: toon(0xb8202a),
     pupil: new THREE.MeshBasicMaterial({ color: 0x1a0608 }),
   };
 
@@ -51,10 +54,32 @@ function createOni() {
   const rows = (list) => list.map(([y, rx, rz, cz, e]) => ({ y, rx, rz, cz, e: 2, ef: e }));
 
   // ---------- tiger-skin loincloth ----------
+  // a twisted straw rope for a belt, knotted at the front with its ends hanging
+  const rope = (phase) => {
+    const pts = [];
+    for (let i = 0; i <= 40; i++) {
+      const a = (i / 40) * Math.PI * 2, tw = a * 9 + phase;
+      const r = 0.47 + 0.028 * Math.cos(tw);
+      pts.push([Math.sin(a) * r, 0.12 + 0.028 * Math.sin(tw), Math.cos(a) * r * 0.87]);
+    }
+    return taperedTube(pts, 0.042, { tip: 1, segments: 120, radial: 6 });
+  };
+  // the pelt's hem is ragged: a ring of tufts hanging off the skirt
+  const tufts = [];
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2 + 0.1, len = 0.13 + ((i * 5) % 3) * 0.04;
+    tufts.push({ geo: new THREE.ConeGeometry(0.075, len, 5), mat: M.tiger, p: [Math.sin(a) * 0.57, -0.42 - len / 2 + 0.03, Math.cos(a) * 0.57 * 0.86], r: [Math.PI, 0, 0] });
+  }
   pelvis.add(bake([
     { geo: lathe([[0.42, 0.14], [0.5, 0.0], [0.56, -0.22], [0.6, -0.42]], 22), mat: M.tiger, s: [1, 1, 0.86] },
-    { geo: new THREE.TorusGeometry(0.46, 0.07, 8, 26), mat: M.gold, p: [0, 0.12, 0], r: [Math.PI / 2, 0, 0], s: [1, 0.86, 1] },
-    { geo: new THREE.SphereGeometry(0.1, 10, 8), mat: M.gold, p: [0, 0.1, 0.42], s: [1.3, 1, 0.6] },
+    ...tufts,
+    { geo: rope(0), mat: M.rope },
+    { geo: rope(Math.PI), mat: M.rope },
+    { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: M.rope, p: [0.12, 0.1, 0.42], s: [1.2, 1, 0.8] },
+    { geo: taperedTube([[0.12, 0.08, 0.44], [0.16, -0.12, 0.5], [0.12, -0.36, 0.52]], 0.04, { tip: 0.6 }), mat: M.rope },
+    { geo: taperedTube([[0.12, 0.08, 0.44], [0.22, -0.08, 0.48], [0.26, -0.28, 0.5]], 0.04, { tip: 0.6 }), mat: M.rope },
+    // the tiger's tail, still on the pelt, hanging at the hip
+    { geo: taperedTube([[-0.5, 0.0, 0.1], [-0.62, -0.3, 0.12], [-0.6, -0.62, 0.2], [-0.52, -0.82, 0.3]], 0.055, { tip: 0.5 }), mat: M.tiger },
   ], { outline: 0.022 }));
 
   // ---------- torso: lofted V-shape — thick neck, wide traps and shoulders, barrel chest, belly ----------
@@ -70,33 +95,54 @@ function createOni() {
     { geo: new THREE.SphereGeometry(0.16, 12, 10), mat: M.skin, p: [-0.46, 1.08, 0.08], s: [1.2, 0.8, 1] },     // traps
     { geo: new THREE.SphereGeometry(0.16, 12, 10), mat: M.skin, p: [0.46, 1.08, 0.08], s: [1.2, 0.8, 1] },
     { geo: new THREE.CylinderGeometry(0.22, 0.27, 0.34, 16), mat: M.skin, p: [0, 1.3, -0.02] },                // neck
-    { geo: new THREE.TorusGeometry(0.3, 0.045, 8, 24), mat: M.gold, p: [0, 1.2, -0.02], r: [Math.PI / 2 + 0.1, 0, 0] },   // neck ring
+    // a slab of abdominal muscle and the obliques
+    ...[0.52, 0.36, 0.2].flatMap((y, i) => [-1, 1].map((sx) => ({ geo: new THREE.SphereGeometry(0.12, 12, 10), mat: M.skin, p: [sx * 0.125, y, 0.5 - i * 0.015], s: [1, 0.72 - i * 0.04, 0.42] }))),
+    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [-0.42, 0.42, 0.28], s: [0.5, 1.2, 0.8] },
+    { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0.42, 0.42, 0.28], s: [0.5, 1.2, 0.8] },
   ], { outline: 0.026 }));
 
   // ---------- head: heavy brow, deep-set eyes, broad nose, jutting jaw ----------
   const head = joint(chest, 0, 1.44, 0.04);
   // the mane: a thick mass of black curls over the back and top of the skull, spilling
   // down the neck to the shoulders, with a few heavier locks tossed up between the horns
-  const mane = [];
-  const skull = new THREE.Vector3(0, 0.3, -0.02);
-  for (let i = 0; i < 46; i++) {
-    const u = ((i * 7) % 11) / 10, v = ((i * 5) % 9) / 8;          // pseudo-random per curl
-    const az = (i / 45 - 0.5) * 4.6;                                 // around the back (0 = straight back)
-    const el = -0.55 + v * 1.75 - Math.abs(az) * 0.12;               // from below the ears up over the crown
-    const d = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
-    const r = 0.46 + u * 0.16 + (el < 0 ? 0.08 : 0);
-    const c = skull.clone().addScaledVector(d, r);
-    if (el < -0.3) c.y -= 0.1 + u * 0.15;                            // the lower curls hang down the neck
-    mane.push({ geo: new THREE.IcosahedronGeometry(0.15 + v * 0.1, 1), mat: M.hair, p: c.toArray(), r: [u * 3, v * 3, 0], s: [1, 0.9, 1] });
+  // the mane: a cap of hair over the skull, bristling with tapered locks that flare out
+  // and up like black flame, the lower ones falling heavily over the neck and shoulders
+  const mane = [{ geo: new THREE.SphereGeometry(0.5, 20, 14), mat: M.hair, p: [0, 0.32, -0.13], s: [1.04, 1.04, 1] }];
+  const skull = new THREE.Vector3(0, 0.32, -0.13);
+  const up = new THREE.Vector3(0, 1, 0), d = new THREE.Vector3();
+  const a0 = new THREE.Vector3(), a1 = new THREE.Vector3(), a2 = new THREE.Vector3();
+  for (let i = 0; i < 44; i++) {
+    const u = ((i * 7) % 11) / 10, v = ((i * 5) % 9) / 8;          // pseudo-random per lock
+    const az = (i / 43 - 0.5) * 4.4;                                 // around the back (0 = straight back)
+    const el = -0.7 + v * 1.9 - Math.abs(az) * 0.1;                  // from the nape up over the crown
+    d.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+    a0.copy(skull).addScaledVector(d, 0.42);
+    const fall = el < 0.1 ? 0.3 + u * 0.2 : -0.12 - v * 0.1;        // low locks hang, high ones flick up
+    a1.copy(a0).addScaledVector(d, 0.2 + u * 0.06).addScaledVector(up, -fall * 0.35);
+    a2.copy(a0).addScaledVector(d, 0.34 + u * 0.12).addScaledVector(up, -fall);
+    mane.push({ geo: taperedTube([a0.toArray(), a1.toArray(), a2.toArray()], 0.1 + v * 0.05, { tip: 0.06, segments: 8, radial: 7 }), mat: M.hair });
   }
-  for (const [x, lean] of [[-0.14, -0.5], [-0.02, 0], [0.11, 0.45]]) {
-    mane.push({ geo: taperedTube([[x, 0.7, -0.1], [x * 1.8 + lean * 0.12, 1.0, -0.28], [x * 2.6 + lean * 0.3, 1.14, -0.55]], 0.1, { tip: 0.1, swell: 0.2 }), mat: M.hair });
+  for (const [x, lean] of [[-0.16, -0.6], [0.0, 0], [0.15, 0.55]]) {
+    mane.push({ geo: taperedTube([[x, 0.7, -0.06], [x * 1.8 + lean * 0.12, 1.02, -0.22], [x * 2.6 + lean * 0.32, 1.18, -0.5]], 0.11, { tip: 0.06, swell: 0.25 }), mat: M.hair });
   }
-  // sideburns down the cheeks
+  // sideburns sweeping back past the ears
   for (const sx of [-1, 1]) {
-    mane.push({ geo: new THREE.IcosahedronGeometry(0.16, 1), mat: M.hair, p: [sx * 0.46, 0.2, 0.12], s: [0.8, 1.3, 0.8] });
-    mane.push({ geo: new THREE.IcosahedronGeometry(0.13, 1), mat: M.hair, p: [sx * 0.48, -0.05, 0.14], s: [0.8, 1.2, 0.7] });
+    mane.push({ geo: taperedTube([[sx * 0.44, 0.34, 0.12], [sx * 0.52, 0.12, 0.1], [sx * 0.62, -0.08, -0.04]], 0.09, { tip: 0.1, segments: 8 }), mat: M.hair });
+    mane.push({ geo: taperedTube([[sx * 0.46, 0.2, 0.16], [sx * 0.5, -0.02, 0.18], [sx * 0.56, -0.2, 0.08]], 0.075, { tip: 0.1, segments: 8 }), mat: M.hair });
   }
+  // thick ridged horns, curving out and then forward, banded dark near the root
+  const horn = (sx) => {
+    const pts = [[sx * 0.2, 0.5, 0.08], [sx * 0.4, 0.78, 0.02], [sx * 0.5, 1.03, 0.1], [sx * 0.42, 1.24, 0.3]];
+    const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
+    const parts = [{ geo: taperedTube(pts, 0.17, { tip: 0.04, segments: 18, radial: 10 }), mat: M.horn }];
+    const q = new THREE.Quaternion(), e = new THREE.Euler(), z = new THREE.Vector3(0, 0, 1);
+    for (const t of [0.06, 0.17, 0.28, 0.39]) {
+      const c = curve.getPointAt(t), tan = curve.getTangentAt(t);
+      e.setFromQuaternion(q.setFromUnitVectors(z, tan));
+      parts.push({ geo: new THREE.TorusGeometry(0.17 * (1 - 0.96 * t) * 0.98, 0.026 - t * 0.03, 6, 18), mat: M.hornDark, p: c.toArray(), r: [e.x, e.y, e.z] });
+    }
+    return parts;
+  };
   const lip = (a, inset = 0) => [0.4 * Math.sign(Math.sin(a)) * Math.pow(Math.abs(Math.sin(a)), 0.8), 0.18 + (0.33 - inset) * Math.pow(Math.cos(a), 0.8)];
   head.add(bake([
     { geo: loft(rows([
@@ -104,11 +150,11 @@ function createOni() {
       [0.35, 0.5, 0.44, 0.03, 2.6], [0.22, 0.49, 0.42, 0.07, 2.6], [0.1, 0.48, 0.4, 0.11, 2.5], [-0.02, 0.45, 0.37, 0.15, 2.5],
       [-0.1, 0.41, 0.33, 0.18, 2.5], [-0.15, 0.35, 0.27, 0.2, 2.4],
     ]), { segs: 32, front: 1 }), mat: M.skin },
-    // brow ridge and angry eyebrows
-    { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [-0.21, 0.37, 0.4], s: [1, 0.42, 0.62] },
-    { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [0.21, 0.37, 0.4], s: [1, 0.42, 0.62] },
-    { geo: taperedTube([[-0.05, 0.3, 0.52], [-0.22, 0.4, 0.5], [-0.42, 0.54, 0.34]], 0.065, { tip: 0.3 }), mat: M.brow },
-    { geo: taperedTube([[0.05, 0.3, 0.52], [0.22, 0.4, 0.5], [0.42, 0.54, 0.34]], 0.065, { tip: 0.3 }), mat: M.brow },
+    // a heavy brow ridge knotted into a scowl, bushy eyebrows flaring up at the ends
+    { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [-0.21, 0.37, 0.4], s: [1, 0.46, 0.66] },
+    { geo: new THREE.SphereGeometry(0.27, 16, 12), mat: M.skin, p: [0.21, 0.37, 0.4], s: [1, 0.46, 0.66] },
+    { geo: taperedTube([[-0.05, 0.31, 0.55], [-0.22, 0.4, 0.53], [-0.4, 0.5, 0.42], [-0.5, 0.62, 0.3]], 0.065, { tip: 0.2, swell: 0.35 }), mat: M.hair },
+    { geo: taperedTube([[0.05, 0.31, 0.55], [0.22, 0.4, 0.53], [0.4, 0.5, 0.42], [0.5, 0.62, 0.3]], 0.065, { tip: 0.2, swell: 0.35 }), mat: M.hair },
     // eye sockets (dark), cheekbones
     { geo: new THREE.SphereGeometry(0.17, 14, 10), mat: M.mouth, p: [-0.2, 0.21, 0.44], s: [1, 0.7, 0.3] },
     { geo: new THREE.SphereGeometry(0.17, 14, 10), mat: M.mouth, p: [0.2, 0.21, 0.44], s: [1, 0.7, 0.3] },
@@ -123,11 +169,10 @@ function createOni() {
     { geo: new THREE.ConeGeometry(0.1, 0.3, 8), mat: M.skin, p: [0.5, 0.3, -0.02], r: [0, 0, -1.2] },
     { geo: new THREE.TorusGeometry(0.07, 0.02, 6, 14), mat: M.gold, p: [-0.5, 0.1, 0.0], r: [0, Math.PI / 2, 0] },
     { geo: new THREE.TorusGeometry(0.07, 0.02, 6, 14), mat: M.gold, p: [0.5, 0.1, 0.0], r: [0, Math.PI / 2, 0] },
-    // horns, ringed at the base
-    { geo: taperedTube([[-0.22, 0.52, 0.06], [-0.36, 0.9, 0.04], [-0.4, 1.22, 0.22]], 0.16, { tip: 0.06 }), mat: M.horn },
-    { geo: taperedTube([[0.22, 0.52, 0.06], [0.36, 0.9, 0.04], [0.4, 1.22, 0.22]], 0.16, { tip: 0.06 }), mat: M.horn },
-    { geo: new THREE.TorusGeometry(0.14, 0.03, 6, 14), mat: M.brow, p: [-0.27, 0.66, 0.05], r: [0.1, 0, 0.4] },
-    { geo: new THREE.TorusGeometry(0.14, 0.03, 6, 14), mat: M.brow, p: [0.27, 0.66, 0.05], r: [0.1, 0, -0.4] },
+    ...horn(-1), ...horn(1),
+    // snarl lines beside the nose
+    { geo: new THREE.CapsuleGeometry(0.022, 0.12, 4, 6), mat: M.skin, p: [-0.19, 0.0, 0.5], r: [0.2, 0, -0.5] },
+    { geo: new THREE.CapsuleGeometry(0.022, 0.12, 4, 6), mat: M.skin, p: [0.19, 0.0, 0.5], r: [0.2, 0, 0.5] },
     // upper teeth along the lip, and the dark mouth cavity behind them
     ...[-0.95, -0.62, -0.32, 0, 0.32, 0.62, 0.95].map((a) => {
       const [x, z] = lip(a, 0.04);
@@ -136,12 +181,16 @@ function createOni() {
     { geo: new THREE.SphereGeometry(0.33, 16, 12), mat: M.mouth, p: [0, -0.1, 0.16], s: [1, 0.55, 0.95] },
     ...mane,
   ], { outline: 0.024 }));
+  // glowing eyes under the brow (no outline, so they burn), each with a soft halo
+  const eyeGlow = new THREE.SpriteMaterial({ map: glowTex(), color: 0xffa020, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
   for (const sx of [-1, 1]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), M.eye);
-    eye.position.set(sx * 0.2, 0.21, 0.46); eye.scale.set(0.9, 0.6, 0.4);
+    eye.position.set(sx * 0.2, 0.22, 0.465); eye.scale.set(0.95, 0.55, 0.4); eye.rotation.z = sx * 0.22;
     const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), M.pupil);
-    pupil.position.set(sx * 0.2, 0.21, 0.505); pupil.scale.set(1, 2.4, 0.6);
-    head.add(eye, pupil);
+    pupil.position.set(sx * 0.19, 0.215, 0.51); pupil.scale.set(0.9, 2.2, 0.6);
+    const halo = new THREE.Sprite(eyeGlow);
+    halo.position.set(sx * 0.2, 0.22, 0.55); halo.scale.setScalar(0.42);
+    head.add(eye, pupil, halo);
   }
   // lower jaw (opens to roar/laugh): heavy and jutting, with two tusks
   const jaw = joint(head, 0, -0.12, 0.06);
@@ -150,8 +199,9 @@ function createOni() {
       [0.0, 0.38, 0.35, 0.1, 2.6], [-0.1, 0.39, 0.36, 0.1, 2.8], [-0.21, 0.35, 0.33, 0.08, 2.4], [-0.29, 0.24, 0.23, 0.02], [-0.32, 0.05, 0.05, 0.0],
     ]), { segs: 28, front: 1 }), mat: M.skin },
     { geo: new THREE.CircleGeometry(0.36, 24), mat: M.mouth, p: [0, 0.005, 0.09], r: [-Math.PI / 2, 0, 0], s: [1, 0.95, 1] },
-    { geo: new THREE.ConeGeometry(0.06, 0.34, 8), mat: M.teeth, p: [-0.26, 0.12, 0.32], r: [0.15, 0, 0.12] },
-    { geo: new THREE.ConeGeometry(0.06, 0.34, 8), mat: M.teeth, p: [0.26, 0.12, 0.32], r: [0.15, 0, -0.12] },
+    // great curved tusks jutting up over the lip
+    { geo: taperedTube([[-0.25, -0.04, 0.3], [-0.29, 0.14, 0.36], [-0.25, 0.32, 0.34], [-0.19, 0.42, 0.3]], 0.068, { tip: 0.12, segments: 10 }), mat: M.teeth },
+    { geo: taperedTube([[0.25, -0.04, 0.3], [0.29, 0.14, 0.36], [0.25, 0.32, 0.34], [0.19, 0.42, 0.3]], 0.068, { tip: 0.12, segments: 10 }), mat: M.teeth },
     ...[-0.1, 0, 0.1].map((x) => ({ geo: new THREE.ConeGeometry(0.03, 0.08, 6), mat: M.teeth, p: [x, 0.03, 0.4] })),
   ], { outline: 0.02 }));
 
@@ -163,7 +213,7 @@ function createOni() {
       const j2 = joint(j1, 0, -len - 0.05, 0);
       j2.add(bake([
         { geo: new THREE.CapsuleGeometry(0.042, len * 0.8, 4, 8), mat: M.skin, p: [0, -len * 0.4 - 0.02, 0] },
-        { geo: new THREE.SphereGeometry(0.03, 8, 6), mat: M.brow, p: [0, -len * 0.85, -0.03], s: [1, 1, 0.5] },
+        { geo: new THREE.ConeGeometry(0.034, 0.1, 6), mat: M.horn, p: [0, -len * 0.8 - 0.07, 0.015], r: [Math.PI - 0.35, 0, 0] },
       ], { outline: 0.012 }));
       curlList.push([j1, j2]);
     }
@@ -171,16 +221,25 @@ function createOni() {
   const arm = (sx) => {
     const shoulder = joint(chest, sx * 0.7, 0.98, 0);
     shoulder.add(bake([
-      { geo: new THREE.SphereGeometry(0.29, 16, 12), mat: M.skin, p: [0, 0.02, 0], s: [1, 0.9, 0.95] },
+      { geo: new THREE.SphereGeometry(0.29, 16, 12), mat: M.skin, p: [0, 0.02, 0], s: [1.04, 0.95, 0.98] },
       { geo: new THREE.CapsuleGeometry(0.2, 0.4, 6, 12), mat: M.skin, p: [0, -0.32, 0] },
-      { geo: new THREE.TorusGeometry(0.2, 0.04, 6, 18), mat: M.gold, p: [0, -0.2, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.SphereGeometry(0.17, 14, 10), mat: M.skin, p: [0, -0.3, 0.08], s: [1, 1.45, 0.95] },      // biceps
+      { geo: new THREE.SphereGeometry(0.15, 12, 10), mat: M.skin, p: [0, -0.32, -0.08], s: [1, 1.4, 0.9] },     // triceps
     ], { outline: 0.024 }));
     const elbow = joint(shoulder, 0, -0.64, 0);
     elbow.add(bake([
       { geo: new THREE.SphereGeometry(0.2, 14, 10), mat: M.skin, p: [0, -0.14, 0], s: [1.05, 1.2, 1.05] },
       { geo: new THREE.CapsuleGeometry(0.16, 0.32, 6, 12), mat: M.skin, p: [0, -0.3, 0] },
-      { geo: new THREE.TorusGeometry(0.165, 0.045, 6, 18), mat: M.gold, p: [0, -0.46, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.SphereGeometry(0.17, 12, 10), mat: M.skin, p: [0, -0.2, 0.02], s: [1.05, 1.3, 1] },       // forearm swell
+      // an iron bracer bound in gold
+      { geo: new THREE.CylinderGeometry(0.19, 0.175, 0.2, 14), mat: M.iron, p: [0, -0.43, 0] },
+      { geo: new THREE.TorusGeometry(0.188, 0.025, 6, 18), mat: M.gold, p: [0, -0.335, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.TorusGeometry(0.175, 0.025, 6, 18), mat: M.gold, p: [0, -0.525, 0], r: [Math.PI / 2, 0, 0] },
     ], { outline: 0.022 }));
+    elbow.add(bake([0, 1, 2, 3, 4, 5].map((i) => {
+      const a = (i / 6) * Math.PI * 2;
+      return { geo: new THREE.ConeGeometry(0.03, 0.07, 6), mat: M.stud, p: [Math.sin(a) * 0.2, -0.43, Math.cos(a) * 0.2], r: [Math.cos(a) * 1.57, 0, -Math.sin(a) * 1.57] };
+    }), { outline: 0 }));
     const hand = joint(elbow, 0, -0.55, 0);
     hand.add(bake([
       { geo: new THREE.SphereGeometry(0.18, 16, 12), mat: M.skin, p: [0, -0.12, 0], s: [1.1, 1.15, 0.6] },
@@ -198,14 +257,18 @@ function createOni() {
   const club = joint(armL.hand, 0, -0.22, -0.02);
   club.rotation.x = 1.75;
   club.add(bake([
-    { geo: lathe([[0.05, -0.3], [0.055, 0.35], [0.1, 0.5], [0.17, 1.4], [0.13, 1.5], [0.0, 1.52]], 10), mat: M.iron },
-    { geo: new THREE.TorusGeometry(0.06, 0.02, 6, 12), mat: M.gold, p: [0, 0.38, 0], r: [Math.PI / 2, 0, 0] },
+    { geo: lathe([[0.07, -0.36], [0.055, -0.3], [0.055, 0.35], [0.1, 0.5], [0.19, 1.42], [0.15, 1.54], [0.0, 1.57]], 8), mat: M.iron },
+    { geo: new THREE.TorusGeometry(0.08, 0.025, 6, 12), mat: M.gold, p: [0, 0.4, 0], r: [Math.PI / 2, 0, 0] },
+    { geo: new THREE.TorusGeometry(0.19, 0.03, 6, 16), mat: M.gold, p: [0, 1.38, 0], r: [Math.PI / 2, 0, 0] },
+    { geo: new THREE.TorusGeometry(0.07, 0.02, 6, 12), mat: M.gold, p: [0, -0.44, 0] },
+    // the grip, bound with red cord
+    ...[0, 1, 2, 3, 4, 5].map((i) => ({ geo: new THREE.TorusGeometry(0.062, 0.018, 5, 10), mat: M.cord, p: [0, -0.24 + i * 0.09, 0], r: [Math.PI / 2 + (i % 2 ? 0.25 : -0.25), 0, 0] })),
   ], { outline: 0.02 }));
-  // a few chunky studs (no outline — tiny outlined cones shimmer)
+  // rows of chunky studs (no outline — tiny outlined cones shimmer)
   const studs = [];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 5; j++) {
-      const a = (j / 5) * Math.PI * 2 + i * 0.6, y = 0.65 + i * 0.22, r = 0.115 + i * 0.016;
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 7; j++) {
+      const a = (j / 7) * Math.PI * 2 + i * 0.45, y = 0.6 + i * 0.15, r = 0.105 + i * 0.016;
       studs.push({ geo: new THREE.ConeGeometry(0.045, 0.1, 6), mat: M.stud, p: [Math.cos(a) * r, y, Math.sin(a) * r], r: [Math.sin(a) * 1.57, 0, -Math.cos(a) * 1.57] });
     }
   }
@@ -217,9 +280,13 @@ function createOni() {
     hip.add(bake([{ geo: new THREE.CapsuleGeometry(0.28, 0.28, 6, 14), mat: M.skin, p: [0, -0.28, 0], s: [1, 1, 1.05] }], { outline: 0.024 }));
     const knee = joint(hip, 0, -0.6, 0);
     knee.add(bake([
-      { geo: new THREE.CapsuleGeometry(0.22, 0.3, 6, 14), mat: M.skin, p: [0, -0.25, 0] },
-      { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0, -0.2, -0.1], s: [1, 1.2, 1] },     // calf
-      { geo: new THREE.TorusGeometry(0.2, 0.05, 6, 18), mat: M.gold, p: [0, -0.45, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.SphereGeometry(0.2, 12, 10), mat: M.skin, p: [0, -0.02, 0.08], s: [1, 0.85, 0.9] },     // kneecap
+      { geo: new THREE.CapsuleGeometry(0.23, 0.3, 6, 14), mat: M.skin, p: [0, -0.25, 0] },
+      { geo: new THREE.SphereGeometry(0.23, 12, 10), mat: M.skin, p: [0, -0.2, -0.08], s: [1.02, 1.25, 1] },   // calf
+      // iron anklets bound in gold
+      { geo: new THREE.CylinderGeometry(0.215, 0.225, 0.14, 14), mat: M.iron, p: [0, -0.44, 0] },
+      { geo: new THREE.TorusGeometry(0.218, 0.024, 6, 18), mat: M.gold, p: [0, -0.37, 0], r: [Math.PI / 2, 0, 0] },
+      { geo: new THREE.TorusGeometry(0.228, 0.024, 6, 18), mat: M.gold, p: [0, -0.51, 0], r: [Math.PI / 2, 0, 0] },
       { geo: new THREE.SphereGeometry(0.24, 14, 10), mat: M.skin, p: [0, -0.6, 0.12], s: [1, 0.42, 1.45] },
       ...[-0.12, -0.04, 0.04, 0.12].map((x) => ({ geo: new THREE.SphereGeometry(0.06, 8, 6), mat: M.skin, p: [x, -0.62, 0.42] })),
       ...[-0.12, -0.04, 0.04, 0.12].map((x) => ({ geo: new THREE.ConeGeometry(0.03, 0.07, 6), mat: M.horn, p: [x, -0.63, 0.49], r: [Math.PI / 2, 0, 0] })),

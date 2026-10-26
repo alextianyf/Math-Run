@@ -12,12 +12,15 @@ import { emit } from './events.js';
 import { rand, easeOutBack, smooth01 } from './helpers.js';
 
 // × travel time: the slower ones give a little more thinking time
-const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0, oni: 2.3 };
+const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0,
+  tengu: 0.95, rokurokubi: 1.1, nopperabo: 1.05, kamaitachi: 0.9, oni: 2.3 };
 // who walks the path: the common three from the start, the rest after enough banishments
 const ROSTER = [
   { type: 'onibi', weight: 3, from: 0 }, { type: 'chochin', weight: 2, from: 0 }, { type: 'hitotsume', weight: 2, from: 0 },
   { type: 'kappa', weight: 1.5, from: 4 }, { type: 'kitsunebi', weight: 1.5, from: 6 }, { type: 'kasa', weight: 1.5, from: 6 },
   { type: 'ittan', weight: 1.2, from: 10 }, { type: 'hyakume', weight: 1, from: 12 }, { type: 'nekomata', weight: 1.2, from: 8 },
+  { type: 'nopperabo', weight: 1.2, from: 9 }, { type: 'tengu', weight: 1.2, from: 11 },
+  { type: 'kamaitachi', weight: 1.1, from: 13 }, { type: 'rokurokubi', weight: 1, from: 15 },
 ];
 const tmp = new THREE.Vector3();
 const scr = { x: 0, y: 0, visible: true };
