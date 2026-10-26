@@ -216,6 +216,7 @@
         </div>
         <div class="title-meta">
           <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
+          <button id="btn-rules" class="meta-chip rules-chip" data-i18n="rulesChip"></button>
           <span id="title-best" class="meta-chip best"></span>
           <!-- share the record run -->
           <button id="btn-share-best" class="meta-chip share-best" data-i18n="shareMine" hidden></button>
@@ -246,6 +247,17 @@
         <div id="tut-actions" class="tut-actions"></div>
       </div>
     </div>
+
+    <!-- How to play: hearts, ranks and trials, scoring, fair play -->
+    <section id="ov-rules" class="overlay" hidden>
+      <div class="card collection-card rules-card">
+        <div class="collection-head">
+          <h2 data-i18n="rulesTitle"></h2>
+          <button id="btn-rules-close" class="icon-btn" data-i18n-label="close">✕</button>
+        </div>
+        <div id="rules-body" class="rules-body"></div>
+      </div>
+    </section>
 
     <!-- A result card: the player's own (name it, copy its link), or one opened from a shared link -->
     <section id="ov-card" class="overlay" hidden>
@@ -304,6 +316,7 @@
         <h2 data-i18n="paused"></h2>
         <p id="pause-note" class="pause-note" data-i18n="pauseNote" hidden></p>
         <button id="btn-resume" class="btn primary" data-i18n="resume"></button>
+        <button id="btn-pause-rules" class="btn ghost" data-i18n="rulesChip"></button>
         <button id="btn-quit" class="btn ghost" data-i18n="quit"></button>
       </div>
     </section>

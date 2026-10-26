@@ -23,6 +23,7 @@ import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/
 import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, shareRun, shareBest } from './game/flow.js';
 import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { initShareCard } from './game/shareCard.js';
+import { initRules } from './game/rules.js';
 import { $, smooth01 } from './game/helpers.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -42,6 +43,7 @@ ui.setBest(S.best);
 ui.setBestRank(S.bestRank);
 initCollection();
 initShareCard();      // a shared result link opens its card first
+initRules();
 showRank();
 ui.resetAI();
 // Creating the audio engine can block for half a second on some PCs, so it's done
