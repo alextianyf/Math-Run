@@ -59,8 +59,7 @@ export function setDistance(m) { $('dist').textContent = Math.floor(m).toLocaleS
 export function setBest(n) {
   $('best').textContent = n.toLocaleString();
   $('title-best').textContent = n ? `${t('best')} ${n.toLocaleString()}` : '';
-  $('btn-share-best').hidden = !n;
-  $('btn-share-best').textContent = t('shareMine');
+  $('btn-share-best').hidden = !n;            // no record yet: nothing to share
 }
 /* ===================== ranks ===================== */
 // one seal character per rank: 阴阳生 · 阴阳师 · 阴阳博士 · 阴阳头 · 晴明

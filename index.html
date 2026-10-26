@@ -189,38 +189,29 @@
         </div>
         <div class="sub-logo" data-i18n="subtitle"></div>
         <p class="tagline" data-i18n="tagline"></p>
-        <ul class="how">
-          <li>
-            <svg class="how-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5v3" /><path d="M4.5 9.2 12 5.5l7.5 3.7V19h-15z" /><path d="M9.3 13.6h5.4M12 10.9v5.4" /></svg>
-            <span data-i18n="how1"></span>
-          </li>
-          <li>
-            <svg class="how-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3" width="9" height="18" rx="1" /><path d="M6 7.5h4M6 10.5h4M6 13.5h2.5" /><path d="M20.5 4.5 14.8 15.6" /><path d="m14.8 15.6-1.6 3.6 2.9-2.4" /></svg>
-            <span data-i18n="how2"></span>
-          </li>
-          <li>
-            <svg class="how-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2.3" /><path d="M7.5 11 16.6 5.6M7.6 12h8.9M7.5 13l9.1 5.4" /><circle cx="18.8" cy="5" r="1.9" /><circle cx="18.8" cy="12" r="1.9" /><circle cx="18.8" cy="19" r="1.9" /></svg>
-            <span data-i18n="how3"></span>
-          </li>
-        </ul>
-        <div class="title-actions">
-          <button id="btn-start" class="btn primary start" disabled>
-            <svg class="btn-crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L47.3 53.1L7.2 24H56.8L16.7 53.1Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round" /></svg>
-            <span id="start-label" data-i18n="loading"></span>
-          </button>
-          <!-- achievements and the bestiary, before the run: a seal beside Start -->
-          <button id="btn-collection" class="collection-btn" data-i18n-label="collection">
+        <button id="btn-start" class="btn primary start" disabled>
+          <svg class="btn-crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L47.3 53.1L7.2 24H56.8L16.7 53.1Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round" /></svg>
+          <span id="start-label" data-i18n="loading"></span>
+        </button>
+        <!-- everything else, as three seal tiles: achievements & bestiary, how to play, share the best run -->
+        <nav class="title-tiles">
+          <button id="btn-collection" class="tile" data-i18n-label="collection">
             <span class="stamp" aria-hidden="true"><b>鉴</b></span>
-            <span class="collection-text"><span data-i18n="collectionShort"></span><b id="collection-count"></b></span>
+            <span class="tile-text"><span data-i18n="collectionShort"></span><small id="collection-count"></small></span>
           </button>
-        </div>
-        <div class="title-meta">
-          <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
-          <button id="btn-rules" class="meta-chip rules-chip" data-i18n="rulesChip"></button>
-          <span id="title-best" class="meta-chip best"></span>
-          <!-- share the record run -->
-          <button id="btn-share-best" class="meta-chip share-best" data-i18n="shareMine" hidden></button>
-          <span id="ai-chip" class="meta-chip ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
+          <button id="btn-rules" class="tile" data-i18n-label="rulesTitle">
+            <span class="stamp" aria-hidden="true"><b>法</b></span>
+            <span class="tile-text"><span data-i18n="rulesShort"></span><small data-i18n="rulesSub"></small></span>
+          </button>
+          <button id="btn-share-best" class="tile" data-i18n-label="shareMine" hidden>
+            <span class="stamp" aria-hidden="true"><b>传</b></span>
+            <span class="tile-text"><span data-i18n="shareShort"></span><small id="title-best"></small></span>
+          </button>
+        </nav>
+        <!-- one quiet line: the best rank reached, and whether the AI is ready -->
+        <div class="title-status">
+          <span class="status-rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
+          <span id="ai-chip" class="status-ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
       </div>
     </section>
