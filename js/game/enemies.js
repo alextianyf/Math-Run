@@ -8,16 +8,25 @@ import * as ui from '../ui/ui.js';
 import { S, SPAWN_Z, HIT_Z, targets } from './state.js';
 import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
+import { emit } from './events.js';
 import { rand, easeOutBack, smooth01 } from './helpers.js';
 
-const TYPE_PACE = { onibi: 1, chochin: 1.08, kasa: 0.94, oni: 2.3 };   // × travel time
+// × travel time: the slower ones give a little more thinking time
+const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0, oni: 2.3 };
+// who walks the path: the common three from the start, the rest after enough banishments
+const ROSTER = [
+  { type: 'onibi', weight: 3, from: 0 }, { type: 'chochin', weight: 2, from: 0 }, { type: 'hitotsume', weight: 2, from: 0 },
+  { type: 'kappa', weight: 1.5, from: 4 }, { type: 'kitsunebi', weight: 1.5, from: 6 }, { type: 'kasa', weight: 1.5, from: 6 },
+  { type: 'ittan', weight: 1.2, from: 10 }, { type: 'hyakume', weight: 1, from: 12 }, { type: 'nekomata', weight: 1.2, from: 8 },
+];
 const tmp = new THREE.Vector3();
 const scr = { x: 0, y: 0, visible: true };
 
 function pickType() {
-  const r = Math.random();
-  if (S.banished >= 6 && r < 0.25) return 'kasa';
-  return r < 0.62 ? 'onibi' : 'chochin';
+  const pool = ROSTER.filter((r) => S.banished >= r.from);
+  let r = Math.random() * pool.reduce((sum, p) => sum + p.weight, 0);
+  for (const p of pool) if ((r -= p.weight) < 0) return p.type;
+  return 'onibi';
 }
 
 // prefer lanes with nothing near the spawn point, so equation tags don't overlap
@@ -28,7 +37,8 @@ function chooseLane() {
 }
 
 // boss: a rank-trial oni (several problems in a row).
-// forced: { type, lane, text, answer, z, speed } — a scripted yokai (the tutorial)
+// forced: { type, lane, text, answer, z, speed, x?, free? } — a scripted yokai (the
+// tutorial, the daily challenge); free: the caller moves it itself
 export function spawn(boss = false, forced = null) {
   const type = forced?.type ?? (boss ? 'oni' : pickType());
   const lane = forced?.lane ?? (boss ? 1 : chooseLane());
@@ -41,7 +51,7 @@ export function spawn(boss = false, forced = null) {
   // drift in from the forest on either side, settling into the lane as it approaches
   // (keeps far-away tags apart, where perspective squeezes the lanes together)
   const side = lane === 1 ? (Math.random() < 0.5 ? -1 : 1) : lane - 1;
-  const x0 = boss ? 0 : LANES[lane] + side * rand(3, 4.5);
+  const x0 = forced?.x ?? (boss ? 0 : LANES[lane] + side * rand(3, 4.5));
   const yokai = createYokai(type);
   yokai.root.position.set(x0, 0, z0);
   yokai.root.scale.setScalar(0.01);
@@ -57,10 +67,11 @@ export function spawn(boss = false, forced = null) {
     answer: prob.answer, text: prob.text,
     tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch }),
     hpDone: 0, hpTotal,
-    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0,
+    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0, free: !!forced?.free,
   };
   measureTag(e);
   S.enemies.push(e);
+  emit('meet', { type });
   fx.emit(yokai.center(tmp), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
@@ -140,13 +151,18 @@ export function updateEnemies(dt, onReachHero) {
       root.rotation.y = Math.atan2(-root.position.x, -root.position.z);
       continue;
     }
-    if (moving) {
-      e.z += e.speed * dt;
-      if (!e.locked && e.z >= HIT_Z) { onReachHero(e); continue; }
+    if (e.free) {
+      e.z = root.position.z;             // placed by its owner (the daily challenge)
+    } else {
+      if (moving) {
+        e.z += e.speed * dt;
+        if (!e.locked && e.z >= HIT_Z) { onReachHero(e); continue; }
+      }
+      const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
+      root.position.z = e.z;
+      root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
     }
-    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
-    root.position.z = e.z;
-    root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
+    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);
     if (!e.tag) continue;
     world.project(e.yokai.labelAnchor(tmp), scr);
     shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible });

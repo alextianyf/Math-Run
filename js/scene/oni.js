@@ -1,6 +1,7 @@
-// oni.js — the red oni (赤鬼): boss of the parade and the one who catches you.
-// Faces +z (toward the hero). Fully jointed so it can walk, roar, stagger,
-// reach down, close its fist around the hero, lift him up and laugh.
+// oni.js — the red oni (赤鬼) of the old pictures: a wild black mane, two thick horns,
+// tusks, a tiger-skin loincloth and an iron club. Boss of the parade and the one who
+// catches you. Faces +z (toward the hero). Fully jointed so it can walk, roar,
+// stagger, reach down, close its fist around the hero, lift him up and laugh.
 import * as THREE from 'three';
 import { toon, glow, bake, joint, lathe, taperedTube, loft } from './toon.js';
 import { tigerTex } from './textures.js';
@@ -31,8 +32,8 @@ function createOni() {
   const M = {
     skin: toon(0xd63c33, { emissive: 0x2a0404 }),
     dark: toon(0x9e2620),
-    hair: toon(0xf2ece3),
-    horn: toon(0xd9b067),
+    hair: toon(0x221820),
+    horn: toon(0xe9dcb4),
     tiger: toon(0xffffff, { map: tiger }),
     gold: toon(0xe3ad3e, { emissive: 0x3a2000 }),
     iron: toon(0x2e2b38),
@@ -40,7 +41,7 @@ function createOni() {
     mouth: toon(0x2a070b),
     teeth: toon(0xfff8ea),
     brow: toon(0x1a1014),
-    eye: new THREE.MeshBasicMaterial({ color: glow(0xffd84a, 1.45) }),
+    eye: new THREE.MeshBasicMaterial({ color: glow(0xffc83a, 1.25) }),
     pupil: new THREE.MeshBasicMaterial({ color: 0x1a0608 }),
   };
 
@@ -74,25 +75,27 @@ function createOni() {
 
   // ---------- head: heavy brow, deep-set eyes, broad nose, jutting jaw ----------
   const head = joint(chest, 0, 1.44, 0.04);
+  // the mane: a thick mass of black curls over the back and top of the skull, spilling
+  // down the neck to the shoulders, with a few heavier locks tossed up between the horns
   const mane = [];
-  // two layers of strands rooted on the back half of the skull: an upper layer that
-  // sweeps up and back, and a lower layer that falls down over the neck
-  for (let i = 0; i < 30; i++) {
-    const layer = i < 16 ? 0 : 1, n = layer ? 14 : 16, k = layer ? i - 16 : i;
-    const a = (k / (n - 1) - 0.5) * (layer ? 3.0 : 3.3);  // around the back of the skull (0 = straight back)
-    const v = ((i * 7) % 5) / 4, u = ((i * 3) % 4) / 3;    // pseudo-random variation per strand
-    const lift = layer ? -0.25 - 0.3 * v : 0.1 + 0.55 * v;
-    const d = new THREE.Vector3(Math.sin(a), lift, -Math.cos(a)).normalize();
-    const base = new THREE.Vector3(0, layer ? 0.22 : 0.4, -0.04).addScaledVector(d, 0.38);
-    const len = (layer ? 0.5 : 0.6) + 0.4 * u;
-    // sweeps back, then droops and curls under at the tip like wind-blown hair
-    const m1 = base.clone().addScaledVector(d, len * 0.5).add(new THREE.Vector3(0, 0.1 * v, -0.08));
-    const m2 = base.clone().addScaledVector(d, len * 0.9).add(new THREE.Vector3(Math.sin(a) * 0.08, -0.15 - 0.3 * Math.max(0, lift), -0.26));
-    const m3 = m2.clone().add(new THREE.Vector3(Math.sin(a) * 0.05, -0.16 - 0.1 * u, -0.06 + 0.1 * v));
-    mane.push({ geo: taperedTube([base.toArray(), m1.toArray(), m2.toArray(), m3.toArray()], 0.055 + 0.035 * v, { tip: 0.05, swell: 0.25 }), mat: M.hair });
+  const skull = new THREE.Vector3(0, 0.3, -0.02);
+  for (let i = 0; i < 46; i++) {
+    const u = ((i * 7) % 11) / 10, v = ((i * 5) % 9) / 8;          // pseudo-random per curl
+    const az = (i / 45 - 0.5) * 4.6;                                 // around the back (0 = straight back)
+    const el = -0.55 + v * 1.75 - Math.abs(az) * 0.12;               // from below the ears up over the crown
+    const d = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+    const r = 0.46 + u * 0.16 + (el < 0 ? 0.08 : 0);
+    const c = skull.clone().addScaledVector(d, r);
+    if (el < -0.3) c.y -= 0.1 + u * 0.15;                            // the lower curls hang down the neck
+    mane.push({ geo: new THREE.IcosahedronGeometry(0.15 + v * 0.1, 1), mat: M.hair, p: c.toArray(), r: [u * 3, v * 3, 0], s: [1, 0.9, 1] });
   }
-  for (const [x, lean] of [[-0.12, -0.5], [-0.02, -0.1], [0.09, 0.35]]) {      // tufts between the horns
-    mane.push({ geo: taperedTube([[x, 0.66, -0.12], [x * 1.6 + lean * 0.1, 0.98, -0.3], [x * 2.4 + lean * 0.25, 1.12, -0.58]], 0.085, { tip: 0.06 }), mat: M.hair });
+  for (const [x, lean] of [[-0.14, -0.5], [-0.02, 0], [0.11, 0.45]]) {
+    mane.push({ geo: taperedTube([[x, 0.7, -0.1], [x * 1.8 + lean * 0.12, 1.0, -0.28], [x * 2.6 + lean * 0.3, 1.14, -0.55]], 0.1, { tip: 0.1, swell: 0.2 }), mat: M.hair });
+  }
+  // sideburns down the cheeks
+  for (const sx of [-1, 1]) {
+    mane.push({ geo: new THREE.IcosahedronGeometry(0.16, 1), mat: M.hair, p: [sx * 0.46, 0.2, 0.12], s: [0.8, 1.3, 0.8] });
+    mane.push({ geo: new THREE.IcosahedronGeometry(0.13, 1), mat: M.hair, p: [sx * 0.48, -0.05, 0.14], s: [0.8, 1.2, 0.7] });
   }
   const lip = (a, inset = 0) => [0.4 * Math.sign(Math.sin(a)) * Math.pow(Math.abs(Math.sin(a)), 0.8), 0.18 + (0.33 - inset) * Math.pow(Math.cos(a), 0.8)];
   head.add(bake([
@@ -121,10 +124,10 @@ function createOni() {
     { geo: new THREE.TorusGeometry(0.07, 0.02, 6, 14), mat: M.gold, p: [-0.5, 0.1, 0.0], r: [0, Math.PI / 2, 0] },
     { geo: new THREE.TorusGeometry(0.07, 0.02, 6, 14), mat: M.gold, p: [0.5, 0.1, 0.0], r: [0, Math.PI / 2, 0] },
     // horns, ringed at the base
-    { geo: taperedTube([[-0.2, 0.56, 0.02], [-0.34, 0.92, 0.0], [-0.36, 1.24, 0.2]], 0.125, { tip: 0.05 }), mat: M.horn },
-    { geo: taperedTube([[0.2, 0.56, 0.02], [0.34, 0.92, 0.0], [0.36, 1.24, 0.2]], 0.125, { tip: 0.05 }), mat: M.horn },
-    { geo: new THREE.TorusGeometry(0.11, 0.03, 6, 14), mat: M.brow, p: [-0.24, 0.68, -0.01], r: [0.1, 0, 0.4] },
-    { geo: new THREE.TorusGeometry(0.11, 0.03, 6, 14), mat: M.brow, p: [0.24, 0.68, -0.01], r: [0.1, 0, -0.4] },
+    { geo: taperedTube([[-0.22, 0.52, 0.06], [-0.36, 0.9, 0.04], [-0.4, 1.22, 0.22]], 0.16, { tip: 0.06 }), mat: M.horn },
+    { geo: taperedTube([[0.22, 0.52, 0.06], [0.36, 0.9, 0.04], [0.4, 1.22, 0.22]], 0.16, { tip: 0.06 }), mat: M.horn },
+    { geo: new THREE.TorusGeometry(0.14, 0.03, 6, 14), mat: M.brow, p: [-0.27, 0.66, 0.05], r: [0.1, 0, 0.4] },
+    { geo: new THREE.TorusGeometry(0.14, 0.03, 6, 14), mat: M.brow, p: [0.27, 0.66, 0.05], r: [0.1, 0, -0.4] },
     // upper teeth along the lip, and the dark mouth cavity behind them
     ...[-0.95, -0.62, -0.32, 0, 0.32, 0.62, 0.95].map((a) => {
       const [x, z] = lip(a, 0.04);
@@ -135,7 +138,7 @@ function createOni() {
   ], { outline: 0.024 }));
   for (const sx of [-1, 1]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), M.eye);
-    eye.position.set(sx * 0.2, 0.21, 0.46); eye.scale.set(1.05, 0.72, 0.4);
+    eye.position.set(sx * 0.2, 0.21, 0.46); eye.scale.set(0.9, 0.6, 0.4);
     const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), M.pupil);
     pupil.position.set(sx * 0.2, 0.21, 0.505); pupil.scale.set(1, 2.4, 0.6);
     head.add(eye, pupil);

@@ -75,6 +75,30 @@ export function setRank(i, progress = 0, state = '') {
   for (const s of ['near', 'trial', 'top']) chip.classList.toggle(s, state === s);
 }
 
+// "Achievement unlocked": a small card at the top; several in a row wait their turn
+const toasts = [];
+function nextToast() {
+  const el = $('achievement-toast');
+  if (el.classList.contains('show') || !toasts.length) return;
+  const [icon, label, name] = toasts.shift();
+  el.innerHTML = `<span class="stamp"><b>${icon}</b></span><span><small>${label}</small><b>${name}</b></span>`;
+  el.classList.add('show');
+  setTimeout(() => { el.classList.remove('show'); setTimeout(nextToast, 400); }, 2600);
+}
+export function achievementToast(icon, label, name) {
+  toasts.push([icon, label, name]);
+  nextToast();
+}
+
+// in the daily challenge the same chip counts the day's yokai instead
+export function setDailyChip(done, total) {
+  $('rank-seal').textContent = '日';
+  $('rank-name').textContent = t('dailyChip', { d: done, n: total });
+  $('rank-fill').style.width = `${Math.round((done / total) * 100)}%`;
+  $('rank-hint').textContent = '';
+  for (const s of ['near', 'trial', 'top']) $('rank-chip').classList.remove(s);
+}
+
 // The five ranks as seals: lit up to `reached`, the next one filling up with
 // `progress`, and anything past `known` hidden as ？ — the next goal is always shown.
 export function renderLadder(el, { reached, progress = 0, known = reached + 1, labels = true }) {
@@ -128,6 +152,16 @@ export function createTag(text, { boss = false, hp = 0, stretch = false } = {}) 
   if (boss) setTagHp(el, 0, hp);
   tagLayer().appendChild(el);
   return el;
+}
+// daily challenge: the points the current problem is worth, under the score, with a
+// bar that drains as the seconds pass (null hides it)
+export function setDailyWorth(points, share = 1) {
+  const el = $('daily-worth');
+  el.hidden = points == null;
+  if (points == null) return;
+  $('worth-points').textContent = `+${points.toLocaleString('en')}`;
+  $('worth-fill').style.width = `${share * 100}%`;
+  el.classList.toggle('slow', share < 1);
 }
 export function setTagText(el, text) {
   setEquation(el.querySelector('.eq'), text);
@@ -225,6 +259,11 @@ export function armTalisman(ms) {
 }
 export function disarmTalisman() { $('pad-timer').classList.remove('run'); }
 
+// a white flash over everything (the daily finale)
+export function screenFlash() {
+  const f = $('flash');
+  f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+}
 export function damageFlash() {
   const v = $('vignette');
   v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');

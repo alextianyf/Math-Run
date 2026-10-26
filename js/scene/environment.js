@@ -2,12 +2,40 @@
 // torii with shimenawa ropes, festival lantern strings, stone lanterns, cedars and
 // night sakura, falling petals, fireflies and ground mist. Props are instanced and
 // slide toward +z, wrapping back to the far end.
+//
+// Two places share the sky and the trees (see THEMES): the festival night of the
+// endless run, and the daily challenge's graveyard under a blood moon — no path, no
+// torii, no festival lanterns; the hero stands on a stone altar in a field of graves,
+// sotoba boards and Jizō statues, candles on the graves, maples and dead trees around,
+// hitodama drifting in the air, spider lilies, and a thick red mist. The yokai climb
+// out of the graves.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { toon, glow, place, lathe, taperedTube } from './toon.js';
-import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex } from './textures.js';
+import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex, magicCircleTex } from './textures.js';
 
 export const FOG_COLOR = 0x2a2056;
+
+export const THEMES = {
+  night: {
+    fog: 0x2a2056, fogRange: [24, 95], sky: [0x03020c, 0x140f38],
+    moon: { color: 0xffffff, bright: 1.6, size: 50, y: 85 }, halo: [0x8f86ff, 0.5, 240], clouds: 0x9a90d8,
+    ridges: [0x3b3070, 0x2a2257, 0x1c173f, 0x2a2257],
+    torii: true, graveyard: false, ground: [0xffffff],
+    foliage: [0xf4a9c8, 0x4a1030],
+    lanternStrings: true, lanterns: [0xff4a22, 0xffd9a0], hitodama: false, stoneFire: 0xffb45a,
+    fireflies: 0xd9ff8f, lilies: [0xff2a3a, 1, 0.28], petals: 0xffd0e2, mist: [0x9d93e6, 1],
+  },
+  bloodMoon: {
+    fog: 0x33122e, fogRange: [15, 62], sky: [0x07020a, 0x2c0a30],
+    moon: { color: 0xff6a48, bright: 2.0, size: 110, y: 58 }, halo: [0xd8402a, 0.7, 360], clouds: 0x6a2846,
+    ridges: [0x4e2046, 0x381632, 0x240a20, 0x381632],
+    torii: false, graveyard: true, ground: [0x6a4a62],
+    foliage: [0xd8482a, 0x3a0a04],
+    lanternStrings: false, lanterns: [0x4ad0ff, 0xd0f4ff], hitodama: true, stoneFire: 0x7fd4ff,
+    fireflies: 0x9fd8ff, lilies: [0xff2a3a, 1.7, 0.5], petals: 0xe85a3a, mist: [0xa05a8a, 1.6],
+  },
+};
 const NEAR = 30;                 // props wrap once they pass this z (behind the camera)
 const GAP = 12;                  // torii spacing
 const SPAN = GAP * 13;           // length of the recycled band
@@ -62,6 +90,15 @@ class Scroller {
   }
 }
 
+// a shide (zigzag paper streamer) hanging from a sacred rope
+function shideGeo() {
+  const z = new THREE.Shape();
+  z.moveTo(0, 0); z.lineTo(0.13, 0); z.lineTo(0.13, -0.11); z.lineTo(0.05, -0.11); z.lineTo(0.05, -0.22);
+  z.lineTo(0.13, -0.22); z.lineTo(0.13, -0.38); z.lineTo(0.0, -0.38); z.lineTo(0.0, -0.27); z.lineTo(0.08, -0.27);
+  z.lineTo(0.08, -0.16); z.lineTo(0, -0.16); z.closePath();
+  return new THREE.ShapeGeometry(z);
+}
+
 function canvasTexture(w, h, draw, repeat) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -94,9 +131,7 @@ function pagodaShape() {
 }
 
 function buildSky(scene) {
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(420, 32, 16),
-    new THREE.ShaderMaterial({
+  const skyMat = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
         top: { value: new THREE.Color(0x03020c) },
@@ -117,8 +152,8 @@ function buildSky(scene) {
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
-    }),
-  );
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(420, 32, 16), skyMat);
   sky.renderOrder = -10;
   scene.add(sky);
 
@@ -160,6 +195,7 @@ function buildSky(scene) {
     { z: -215, color: 0x1c173f, base: 0, amp: 22, seed: 3 },
     { z: 260, color: 0x2a2257, base: 8, amp: 40, seed: 4 },
   ];
+  const ridges = [];
   for (const L of layers) {
     const shape = new THREE.Shape();
     const W = 1100;
@@ -172,6 +208,7 @@ function buildSky(scene) {
     const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: L.color, fog: false, side: THREE.DoubleSide }));
     m.position.z = L.z;
     scene.add(m);
+    ridges.push(m);
   }
 
   // pagoda on the middle ridge, with lit windows and a lantern trail up the slope
@@ -198,6 +235,19 @@ function buildSky(scene) {
         c.position.x += c.userData.speed * dt;
         if (c.position.x > 160) c.position.x = -180;
       }
+    },
+    theme(th) {
+      skyMat.uniforms.top.value.set(th.sky[0]);
+      skyMat.uniforms.mid.value.set(th.sky[1]);
+      skyMat.uniforms.horizon.value.set(th.fog);
+      moon.material.color.copy(glow(th.moon.color, th.moon.bright));
+      moon.scale.setScalar(th.moon.size);
+      moon.position.y = halo.position.y = th.moon.y;
+      halo.material.color.set(th.halo[0]);
+      halo.material.opacity = th.halo[1];
+      halo.scale.setScalar(th.halo[2]);
+      for (const c of clouds) c.material.color.set(th.clouds);
+      ridges.forEach((m, i) => m.material.color.set(th.ridges[i]));
     },
   };
 }
@@ -246,25 +296,57 @@ function buildGround(scene) {
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, y, -110);
     scene.add(m);
+    return m;
   };
-  flat(240, toon(0xffffff, { map: moss }), 0, 0);
-  flat(PATH_W, toon(0xffffff, { map: stone }), 0, 0.02);
+  const mossMat = toon(0xffffff, { map: moss }), stoneMat = toon(0xffffff, { map: stone });
+  flat(240, mossMat, 0, 0);
   const gravelMat = toon(0xffffff, { map: gravel });
-  flat(1.5, gravelMat, -(PATH_W / 2 + 0.75), 0.015);
-  flat(1.5, gravelMat, PATH_W / 2 + 0.75, 0.015);
+  const path = [flat(PATH_W, stoneMat, 0, 0.02), flat(1.5, gravelMat, -(PATH_W / 2 + 0.75), 0.015), flat(1.5, gravelMat, PATH_W / 2 + 0.75, 0.015)];
 
   const curbMat = toon(0x4a4458);
   for (const sx of [-1, 1]) {
     const curb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.14, 320), curbMat);
     curb.position.set(sx * (PATH_W / 2 + 0.08), 0.07, -110);
     scene.add(curb);
+    path.push(curb);
   }
+  // the graveyard has no path: a round stone altar where the hero stands, a seal glowing
+  // faintly on it, and a kekkai — stakes strung with sacred rope — guarding his sides
+  const altar = new THREE.Group();
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.85, 0.1, 28), toon(0x4a3f52));
+  slab.position.y = 0.05;
+  const seal = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 3.1), new THREE.MeshBasicMaterial({
+    map: magicCircleTex(), color: glow(0xff9a40, 0.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  seal.rotation.x = -Math.PI / 2;
+  seal.position.y = 0.115;
+  const stakes = [], ropes = [], papers = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      stakes.push(place(new THREE.CylinderGeometry(0.05, 0.065, 1.15, 8), [sx * 2.05, 0.57, sz * 1.7]));
+      stakes.push(place(new THREE.ConeGeometry(0.07, 0.1, 8), [sx * 2.05, 1.19, sz * 1.7]));
+    }
+    ropes.push(taperedTube([[sx * 2.05, 1.08, 1.7], [sx * 2.05, 0.92, 0], [sx * 2.05, 1.08, -1.7]], 0.035, { tip: 1, radial: 6, segments: 16 }));
+    for (const z of [-0.85, 0, 0.85]) papers.push(place(shideGeo(), [sx * 2.05 - 0.06, 0.98 - Math.abs(z) * 0.05, z], [0, Math.PI / 2, 0]));
+  }
+  altar.add(slab, seal,
+    new THREE.Mesh(merge(stakes), toon(0x2a1d1a)),
+    new THREE.Mesh(merge(ropes), toon(0xc9a45a)),
+    new THREE.Mesh(merge(papers), toon(0xf7f3ea, { side: THREE.DoubleSide })));
+  altar.visible = false;
+  scene.add(altar);
 
   return {
-    step(dz) {
+    step(dz, t) {
       stone.offset.y += dz / PATH_W;
       gravel.offset.y += dz / 1.5;
       moss.offset.y += dz / 8;
+      if (altar.visible) seal.rotation.z = t * 0.12;
+    },
+    theme(th) {
+      mossMat.color.set(th.ground[0]);
+      for (const m of path) m.visible = !th.graveyard;
+      altar.visible = th.graveyard;
     },
   };
 }
@@ -294,11 +376,7 @@ function buildTorii(scene) {
   rope.push(taperedTube([[-2.6, 3.28, 0.2], [-1.3, 3.0, 0.24], [0, 2.92, 0.25], [1.3, 3.0, 0.24], [2.6, 3.28, 0.2]], 0.075, { tip: 1, radial: 8, segments: 24 }));
   for (const x of [-1.6, -0.55, 0.55, 1.6]) {
     rope.push(place(new THREE.CylinderGeometry(0.035, 0.06, 0.32, 6), [x, 2.78, 0.25]));
-    const z = new THREE.Shape();
-    z.moveTo(0, 0); z.lineTo(0.13, 0); z.lineTo(0.13, -0.11); z.lineTo(0.05, -0.11); z.lineTo(0.05, -0.22);
-    z.lineTo(0.13, -0.22); z.lineTo(0.13, -0.38); z.lineTo(0.0, -0.38); z.lineTo(0.0, -0.27); z.lineTo(0.08, -0.27);
-    z.lineTo(0.08, -0.16); z.lineTo(0, -0.16); z.closePath();
-    paper.push(place(new THREE.ShapeGeometry(z), [x + 0.2, 3.0, 0.27]));
+    paper.push(place(shideGeo(), [x + 0.2, 3.0, 0.27]));
   }
 
   const count = SPAN / GAP;
@@ -311,7 +389,9 @@ function buildTorii(scene) {
   ];
   scene.add(...meshes);
   const items = Array.from({ length: count }, (_, i) => ({ x: 0, z: NEAR - 6 - i * GAP }));
-  return new Scroller(meshes, items);
+  const scroller = new Scroller(meshes, items);
+  scroller.theme = (th) => { for (const m of meshes) m.visible = th.torii; };
+  return scroller;
 }
 
 /* ===================== festival lantern strings ===================== */
@@ -348,7 +428,6 @@ function buildLanternStrings(scene) {
   const capMesh = instanced(caps, toon(0x17121a), spans * 2 * PER);
   scene.add(postMesh, ropeMesh, bodyMesh, capMesh);
 
-  const red = new THREE.Color(0xff4a22), warm = new THREE.Color(0xffd9a0);
   const spanItems = [], lanternItems = [];
   for (let i = 0; i < spans; i++) {
     for (const sx of [-1, 1]) {
@@ -356,12 +435,17 @@ function buildLanternStrings(scene) {
       spanItems.push({ x: sx * 3.45, z: z0 });
       for (let j = 1; j <= PER; j++) {
         const t = j / (PER + 1);
-        lanternItems.push({ x: sx * 3.45, y: ropeY(t) - 0.34, z: z0 - GAP * t });
-        bodyMesh.setColorAt(lanternItems.length - 1, (i * 7 + j) % 5 === 0 ? warm : red);
+        lanternItems.push({ x: sx * 3.45, y: ropeY(t) - 0.34, z: z0 - GAP * t, odd: (i * 7 + j) % 5 === 0 });
       }
     }
   }
-  bodyMesh.instanceColor.needsUpdate = true;
+  // most lanterns one colour, every fifth or so the other
+  const paint = ([main, odd]) => {
+    const a = new THREE.Color(main), b = new THREE.Color(odd);
+    lanternItems.forEach((it, i) => bodyMesh.setColorAt(i, it.odd ? b : a));
+    bodyMesh.instanceColor.needsUpdate = true;
+  };
+  paint(THEMES.night.lanterns);
   const spanScroll = new Scroller([postMesh, ropeMesh], spanItems);
   const lanternScroll = new Scroller([bodyMesh, capMesh], lanternItems);
   return {
@@ -370,6 +454,10 @@ function buildLanternStrings(scene) {
       // a gentle swing: rotate each lantern a little around y (cheap, reads as motion)
       lanternItems.forEach((it, i) => { it.ry = Math.sin(t * 1.3 + i) * 0.4; });
       lanternScroll.step(dz);
+    },
+    theme(th) {
+      paint(th.lanterns);
+      for (const m of [postMesh, ropeMesh, bodyMesh, capMesh]) m.visible = th.lanternStrings;
     },
   };
 }
@@ -389,8 +477,20 @@ function buildStoneLanterns(scene) {
   const stoneMesh = instanced(stone, toon(0x8a8398), count);
   const fireMesh = instanced(fire, new THREE.MeshBasicMaterial({ color: glow(0xffb45a, 2.2) }), count);
   scene.add(stoneMesh, fireMesh);
-  const items = Array.from({ length: count }, (_, i) => ({ x: (i % 2 ? 1 : -1) * 4.4, z: NEAR - 3 - i * GAP, ry: Math.PI / 6 }));
-  return new Scroller([stoneMesh, fireMesh], items);
+  // two layouts: rows along the path, or scattered among the graves
+  const items = Array.from({ length: count }, (_, i) => {
+    const side = i % 2 ? 1 : -1;
+    const path = { x: side * 4.4, z: NEAR - 3 - i * GAP, ry: Math.PI / 6 };
+    const grave = { x: side * rand(4.6, 11), z: rand(-64, 2) - (i < 2 ? 4 : 0), ry: rand(0, Math.PI) };
+    return { ...path, path, grave };
+  });
+  const scroller = new Scroller([stoneMesh, fireMesh], items);
+  scroller.theme = (th) => {
+    fireMesh.material.color.copy(glow(th.stoneFire, 2.2));
+    for (const it of items) Object.assign(it, th.graveyard ? it.grave : it.path);
+    scroller.apply();
+  };
+  return scroller;
 }
 
 /* ===================== trees ===================== */
@@ -422,19 +522,123 @@ function buildTrees(scene) {
   ].map(([x, y, z, r]) => place(new THREE.IcosahedronGeometry(r, 1), [x, y, z])));
   const sakCount = 24;
   const sakTrunkMesh = instanced(sakTrunk, toon(0x3b2630), sakCount);
-  const sakTopMesh = instanced(blossom, toon(0xf4a9c8, { emissive: 0x4a1030 }), sakCount);
+  const foliageMat = toon(0xf4a9c8, { emissive: 0x4a1030 });
+  const sakTopMesh = instanced(blossom, foliageMat, sakCount);
   scene.add(sakTrunkMesh, sakTopMesh);
   const sakura = new Scroller([sakTrunkMesh, sakTopMesh], Array.from({ length: sakCount }, (_, i) => ({
     x: (i % 2 ? 1 : -1) * rand(5.6, 8), z: NEAR - (i / sakCount) * SPAN - rand(0, 4), s: rand(0.9, 1.25), ry: Math.random() * Math.PI * 2,
   })));
-  return { step(dz) { cedars.step(dz); sakura.step(dz); } };
+
+  // dead trees (the graveyard's back rows): a twisted trunk and a few bare branches
+  const twig = (pts, r) => taperedTube(pts, r, { tip: 0.25, segments: 8, radial: 6 });
+  const dead = merge([
+    twig([[0, 0, 0], [0.12, 1.6, 0.05], [-0.1, 3.1, 0.1], [0.08, 4.4, 0]], 0.26),
+    twig([[0.05, 2.2, 0], [0.9, 3.0, 0.3], [1.5, 3.9, 0.2]], 0.1),
+    twig([[1.1, 3.2, 0.25], [1.3, 3.9, 0.6]], 0.05),
+    twig([[-0.05, 2.8, 0.05], [-0.8, 3.6, -0.3], [-1.3, 4.5, -0.1]], 0.1),
+    twig([[-0.9, 3.7, -0.25], [-1.4, 3.9, -0.6]], 0.05),
+    twig([[0.05, 3.9, 0], [0.4, 4.9, -0.3], [0.5, 5.6, 0.1]], 0.08),
+    twig([[0.0, 4.2, 0], [-0.4, 5.0, 0.3]], 0.05),
+  ]);
+  const deadCount = 60;
+  const deadMesh = instanced(dead, toon(0x17101c), deadCount);
+  deadMesh.visible = false;
+  scene.add(deadMesh);
+  const deadTrees = new Scroller([deadMesh], Array.from({ length: deadCount }, (_, i) => ({
+    x: (i % 2 ? 1 : -1) * rand(8.5, 22), z: NEAR - Math.random() * SPAN, s: rand(0.8, 1.6), ry: Math.random() * Math.PI * 2,
+  })));
+  return {
+    step(dz) { cedars.step(dz); sakura.step(dz); if (deadMesh.visible) deadTrees.step(dz); },
+    theme(th) {
+      foliageMat.color.set(th.foliage[0]);
+      foliageMat.emissive.set(th.foliage[1]);
+      cedarTrunk.visible = cedarTop.visible = !th.graveyard;
+      deadMesh.visible = th.graveyard;
+    },
+  };
+}
+
+/* ===================== graveyard ===================== */
+
+// Gravestones in three tiers, clusters of sotoba boards behind them, and Jizō statues
+// in red bibs around the altar. Only the daily challenge shows them. The yokai climb
+// out of the graves nearest the altar (SPAWN), the oni out of the great tomb (TOMB).
+function buildGraveyard(scene) {
+  const stone = toon(0x6e6878);
+  const grave = merge([
+    place(new THREE.BoxGeometry(1.0, 0.22, 1.0), [0, 0.11, 0]),
+    place(new THREE.BoxGeometry(0.72, 0.2, 0.72), [0, 0.32, 0]),
+    place(new THREE.BoxGeometry(0.34, 1.3, 0.34), [0, 1.05, 0]),
+    place(new THREE.BoxGeometry(0.38, 0.08, 0.38), [0, 1.72, 0]),
+    place(new THREE.CylinderGeometry(0.18, 0.2, 0.3, 6), [0, 1.9, 0]),
+  ]);
+  const board = (x, tilt) => [
+    place(new THREE.BoxGeometry(0.13, 1.7, 0.025), [x, 0.85, 0], [0, 0, tilt]),
+    place(new THREE.ConeGeometry(0.095, 0.16, 4), [x - Math.sin(tilt) * 1.7, 1.78, 0], [0, Math.PI / 4, tilt]),
+  ];
+  const sotoba = merge([...board(-0.2, 0.05), ...board(0, -0.02), ...board(0.2, 0.08)]);
+  const jizoStone = merge([
+    place(new THREE.CylinderGeometry(0.34, 0.38, 0.14, 8), [0, 0.07, 0]),
+    place(lathe([[0.2, 0.14], [0.26, 0.5], [0.18, 0.95], [0.1, 1.02]], 12), [0, 0, 0]),
+    place(new THREE.SphereGeometry(0.2, 14, 10), [0, 1.14, 0]),
+    place(new THREE.SphereGeometry(0.1, 10, 8), [0, 0.6, 0.2], [0, 0, 0], [1.4, 0.8, 0.8]),
+  ]);
+  const bib = place(new THREE.BoxGeometry(0.34, 0.3, 0.06), [0, 0.86, 0.22], [0.15, 0, 0]);
+  const holder = place(new THREE.CylinderGeometry(0.05, 0.075, 0.2, 8), [0, 0.1, 0]);
+  const flame = place(new THREE.SphereGeometry(0.06, 8, 6), [0, 0.3, 0], [0, 0, 0], [1, 1.7, 1]);
+
+  const graveCount = 90, jizoCount = 6;
+  const graveMesh = instanced(grave, stone, graveCount);
+  const sotobaMesh = instanced(sotoba, toon(0xc9b48a), graveCount);
+  const jizoMesh = instanced(jizoStone, toon(0x8a8398), jizoCount);
+  const bibMesh = instanced(bib, toon(0xd8322a), jizoCount);
+  const meshes = [graveMesh, sotobaMesh, jizoMesh, bibMesh];
+
+  const SPAWN = [[-4.6, -14.5], [-1.9, -18.5], [2.4, -16.5], [5.4, -14], [-3.6, -22.5], [4.4, -21.5], [0.8, -26]];
+  const TOMB = [0, -24.5];
+  const graves = SPAWN.map(([x, z]) => ({ x, z, z0: z, s: 1.15, ry: rand(-0.15, 0.15) }));
+  graves.push({ x: TOMB[0], z: TOMB[1], z0: TOMB[1], s: 2.3, ry: 0 });
+  // the rest scatter over the field, clear of the altar and of the yokai's way to it
+  while (graves.length < graveCount) {
+    const x = rand(-13, 13), z = rand(-120, 4);
+    if (Math.abs(x) < 3 && z > -13) continue;
+    if (graves.some((g) => Math.hypot(g.x - x, g.z0 - z) < 1.6 * g.s + 0.6)) continue;
+    graves.push({ x, z, z0: z, s: rand(0.7, 1.3), ry: rand(-0.35, 0.35) });
+  }
+  const boards = graves.map((g) => ({ x: g.x + (g.x > 0 ? 0.1 : -0.1), z: g.z - 0.75 * g.s, z0: g.z0 - 0.75 * g.s, s: g.s, ry: g.ry }));
+  const jizos = [[-3.4, -5.5], [3.4, -5.5], [-4.6, -10.5], [4.6, -10.5], [-3.2, -1], [3.2, -1]].map(([x, z]) => ({
+    x, z, z0: z, s: 1, ry: Math.atan2(-x, -6 - z),           // turned toward the altar
+  }));
+  // a candle burning in front of every third grave or so
+  const candles = graves.filter((g, i) => i % 7 < 3 && g.s < 2).map((g) => ({ x: g.x, z: g.z0 + 0.72 * g.s, z0: g.z0 + 0.72 * g.s, s: 1 }));
+  const holderMesh = instanced(holder, toon(0x2a1d1a), candles.length);
+  const flameMesh = instanced(flame, new THREE.MeshBasicMaterial({ color: glow(0xffb860, 2.4) }), candles.length);
+  meshes.push(holderMesh, flameMesh);
+  for (const m of meshes) { m.visible = false; scene.add(m); }
+  const flames = new Scroller([flameMesh], candles.map((c) => ({ ...c })));
+  const scrollers = [new Scroller([graveMesh], graves), new Scroller([sotobaMesh], boards), new Scroller([jizoMesh, bibMesh], jizos), new Scroller([holderMesh], candles), flames];
+  return {
+    spawn: SPAWN, tomb: TOMB,
+    step(dz, t) {
+      if (!graveMesh.visible) return;
+      flames.items.forEach((it, i) => { it.s = 0.8 + 0.35 * Math.abs(Math.sin(t * 7 + i * 1.7)); });
+      for (const sc of scrollers) sc.step(dz);
+    },
+    theme(th) {
+      for (const m of meshes) m.visible = th.graveyard;
+      // the field is laid out around the altar: put everything back where it was built
+      for (const sc of scrollers) { for (const it of sc.items) it.z = it.z0; sc.apply(); }
+    },
+  };
 }
 
 /* ===================== particles: fireflies, lilies, petals ===================== */
 
 function buildParticles(scene, { count, area, size, color, additive, map = glowTex(), fall = 0, drift = 0 }) {
   const base = new Float32Array(count * 3), pos = new Float32Array(count * 3), phase = new Float32Array(count);
-  for (let i = 0; i < count; i++) { base.set(area(i), i * 3); phase[i] = Math.random() * Math.PI * 2; }
+  const layout = (fn) => { for (let i = 0; i < count; i++) base.set(fn(i), i * 3); };
+  layout(area);
+  for (let i = 0; i < count; i++) phase[i] = Math.random() * Math.PI * 2;
   pos.set(base);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -445,7 +649,11 @@ function buildParticles(scene, { count, area, size, color, additive, map = glowT
   pts.frustumCulled = false;
   scene.add(pts);
   return {
+    recolor(c, size = pts.material.size) { pts.material.color.copy(c); pts.material.size = size; },
+    relayout: layout,
+    show(on) { pts.visible = on; },
     step(dz, t, dt) {
+      if (!pts.visible) return;
       for (let i = 0; i < count; i++) {
         let z = base[i * 3 + 2] + dz;
         if (z > NEAR) z -= SPAN;
@@ -476,7 +684,7 @@ function buildMist(scene) {
     m.rotation.x = -Math.PI / 2;
     m.position.set(0, y, -55);
     scene.add(m);
-    return { t, k };
+    return { t, k, m, opacity };
   });
   return {
     step(dz, t) {
@@ -485,29 +693,43 @@ function buildMist(scene) {
         L.t.offset.x = Math.sin(t * 0.05 * L.k) * 0.3;
       }
     },
+    theme(th) { for (const L of layers) { L.m.material.color.set(th.mist[0]); L.m.material.opacity = Math.min(1, L.opacity * th.mist[1]); } },
   };
 }
 
 /* ===================== assemble ===================== */
 
+// spider lilies: along the path's edges, or over the whole graveyard (clear of the altar)
+const LILY_EDGES = (i) => [(i % 2 ? 1 : -1) * (Math.random() < 0.7 ? rand(4.4, 5.0) : rand(5.2, 8)), rand(0.12, 0.3), NEAR - Math.random() * SPAN];
+const LILY_FIELD = () => {
+  let x, z;
+  do { x = rand(-12, 12); z = rand(-70, 3); } while (Math.hypot(x, z) < 3.2);
+  return [x, rand(0.12, 0.35), z];
+};
+
 export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
-  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), buildMist(scene)];
-  const particles = [
+  const graveyard = buildGraveyard(scene);
+  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), graveyard, buildMist(scene)];
+  const [fireflies, lilies, petals, hitodama] = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
       area: (i) => [(i % 2 ? 1 : -1) * rand(1, 14), rand(0.4, 4.6), NEAR - Math.random() * SPAN],
     }),
-    buildParticles(scene, {
-      count: 300, size: 0.28, color: 0xff2a3a, additive: false,
-      area: (i) => [(i % 2 ? 1 : -1) * (Math.random() < 0.7 ? rand(4.4, 5.0) : rand(5.2, 8)), rand(0.12, 0.3), NEAR - Math.random() * SPAN],
-    }),
+    buildParticles(scene, { count: 300, size: 0.28, color: 0xff2a3a, additive: false, area: LILY_EDGES }),
     buildParticles(scene, {
       count: 260, size: 0.16, color: 0xffd0e2, additive: false, map: petalTex(), fall: 0.45, drift: 0.5,
       area: () => [rand(-9, 9), rand(0.2, 5), NEAR - Math.random() * SPAN],
     }),
+    // hitodama: soul-flames drifting between the trees (the blood-moon night only)
+    buildParticles(scene, {
+      count: 90, size: 1.1, color: glow(0x8fd8ff, 1.7), additive: true, drift: 1.4,
+      area: (i) => [(i % 2 ? 1 : -1) * rand(2.5, 13), rand(1.2, 6), NEAR - Math.random() * SPAN],
+    }),
   ];
+  hitodama.show(false);
+  const particles = [fireflies, lilies, petals, hitodama];
   return {
     // arches overhead would fill the play camera's view right after passing the runner
     set hideToriiBeyond(z) { torii.hideZ = z; },
@@ -515,6 +737,18 @@ export function createEnvironment(scene) {
       sky.step(dt);
       for (const p of parts) p.step(dz, t);
       for (const p of particles) p.step(dz, t, dt);
+    },
+    // the graveyard's graves the yokai come out of: { spawn: [[x, z]…], tomb: [x, z] }
+    graves: { spawn: graveyard.spawn, tomb: graveyard.tomb },
+    // switch between the looks in THEMES (the lights and fog are world.js's)
+    setTheme(th) {
+      sky.theme(th);
+      for (const p of parts) p.theme?.(th);
+      fireflies.recolor(glow(th.fireflies, 1.6));
+      lilies.recolor(glow(th.lilies[0], th.lilies[1]), th.lilies[2]);
+      lilies.relayout(th.graveyard ? LILY_FIELD : LILY_EDGES);
+      petals.recolor(new THREE.Color(th.petals));
+      hitodama.show(th.hitodama);
     },
   };
 }

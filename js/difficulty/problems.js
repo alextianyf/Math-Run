@@ -12,8 +12,16 @@
 
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const sup = (n) => String(n).split('').map((d) => SUP[+d]).join('');
-const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+// Every random choice goes through `random`, so a seeded generator can stand in for
+// Math.random — that is how the daily challenge gives everyone the same problems.
+let random = Math.random;
+export function withRandom(rng, build) {
+  const previous = random;
+  random = rng;
+  try { return build(); } finally { random = previous; }
+}
+const ri = (a, b) => a + Math.floor(random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(random() * arr.length)];
 
 export const BASIC = ['+', '−', '×', '÷'];
 export const ALL = [...BASIC, 'sq', 'sqrt', 'cube', 'cbrt', 'pow'];
@@ -82,13 +90,13 @@ function build(v, steps, cfg) {
   const exoticOn = cfg.ops.some((o) => EXOTIC.has(o));
   switch (op) {
     case '+': {
-      let a = exoticOn && Math.random() < 0.45 ? powerOperand(cfg, 1, v - 1) : null;
+      let a = exoticOn && random() < 0.45 ? powerOperand(cfg, 1, v - 1) : null;
       if (a == null) a = ri(1, v - 1);
       const [l, r] = split(rest);
       return { t: 'b', op, a: build(a, l, cfg), b: build(v - a, r, cfg), v };
     }
     case '−': {
-      let a = exoticOn && Math.random() < 0.5 ? powerOperand(cfg, v + 1, cfg.cap) : null;
+      let a = exoticOn && random() < 0.5 ? powerOperand(cfg, v + 1, cfg.cap) : null;
       if (a == null) a = v + ri(1, cfg.cap - v);
       const [l, r] = split(rest);
       return { t: 'b', op, a: build(a, l, cfg), b: build(a - v, r, cfg), v };
@@ -220,11 +228,11 @@ export function makeProblem(target, { answer = ri(0, 9), avoid = new Set(), allo
   const i = bandIndex(target);
   let best = null, bestGap = Infinity;
   for (let k = 0; k < 32; k++) {
-    const band = BANDS[Math.max(0, Math.min(BANDS.length - 1, i + (Math.random() < 0.3 ? pick([-1, 1]) : 0)))];
+    const band = BANDS[Math.max(0, Math.min(BANDS.length - 1, i + (random() < 0.3 ? pick([-1, 1]) : 0)))];
     const p = generate(answer, restrict(band, allow, feature));
     if (avoid.has(p.text) || p.text.length > 24 || p.text === String(answer)) continue;
     if (allow && !allow.brackets && p.kinds.has('()')) continue;
-    let gap = Math.abs(p.difficulty - target) + Math.random() * 30;   // a little noise keeps the mix varied
+    let gap = Math.abs(p.difficulty - target) + random() * 30;   // a little noise keeps the mix varied
     if (feature && !feature.some((f) => p.kinds.has(f))) gap += 250;
     if (gap < bestGap) { best = p; bestGap = gap; }
   }

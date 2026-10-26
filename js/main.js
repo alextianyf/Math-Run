@@ -19,8 +19,10 @@ import { spawn, updateSpawner, updateEnemies } from './game/enemies.js';
 import { onTalisman, decide } from './game/handwriting.js';
 import { answer, cast, fizzle, playerHit, updateCombat } from './game/combat.js';
 import { coach, updateTutorial, tutorialWriting, tutorialAnswer } from './game/tutorial.js';
+import { updateDaily, dailyAnswer } from './game/dailyRun.js';
 import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/capture.js';
-import { startGame, beginPlay, pause, resume, toTitle, showGameOver } from './game/flow.js';
+import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, refreshDailyButton, shareDaily } from './game/flow.js';
+import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { $, smooth01 } from './game/helpers.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
@@ -38,6 +40,8 @@ ui.applyI18n();
 ui.setHearts(MAX_HEARTS, MAX_HEARTS);
 ui.setBest(S.best);
 ui.setBestRank(S.bestRank);
+refreshDailyButton();
+initCollection();
 showRank();
 ui.resetAI();
 // Creating the audio engine can block for half a second on some PCs, so it's done
@@ -52,7 +56,7 @@ document.body.classList.toggle('ai-open', ui.store.get('aiPanel', window.innerWi
 // what a reading of the talisman does: the tutorial handles it while it runs
 onTalisman({
   write: tutorialWriting,
-  read: (reading) => (S.tut ? tutorialAnswer(reading) : answer(reading)),
+  read: (reading) => (S.tut ? tutorialAnswer(reading) : S.daily ? dailyAnswer(reading) : answer(reading)),
 });
 
 /* ===================== loading screen ===================== */
@@ -78,6 +82,7 @@ Promise.all([
     await nextFrame();                       // the prewarm frame below is a long one
     prewarm();
     $('btn-start').disabled = false;
+    $('btn-daily').disabled = false;
     $('start-label').dataset.i18n = 'start';
     $('start-label').textContent = ui.t('start');
     $('ai-status').dataset.i18n = '';
@@ -104,6 +109,7 @@ Promise.all([
 /* ===================== frame loop ===================== */
 function updatePlaying(dt) {
   if (S.tut) { updateTutorial(dt); return; }
+  if (S.daily) { updateDaily(dt); return; }
   S.distance += S.speed * dt * 0.6;
   ui.setDistance(S.distance);
   updateCombat(dt);
@@ -113,7 +119,7 @@ function updatePlaying(dt) {
 function step(dt, realDt) {
   // the hero runs while playing, stands on the title and stops while the tutorial talks
   let target = 0;
-  if (S.mode === 'intro' || S.mode === 'playing') target = S.tut?.frozen ? 0 : director.runSpeed();
+  if (S.mode === 'intro' || S.mode === 'playing') target = S.tut?.frozen || S.daily ? 0 : director.runSpeed();
   S.speed += (target - S.speed) * Math.min(1, dt * (S.mode === 'caught' ? 5 : 2));
 
   world.update(dt, S.speed, S.t);
@@ -141,7 +147,9 @@ function frame(now) {
   last = now;
   if (S.mode !== 'paused') {
     // brief slow motion as the last heart is lost
-    const slow = S.mode === 'caught' && S.caughtT < 0.7 ? 0.25 + 0.75 * smooth01((S.caughtT - 0.3) / 0.4) : 1;
+    // and as the daily finale lands
+    let slow = S.mode === 'caught' && S.caughtT < 0.7 ? 0.25 + 0.75 * smooth01((S.caughtT - 0.3) / 0.4) : 1;
+    if (S.slowT > 0) { S.slowT -= realDt; slow *= 0.35; }
     const dt = realDt * slow;
     S.t += dt;
     step(dt, realDt);
@@ -154,7 +162,9 @@ requestAnimationFrame(frame);
 const skip = () => { if (skipCapture()) showGameOver(); };
 
 $('btn-start').addEventListener('click', () => startGame(false));
-$('btn-retry').addEventListener('click', () => startGame(true));
+$('btn-daily').addEventListener('click', () => startGame(false, true));
+$('btn-share').addEventListener('click', shareDaily);
+$('btn-retry').addEventListener('click', retryRun);
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
 $('btn-over-title').addEventListener('click', toTitle);
@@ -177,6 +187,8 @@ $('btn-lang').addEventListener('click', () => {
   ui.setBest(S.best);
   ui.setBestRank(S.bestRank);
   ui.setCombo(S.combo);
+  refreshDailyButton();
+  refreshCollectionChip();
   if (aiInfo.ready) $('ai-status').textContent = ui.t('ready');
 });
 stage.addEventListener('pointerdown', skip);
@@ -192,7 +204,8 @@ document.addEventListener('keydown', (e) => {
     debugCast(Number(e.key));
   }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+// (not in the daily challenge: its clock keeps running, so there's nothing to protect)
+document.addEventListener('visibilitychange', () => { if (document.hidden && !S.daily) pause(); });
 window.addEventListener('pagehide', () => { if (S.mode === 'playing' || S.mode === 'paused') saveBest(); });
 
 /* ===================== ?debug ===================== */

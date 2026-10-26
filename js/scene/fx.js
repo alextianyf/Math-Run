@@ -112,6 +112,10 @@ export function createFx(scene, camera) {
     map: magicCircleTex(), color: glow(color, bright), transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
   });
+  const pillarMat = (color, bright) => new THREE.MeshBasicMaterial({
+    color: glow(color, bright), transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+  });
   const paperMat = (texture) => new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, fog: false });
   const trailMat = (color) => new THREE.ShaderMaterial({
     uniforms: { color: { value: glow(color, 2.4) }, fade: { value: 1 } },
@@ -166,18 +170,54 @@ export function createFx(scene, camera) {
   }
 
   // 滅 seal: pops in big, settles, then fades — sized to read the same at any distance
-  function seal(p, ch = '滅') {
+  // (size 1 = the usual stamp; the finale stamps a far bigger one and holds it longer)
+  function seal(p, ch = '滅', { size = 1, dur = 0.85 } = {}) {
     const s = new THREE.Sprite(sealMat(ch));
     s.position.copy(p);
     s.renderOrder = 10;
-    const base = camera.position.distanceTo(p) * 0.11;
+    const base = camera.position.distanceTo(p) * 0.11 * size;
     const rot = (Math.random() - 0.5) * 0.5;
-    addTimed(s, 0.85, (k, o) => {
+    addTimed(s, dur, (k, o) => {
       const pop = k < 0.15 ? 2.1 - (k / 0.15) * 1.1 : 1;
       o.scale.setScalar(base * pop);
       o.material.rotation = rot;
       o.material.opacity = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
     });
+  }
+
+  /* ===================== light pillars and lightning ===================== */
+  const pillarGeo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true).translate(0, 0.5, 0);   // base at y = 0
+
+  // a column of light rising from p: grows up, holds, fades
+  function pillar(p, { color = 0xffe08a, radius = 1, height = 24, dur = 1.2, bright = 2.4 } = {}) {
+    const m = new THREE.Mesh(pillarGeo, pillarMat(color, bright));
+    m.position.set(p.x, 0, p.z);
+    m.renderOrder = 5;
+    addTimed(m, dur, (k, o) => {
+      const rise = 1 - Math.pow(1 - Math.min(1, k * 3.5), 3);
+      o.scale.set(radius * (1 - 0.5 * k), height * rise, radius * (1 - 0.5 * k));
+      o.material.opacity = k < 0.55 ? 1 : 1 - (k - 0.55) / 0.45;
+    });
+  }
+
+  // a lightning strike onto p: a blinding core inside a wide glow, a flash at the
+  // impact, a shockwave on the ground and sparks thrown up
+  function lightning(p, { color = 0xbfe4ff, dur = 0.55 } = {}) {
+    for (const [radius, bright] of [[0.12, 5], [0.55, 1.6]]) {
+      const m = new THREE.Mesh(pillarGeo, pillarMat(color, bright));
+      m.position.set(p.x, 0, p.z);
+      m.renderOrder = 5;
+      addTimed(m, dur, (k, o) => {
+        const flicker = 0.7 + 0.3 * Math.sin(k * 90);
+        o.scale.set(radius * flicker * (1 - k), 40, radius * flicker * (1 - k));
+        o.material.opacity = 1 - k * k;
+      });
+    }
+    const flash = new THREE.Sprite(haloMat(color));
+    flash.position.copy(p);
+    addTimed(flash, 0.4, (k, o) => { o.scale.setScalar(6 * (1 - k * 0.5)); o.material.opacity = 1 - k; });
+    ring(new THREE.Vector3(p.x, 0.1, p.z), { color, scale: 7, dur: 0.6 });
+    emit(p, { count: 60, color, color2: 0xffffff, bright: 2.4, speed: 9, life: 0.7, size: 0.22, gravity: -2, up: 0.8 });
   }
 
   /* ===================== talismans + light trails ===================== */
@@ -271,7 +311,7 @@ export function createFx(scene, camera) {
   }
 
   return {
-    emit, ring, talisman, magicCircle, seal,
+    emit, ring, talisman, magicCircle, seal, pillar, lightning,
     setScale(px) { uniforms.uScale.value = px; },
     // one object per effect material, to be compiled once and then kept (hidden)
     warmObjects() {
@@ -284,6 +324,7 @@ export function createFx(scene, camera) {
         new THREE.Mesh(circleGeo, circleMat(0xffffff, 1)),
         new THREE.Mesh(talGeo, paperMat(paper)),
         new THREE.Mesh(talGeo, trailMat(0xffffff)),
+        new THREE.Mesh(pillarGeo, pillarMat(0xffffff, 1)),
       ];
     },
     update(dt) {

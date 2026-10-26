@@ -10,6 +10,7 @@ import { addScore, record, advance, promote, showRank } from './progress.js';
 import { measureTag, removeEnemy } from './enemies.js';
 import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
+import { emit } from './events.js';
 import { rand } from './helpers.js';
 
 // combo aura tiers: [min combo, colour] — the talismans and sparks take this colour
@@ -70,6 +71,7 @@ export function cast(digit, paper) {
   sfx.cast();
 
   const n = victims.length;
+  emit('cast', { victims: n });
   if (n >= 2) {
     ui.banner(ui.t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
     sfx.multi(n);
@@ -157,6 +159,7 @@ function impact(e, n) {
     world.shake(0.4);
     promote();
   }
+  emit('banish', { type: e.yokai.type, combo: S.combo });
   e.yokai.flash();
   e.dying = 0.0001;
   if (e.boss) showRank();
