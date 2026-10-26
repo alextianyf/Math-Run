@@ -71,11 +71,10 @@ export function openShare(run) {
 }
 
 async function shareLink() {
-  const url = runLink(current);
-  const text = ui.t('cardMessage', { s: current.score.toLocaleString('en') });
+  const url = runLink(current);                      // just the link: the card says the rest
   try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: ui.t('cardTitleOwn'), text, url }); return; }
-    await navigator.clipboard.writeText(`${text} ${url}`);
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: ui.t('cardTitleOwn'), url }); return; }
+    await navigator.clipboard.writeText(url);
     $('btn-card-copy').textContent = ui.t('cardCopied');
     setTimeout(() => { $('btn-card-copy').textContent = ui.t('cardCopy'); }, 2000);
   } catch { /* the player closed the share sheet */ }
