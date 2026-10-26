@@ -762,25 +762,15 @@ body.booting .title-card > * { animation-play-state: paused; }
   .loader-crest, .loader-ring { animation-duration: 6s; }
 }
 
-/* ===================== daily challenge ===================== */
-/* the title's second button: today's number and status */
-.btn.daily { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; margin-top: 10px; padding: 10px 16px; }
-.btn.daily small { font-size: 12px; font-weight: 500; color: var(--dim); }
-/* the result card: one square per problem */
-.daily-result { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
-.daily-head { width: 100%; display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--dim); }
-.daily-head b { color: var(--gold); }
-.daily-grid { display: grid; grid-template-columns: repeat(5, 22px); gap: 6px; }
-.daily-grid i { width: 22px; height: 22px; border-radius: 4px; background: rgba(255, 255, 255, 0.12); }
-.daily-grid i.full { background: #5fc27e; }
-.daily-grid i.slow { background: #e6b93c; }
-.daily-grid i.wrong { background: #d8463a; }
-.daily-note { margin: 0; font-size: 12px; color: var(--dim); text-align: center; }
-
 /* ===================== collection: achievements, bestiary, transfer ===================== */
-.meta-chip.collection { cursor: pointer; color: var(--ink); font: inherit; font-size: 12px; }
-.meta-chip.collection b { color: var(--gold); }
-.meta-chip.collection:hover { border-color: rgba(246, 201, 91, 0.5); }
+/* the title's second button: achievements and bestiary, with the count earned */
+.btn.collection-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 10px; }
+.btn.collection-btn b { color: var(--gold); font-variant-numeric: tabular-nums; }
+/* the game-over card's share button */
+.btn.share { margin-top: 0; }
+/* paused: the problems are hidden (and replaced when the run goes on) */
+body.paused #labels { visibility: hidden; }
+.pause-note { margin: 0 0 4px; font-size: 12.5px; line-height: 1.5; color: var(--dim); text-align: center; }
 .collection-card {
   width: min(460px, 100%); max-height: min(86vh, 760px); display: flex; flex-direction: column; gap: 12px; padding: 22px 22px 18px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
@@ -823,17 +813,3 @@ body.booting .title-card > * { animation-play-state: paused; }
 .achievement-toast small { font-size: 11px; color: var(--gold); letter-spacing: 0.06em; }
 .achievement-toast b { font-size: 14px; color: #fff; }
 
-/* ===================== daily challenge: points, timer, flash ===================== */
-/* daily challenge: what the current problem is worth, under the score */
-.daily-worth { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin-top: 2px; }
-.daily-worth b { font: 800 22px/1 var(--font-display); color: var(--ok); font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(123, 224, 160, 0.5); }
-.daily-worth.slow b { color: var(--warn); text-shadow: 0 0 12px rgba(255, 181, 71, 0.5); }
-.worth-bar { width: 110px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
-.worth-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #3fae6a, #8fd96a); transition: width 0.1s linear; }
-.daily-worth.slow .worth-bar i { background: linear-gradient(90deg, #d68b1e, #f2c24a); }
-.popup.miss { color: #ff7a6a; text-shadow: 0 2px 0 #4a0d08, 0 0 12px rgba(255, 90, 70, 0.6); }
-#flash { position: absolute; inset: 0; pointer-events: none; background: #fff; opacity: 0; z-index: 6; }
-#flash.go { animation: flashGo 1.1s ease-out; }
-@keyframes flashGo { 0% { opacity: 0.95; } 100% { opacity: 0; } }
-body.daily-run #hearts, body.daily-run #combo { visibility: hidden; }
-body.daily-run .score-sub { display: none; }

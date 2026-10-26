@@ -3,7 +3,6 @@
 // device with a transfer code. It only listens to game events (events.js).
 import { store } from '../ui/ui.js';
 import { on } from './events.js';
-import { dailyStreak } from './daily.js';
 import { YOKAI_TYPES } from '../scene/yokai.js';
 
 export { YOKAI_TYPES };
@@ -16,21 +15,20 @@ export const ACHIEVEMENTS = [
   { id: 'combo10', icon: '十' },
   { id: 'combo25', icon: '廿' },
   { id: 'score10k', icon: '万' },
+  { id: 'score30k', icon: '极' },
   { id: 'rank1', icon: '师' },
   { id: 'rank2', icon: '博' },
   { id: 'rank3', icon: '头' },
   { id: 'rank4', icon: '明' },
   { id: 'hundred', icon: '百', goal: 100 },
   { id: 'thousand', icon: '千', goal: 1000 },
-  { id: 'dailyFirst', icon: '日' },
-  { id: 'dailyPerfect', icon: '全' },
-  { id: 'streak3', icon: '续', goal: 3 },
-  { id: 'streak7', icon: '七', goal: 7 },
+  { id: 'run1k', icon: '里' },
+  { id: 'runs10', icon: '局', goal: 10 },
   { id: 'bestiary', icon: '鉴', goal: YOKAI_TYPES.length },
 ];
 
-// saved as { earned: { id: time }, seen: { type: time }, banished: n }
-const load = () => ({ earned: {}, seen: {}, banished: 0, ...store.get('collection', {}) });
+// saved as { earned: { id: time }, seen: { type: time }, banished: n, runs: n }
+const load = () => ({ earned: {}, seen: {}, banished: 0, runs: 0, ...store.get('collection', {}) });
 let data = load();
 const save = () => store.set('collection', data);
 
@@ -49,7 +47,7 @@ export const reloadCollection = () => { data = load(); };   // after a transfer 
 export function progressOf(achievement) {
   if (achievement.id === 'hundred' || achievement.id === 'thousand') return data.banished;
   if (achievement.id === 'bestiary') return Object.keys(data.seen).length;
-  if (achievement.id === 'streak3' || achievement.id === 'streak7') return dailyStreak();
+  if (achievement.id === 'runs10') return data.runs;
   return null;
 }
 
@@ -73,11 +71,14 @@ on('cast', ({ victims }) => {
   if (victims >= 2) earn('double');
   if (victims >= 3) earn('triple');
 });
-on('score', ({ score }) => { if (score >= 10000) earn('score10k'); });
+on('score', ({ score }) => {
+  if (score >= 10000) earn('score10k');
+  if (score >= 30000) earn('score30k');
+});
 on('promote', ({ rank }) => { for (let r = 1; r <= rank; r++) earn(`rank${r}`); });
-on('dailyDone', ({ solved, total, streak }) => {
-  earn('dailyFirst');
-  if (solved === total) earn('dailyPerfect');
-  if (streak >= 3) earn('streak3');
-  if (streak >= 7) earn('streak7');
+on('runEnd', ({ distance }) => {
+  data.runs++;
+  save();
+  if (distance >= 1000) earn('run1k');
+  if (data.runs >= 10) earn('runs10');
 });

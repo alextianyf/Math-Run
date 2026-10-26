@@ -102,7 +102,6 @@
       <div id="labels" aria-live="off"></div>
       <div id="popups" aria-hidden="true"></div>
       <div id="vignette" aria-hidden="true"></div>
-      <div id="flash" aria-hidden="true"></div>
       <div id="banner" class="banner" aria-live="polite"></div>
       <div id="skip-hint" class="skip-hint" data-i18n="skip"></div>
       <div id="countdown" class="countdown" aria-live="assertive"></div>
@@ -123,7 +122,6 @@
           <div class="score-box">
             <div id="score" class="score">0</div>
             <div class="score-sub"><span id="dist">0</span> m · <span data-i18n="best"></span> <span id="best">0</span></div>
-            <div id="daily-worth" class="daily-worth" hidden><b id="worth-points"></b><span class="worth-bar"><i id="worth-fill"></i></span></div>
           </div>
           <div class="hud-btns">
             <button id="btn-ai" class="icon-btn" aria-label="AI view">AI</button>
@@ -209,14 +207,10 @@
           <svg class="btn-crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L47.3 53.1L7.2 24H56.8L16.7 53.1Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round" /></svg>
           <span id="start-label" data-i18n="loading"></span>
         </button>
-        <!-- the daily challenge: the same 20 problems for everyone today -->
-        <button id="btn-daily" class="btn ghost daily" disabled>
-          <span id="daily-label"></span>
-          <small id="daily-status"></small>
-        </button>
+        <!-- achievements and the bestiary, before the run -->
+        <button id="btn-collection" class="btn ghost collection-btn"><span data-i18n="collection"></span><b id="collection-count"></b></button>
         <div class="title-meta">
           <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
-          <button id="btn-collection" class="meta-chip collection"><span data-i18n="collection"></span><b id="collection-count"></b></button>
           <span id="title-best" class="meta-chip best"></span>
           <span id="ai-chip" class="meta-chip ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
@@ -278,7 +272,7 @@
     <section id="ov-pause" class="overlay" hidden>
       <div class="card small-card">
         <h2 data-i18n="paused"></h2>
-        <p id="pause-note" class="daily-note" hidden></p>
+        <p id="pause-note" class="pause-note" data-i18n="pauseNote" hidden></p>
         <button id="btn-resume" class="btn primary" data-i18n="resume"></button>
         <button id="btn-quit" class="btn ghost" data-i18n="quit"></button>
       </div>
@@ -302,15 +296,9 @@
           </div>
           <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
         </dl>
-        <!-- daily challenge result: one square per problem, and a card to share -->
-        <div id="daily-result" class="daily-result" hidden>
-          <div class="daily-head"><b id="daily-title"></b><span id="daily-streak"></span></div>
-          <div id="daily-grid" class="daily-grid" aria-hidden="true"></div>
-          <p id="daily-note" class="daily-note"></p>
-          <button id="btn-share" class="btn small ghost" data-i18n="share"></button>
-        </div>
         <button id="btn-retry" class="btn primary" data-i18n="retry"></button>
-        <p id="retry-note" class="daily-note" hidden></p>
+        <!-- the result as text, to paste anywhere (or the phone's share sheet) -->
+        <button id="btn-share" class="btn ghost share" data-i18n="share"></button>
         <button id="btn-over-title" class="btn ghost" data-i18n="quit"></button>
       </div>
     </section>

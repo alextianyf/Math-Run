@@ -37,8 +37,7 @@ function chooseLane() {
 }
 
 // boss: a rank-trial oni (several problems in a row).
-// forced: { type, lane, text, answer, z, speed, x?, free? } — a scripted yokai (the
-// tutorial, the daily challenge); free: the caller moves it itself
+// forced: { type, lane, text, answer, z, speed, x? } — a scripted yokai (the tutorial)
 export function spawn(boss = false, forced = null) {
   const type = forced?.type ?? (boss ? 'oni' : pickType());
   const lane = forced?.lane ?? (boss ? 1 : chooseLane());
@@ -67,7 +66,7 @@ export function spawn(boss = false, forced = null) {
     answer: prob.answer, text: prob.text,
     tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch }),
     hpDone: 0, hpTotal,
-    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0, free: !!forced?.free,
+    locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0,
   };
   measureTag(e);
   S.enemies.push(e);
@@ -151,18 +150,13 @@ export function updateEnemies(dt, onReachHero) {
       root.rotation.y = Math.atan2(-root.position.x, -root.position.z);
       continue;
     }
-    if (e.free) {
-      e.z = root.position.z;             // placed by its owner (the daily challenge)
-    } else {
-      if (moving) {
-        e.z += e.speed * dt;
-        if (!e.locked && e.z >= HIT_Z) { onReachHero(e); continue; }
-      }
-      const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
-      root.position.z = e.z;
-      root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
+    if (moving) {
+      e.z += e.speed * dt;
+      if (!e.locked && e.z >= HIT_Z) { onReachHero(e); continue; }
     }
-    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);
+    const near = (e.z - SPAWN_Z) / (HIT_Z - SPAWN_Z);   // 0 at spawn → 1 at the hero
+    root.position.z = e.z;
+    root.position.x = e.x0 + (LANES[e.lane] - e.x0) * smooth01(near * 1.7);
     if (!e.tag) continue;
     world.project(e.yokai.labelAnchor(tmp), scr);
     shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible });
@@ -197,5 +191,20 @@ function placeTags(shown, dt, moving) {
     const timeLeft = (HIT_Z - e.z) / e.speed;
     ui.placeTag(e.tag, e.sx, e.sy, v.scale, v.visible ? Math.min(1, e.age / 0.6) : 0,
       moving && !e.locked && timeLeft < 2.3);
+  }
+}
+
+// After a pause every problem on screen is replaced (with a different answer), so
+// pausing — or leaving the page — to work one out elsewhere gains nothing.
+export function rerollProblems() {
+  if (S.tut) return;
+  for (const e of targets()) {
+    if (e.locked || !e.tag) continue;
+    let answer;
+    do answer = Math.floor(Math.random() * 10); while (answer === e.answer);
+    const prob = director.nextProblem({ answer, avoid: new Set(S.enemies.map((o) => o.text)), boss: e.boss });
+    Object.assign(e, { problem: prob, qStart: e.age, answer: prob.answer, text: prob.text });
+    ui.setTagText(e.tag, prob.text);
+    measureTag(e);
   }
 }

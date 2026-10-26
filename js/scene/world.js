@@ -5,17 +5,12 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { createEnvironment, FOG_COLOR, THEMES } from './environment.js';
+import { createEnvironment, FOG_COLOR } from './environment.js';
 import { createHero } from './hero.js';
 
 export const LANES = [-1.9, 0, 1.9];
 
 const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
-// lights per look: the festival night, and the daily challenge's blood moon
-const LIGHTING = {
-  night: { hemi: [0x8783f2, 0x2a1838], moon: 0xc8ceff, key: 0xffc796, fill: 0xffa860 },
-  bloodMoon: { hemi: [0xb86a9a, 0x2a1020], moon: 0xff9a88, key: 0xffb8a0, fill: 0x9ad8ff },
-};
 const QUALITY = [
   { bloom: false, dpr: 1 },
   { bloom: true, dpr: 1.25 },
@@ -43,19 +38,6 @@ export function createWorld(canvas) {
   const fill = new THREE.PointLight(0xffa860, 9, 11, 2);
   fill.position.set(0.5, 2.6, 2.2);
   scene.add(moon, key, fill);
-  const hemi = scene.children[0];
-  let theme = 'night';
-  function setTheme(name) {
-    if (name === theme) return;
-    theme = name;
-    const th = THEMES[name], L = LIGHTING[name];
-    scene.background.set(th.fog);
-    scene.fog.color.set(th.fog);
-    [scene.fog.near, scene.fog.far] = th.fogRange;
-    hemi.color.set(L.hemi[0]); hemi.groundColor.set(L.hemi[1]);
-    moon.color.set(L.moon); key.color.set(L.key); fill.color.set(L.fill);
-    env.setTheme(th);
-  }
 
   const env = createEnvironment(scene);
   env.step(6, 0, 0);        // start with a torii just behind the hero: it frames him on the title screen
@@ -191,9 +173,6 @@ export function createWorld(canvas) {
       if (first) setCameraMode('title', true);
     },
     setCameraMode,
-    setTheme,
-    get theme() { return theme; },
-    get graves() { return env.graves; },
     // ?debug helper: park the camera anywhere to inspect models
     debugView(pos, look) {
       presets.debug = { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look) };

@@ -54,9 +54,6 @@ export function decide(probs) {
   const order = probs.map((p, d) => ({ p, d })).sort((a, b) => b.p - a.p);
   const top = order[0];
   if (!answers.size) return { kind: 'idle', ...top };
-  // daily challenge: the model has to read the digit itself, sure enough — no help
-  // from the answer on screen; when unsure, the player simply writes again
-  if (S.daily) return top.p >= 0.55 ? { kind: answers.has(top.d) ? 'hit' : 'miss', ...top } : { kind: 'unclear', ...top };
   const best = order.find((o) => answers.has(o.d));
   if (best.d === top.d && top.p >= 0.3) return { kind: 'hit', ...top };
   if (best.p >= 0.2 && best.p >= 0.35 * top.p) return { kind: 'hit', ...best, corrected: top.d };

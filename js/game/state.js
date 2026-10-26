@@ -23,8 +23,6 @@ export const S = {
   best: store.get('best', 0),
   bestRank: store.get('bestRank', 0),       // a record only: every run starts at the lowest rank
   tut: null,                       // the tutorial while it runs (see tutorial.js)
-  daily: null,                     // the daily challenge while it runs (see dailyRun.js)
-  slowT: 0,                        // seconds of slow motion left (the daily finale)
 };
 
 // yokai the player can still answer: not dying, not already hit, not in the capture scene

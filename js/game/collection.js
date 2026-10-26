@@ -5,7 +5,7 @@ import * as ui from '../ui/ui.js';
 import { ACHIEVEMENTS, YOKAI_TYPES, collection, progressOf, onUnlock } from './achievements.js';
 import { $ } from './helpers.js';
 
-const SAVED = ['best', 'bestRank', 'daily', 'collection'];      // what a transfer code carries
+const SAVED = ['best', 'bestRank', 'collection'];      // what a transfer code carries
 const YOKAI_LOOK = {
   onibi: ['火', '#4aa8e0'], chochin: ['灯', '#e8892e'], hitotsume: ['目', '#d2a640'], kappa: ['河', '#4fa65a'],
   kitsunebi: ['狐', '#8a6aff'], kasa: ['伞', '#e0457f'], ittan: ['布', '#8fb4d8'], hyakume: ['百', '#e0804a'], nekomata: ['猫', '#d8a860'], oni: ['鬼', '#c9302c'],
