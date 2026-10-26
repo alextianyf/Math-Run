@@ -84,13 +84,13 @@ export function createWorld(canvas) {
         pos: new THREE.Vector3(portrait ? 3.0 : 3.4, portrait ? 2.2 : 2.1, portrait ? 7.6 : 6.4),
         look: new THREE.Vector3(-0.2, portrait ? 3.1 : 2.8, -2.2),
       },
-      // profile close-up once the oni lifts the hero to its face: the laughing face on
-      // one side, the hero kicking in its fist on the other (camera stays inside the
-      // lantern-post line so nothing passes in front of it)
+      // close-up once the oni lifts the hero to its face: from in front of the oni, a
+      // little to its right, so the laughing face looks into the camera and the hero
+      // kicks in its fist beside it, not in front of it
       held: {
         // (wide screens look further left so the pair sits in the right half, clear of the game-over card)
-        pos: new THREE.Vector3(-2.8, wide ? 4.75 : 4.4, wide ? 0.1 : 0.15),
-        look: new THREE.Vector3(0.6, wide ? 4.55 : 4.25, wide ? -2.9 : -1.15),
+        pos: new THREE.Vector3(-2.6, 5.0, 2.9),
+        look: new THREE.Vector3(wide ? 0.3 : 0.8, 4.4, wide ? -2.4 : -0.9),
       },
     };
   }
