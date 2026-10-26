@@ -209,6 +209,8 @@ export function createHero() {
   /* ===================== per-frame ===================== */
   const e = new THREE.Euler(), qPose = new THREE.Quaternion(), tmp = new THREE.Vector3();
   let phase = 0, castT = 99, hurtT = 0, mode = 'run', modeT = 1, nextBlink = 2, blinkT = 0;
+  let dismayT = 0;            // a wrong answer: head down, shaking it, shoulders slumped
+  let gazeAhead = false;      // standing still but watching the path (daily challenge), not the viewer
 
   function applyPose(p) {
     for (const k of KEYS) {
@@ -232,12 +234,13 @@ export function createHero() {
     if (!shocked && t > nextBlink) { blinkT = 0.14; nextBlink = t + 2.4 + Math.random() * 3; }
     blinkT -= dt;
     const casting = castT < 0.42;
-    const next = shocked ? 'shock' : casting ? 'cast' : hurtT > 0.3 ? 'hurt' : 'normal';
+    const next = shocked ? 'shock' : casting ? 'cast' : hurtT > 0.3 ? 'hurt' : dismayT > 0.15 ? 'dismay' : 'normal';
     if (next !== expression) { em.resetValues(); expression = next; }
     expr('blink', shocked ? 0 : blinkT > 0 ? 1 : 0);
     if (shocked) { expr('Surprised', 1); expr('sad', 0.35); expr('oh', 0.5); }
     else if (casting) { expr('angry', 0.7); expr('aa', 0.35); }   // shouting the spell
     else if (hurtT > 0.3) { expr('angry', 0.4); expr('ih', 0.4); }
+    else if (dismayT > 0.15) { expr('sad', 0.9); expr('ou', 0.25); }
   }
 
   function setWind(speed, t, amp) {
@@ -262,9 +265,11 @@ export function createHero() {
     get mode() { return mode; },
     cast() { castT = 0; },
     hurt() { hurtT = 1; },
+    dismay() { dismayT = 1; },
+    setGazeAhead(on) { gazeAhead = on; },
     setMode,
     reset() {
-      mode = 'run'; modeT = 1; castT = 99; hurtT = 0;
+      mode = 'run'; modeT = 1; castT = 99; hurtT = 0; dismayT = 0; gazeAhead = false;
       root.position.set(0, 0, 0); root.rotation.set(0, 0, 0); root.scale.setScalar(1);
       shadow.visible = true;
     },
@@ -285,6 +290,18 @@ export function createHero() {
         p.uaL = [p.uaL[0], p.uaL[1], p.uaL[2] - 0.5 * hurtT];
         p.uaR = [p.uaR[0], p.uaR[1], p.uaR[2] + 0.5 * hurtT];
       }
+      dismayT = Math.max(0, dismayT - dt * 0.6);
+      if (dismayT > 0) {
+        // slump: head drops and shakes "no", shoulders and arms sag
+        const w = Math.min(1, dismayT * 3);
+        p.chest = [p.chest[0] + 0.28 * w, p.chest[1], p.chest[2]];
+        p.neck = [p.neck[0] + 0.25 * w, p.neck[1], p.neck[2]];
+        p.head = [p.head[0] + 0.3 * w, p.head[1] + 0.35 * w * Math.sin(t * 9), p.head[2]];
+        p.uaR = p.uaR.map((v, i) => lerp(v, [0.05, 0, 0.12][i], w));
+        p.faR = p.faR.map((v, i) => lerp(v, [0.25, 0, 0][i], w));
+        p.uaL = p.uaL.map((v, i) => lerp(v, [0.05, 0, -0.12][i], w));
+        p.faL = p.faL.map((v, i) => lerp(v, [0.25, 0, 0][i], w));
+      }
       for (const m of materials) if (m.emissive) m.emissive.setRGB(hurtT * 0.9, hurtT * 0.12, hurtT * 0.15);
       applyPose(p);
       shadow.visible = mode !== 'grabbed';
@@ -293,7 +310,7 @@ export function createHero() {
 
       // eye contact while standing still; otherwise look where he runs
       if (vrm.lookAt) {
-        if (camera && amp < 0.05 && mode === 'run') lookTarget.position.copy(camera.position);
+        if (camera && amp < 0.05 && mode === 'run' && !gazeAhead) lookTarget.position.copy(camera.position);
         else { bones.head.getWorldPosition(tmp); lookTarget.position.set(tmp.x, tmp.y, tmp.z - 10); }
         lookTarget.updateMatrixWorld(true);
       }

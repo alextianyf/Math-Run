@@ -42,7 +42,7 @@ export function beginCapture() {
     e.tag = null;
     e.swarm = true;
   }
-  const types = ['onibi', 'chochin', 'kasa', 'onibi', 'chochin', 'onibi'];
+  const types = ['onibi', 'chochin', 'kasa', 'hitotsume', 'kappa', 'kitsunebi'];
   while (S.enemies.length < 6) {
     const yokai = createYokai(types[S.enemies.length]);
     const a = Math.random() * Math.PI * 2;

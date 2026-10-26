@@ -102,6 +102,7 @@
       <div id="labels" aria-live="off"></div>
       <div id="popups" aria-hidden="true"></div>
       <div id="vignette" aria-hidden="true"></div>
+      <div id="flash" aria-hidden="true"></div>
       <div id="banner" class="banner" aria-live="polite"></div>
       <div id="skip-hint" class="skip-hint" data-i18n="skip"></div>
       <div id="countdown" class="countdown" aria-live="assertive"></div>
@@ -122,6 +123,7 @@
           <div class="score-box">
             <div id="score" class="score">0</div>
             <div class="score-sub"><span id="dist">0</span> m · <span data-i18n="best"></span> <span id="best">0</span></div>
+            <div id="daily-worth" class="daily-worth" hidden><b id="worth-points"></b><span class="worth-bar"><i id="worth-fill"></i></span></div>
           </div>
           <div class="hud-btns">
             <button id="btn-ai" class="icon-btn" aria-label="AI view">AI</button>
@@ -207,8 +209,14 @@
           <svg class="btn-crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6L47.3 53.1L7.2 24H56.8L16.7 53.1Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round" /></svg>
           <span id="start-label" data-i18n="loading"></span>
         </button>
+        <!-- the daily challenge: the same 20 problems for everyone today -->
+        <button id="btn-daily" class="btn ghost daily" disabled>
+          <span id="daily-label"></span>
+          <small id="daily-status"></small>
+        </button>
         <div class="title-meta">
           <span class="meta-chip rank"><span data-i18n="bestRank"></span><ol id="title-ladder" class="ladder mini"></ol></span>
+          <button id="btn-collection" class="meta-chip collection"><span data-i18n="collection"></span><b id="collection-count"></b></button>
           <span id="title-best" class="meta-chip best"></span>
           <span id="ai-chip" class="meta-chip ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></span>
         </div>
@@ -238,10 +246,39 @@
       </div>
     </div>
 
+    <!-- Collection: achievements, the bestiary, and moving progress to another device -->
+    <section id="ov-collection" class="overlay" hidden>
+      <div class="card collection-card">
+        <div class="collection-head">
+          <h2 data-i18n="collectionTitle"></h2>
+          <button id="btn-collection-close" class="icon-btn" data-i18n-label="close">✕</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="achievement-list" role="tab" data-i18n="tabAchievements"></button>
+          <button class="tab" data-tab="bestiary-list" role="tab" data-i18n="tabBestiary"></button>
+        </div>
+        <ul id="achievement-list" class="collection-list"></ul>
+        <ul id="bestiary-list" class="collection-list" hidden></ul>
+        <details class="transfer">
+          <summary data-i18n="transfer"></summary>
+          <p data-i18n="transferHint"></p>
+          <textarea id="transfer-out" rows="2" readonly></textarea>
+          <button id="btn-transfer-copy" class="btn small ghost" data-i18n="transferCopy"></button>
+          <textarea id="transfer-in" rows="2"></textarea>
+          <button id="btn-transfer-apply" class="btn small primary" data-i18n="transferApply"></button>
+          <p id="transfer-msg" class="transfer-msg"></p>
+        </details>
+      </div>
+    </section>
+
+    <!-- "Achievement unlocked" -->
+    <div id="achievement-toast" class="achievement-toast" aria-live="polite"></div>
+
     <!-- Pause -->
     <section id="ov-pause" class="overlay" hidden>
       <div class="card small-card">
         <h2 data-i18n="paused"></h2>
+        <p id="pause-note" class="daily-note" hidden></p>
         <button id="btn-resume" class="btn primary" data-i18n="resume"></button>
         <button id="btn-quit" class="btn ghost" data-i18n="quit"></button>
       </div>
@@ -250,7 +287,7 @@
     <!-- Game over -->
     <section id="ov-over" class="overlay over" hidden>
       <div class="card small-card">
-        <h2 data-i18n="overTitle"></h2>
+        <h2 id="over-title" data-i18n="overTitle"></h2>
         <div id="over-newbest" class="newbest" data-i18n="newBest" hidden></div>
         <div id="over-score" class="big-score">0</div>
         <dl class="stats">
@@ -265,7 +302,15 @@
           </div>
           <div><dt data-i18n="statAI"></dt><dd id="st-ai"></dd></div>
         </dl>
+        <!-- daily challenge result: one square per problem, and a card to share -->
+        <div id="daily-result" class="daily-result" hidden>
+          <div class="daily-head"><b id="daily-title"></b><span id="daily-streak"></span></div>
+          <div id="daily-grid" class="daily-grid" aria-hidden="true"></div>
+          <p id="daily-note" class="daily-note"></p>
+          <button id="btn-share" class="btn small ghost" data-i18n="share"></button>
+        </div>
         <button id="btn-retry" class="btn primary" data-i18n="retry"></button>
+        <p id="retry-note" class="daily-note" hidden></p>
         <button id="btn-over-title" class="btn ghost" data-i18n="quit"></button>
       </div>
     </section>

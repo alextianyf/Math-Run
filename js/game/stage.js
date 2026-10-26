@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { createWorld } from '../scene/world.js';
 import { createFx } from '../scene/fx.js';
-import { createYokai } from '../scene/yokai.js';
+import { createYokai, YOKAI_TYPES } from '../scene/yokai.js';
 import { takeOni, releaseOni } from '../scene/oni.js';
 import { createDirector } from '../difficulty/adaptive.js';
 import { $ } from './helpers.js';
@@ -21,7 +21,7 @@ export const director = createDirector();
 // as they exist, their shaders stay compiled and their textures uploaded.
 export function prewarm() {
   const warm = new THREE.Group();
-  for (const type of ['onibi', 'chochin', 'kasa']) warm.add(createYokai(type).root);
+  for (const type of YOKAI_TYPES) if (type !== 'oni') warm.add(createYokai(type).root);
   const oni = takeOni();
   warm.add(oni.root, ...fx.warmObjects());
   warm.scale.setScalar(1e-4);
