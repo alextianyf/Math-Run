@@ -13,9 +13,9 @@ import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
 import { emit } from './events.js';
 import { rand } from './helpers.js';
-import { chargeKill, scoreMult, blockHit, finisher, later } from './powers.js';
+import { chargeKill, scoreMult, blockHit, finisher, later, SKILLS } from './powers.js';
 
-// combo aura tiers: [min combo, colour] — the talismans and sparks take this colour
+// combo tiers: [min combo, colour] — the talismans and their sparks take this colour
 const AURA = [[20, 0xc77dff], [10, 0x6fd8ff], [5, 0xffc84a]];
 const auraColor = () => (AURA.find(([min]) => S.combo >= min) || [0, 0xffc84a])[1];
 const comboMult = () => 1 + Math.min(2, Math.max(0, S.combo - 1) * 0.1);
@@ -170,8 +170,8 @@ function impact(e, n) {
   // a hit-stop and a little camera kick, except on the oni's last answer: its
   // finisher has a slow motion and a zoom of its own
   if (!(e.boss && e.hpDone + 1 >= e.hpTotal)) {
-    S.hitstop = Math.max(S.hitstop, e.boss ? 0.12 : n >= 2 ? 0.1 : 0.075);
-    world.punch(n >= 2 || e.boss ? 1.07 : 1.045);
+    S.hitstop = Math.max(S.hitstop, e.boss || n >= 2 ? 0.14 : 0.1);
+    world.punch(n >= 2 || e.boss ? 1.09 : 1.06);
   }
 
   if (e.hpDone + 1 < e.hpTotal) {
@@ -198,7 +198,7 @@ function impact(e, n) {
 
   // banished: more points the farther away it was (the rokurokubi: the nearer), and
   // for several at once
-  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.1 : 0.06); }
+  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.28 : 0.18); ui.killFlash(); }
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
@@ -268,18 +268,37 @@ export function playerHit(e) {
   if (S.hearts <= 0) beginCapture();
 }
 
+// the hero's charge aura: a back-light that grows gold as the seal charges, sparks
+// rising off him, then crackling arcs near the end; a ready skill turns it its colour
+let aura = null, arcT = 0;
+const smooth01 = (x) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
+function updateAura(dt) {
+  aura ??= fx.aura(new THREE.Vector3(0, 1.05, -0.35));
+  const k = S.tut ? 0 : S.skill ? 1 : S.charge;
+  const color = S.skill ? SKILLS[S.skill].color : 0xffc84a;
+  const pulse = S.skill ? 0.12 * Math.sin(S.t * 7) : 0;
+  aura.set(smooth01((k - 0.1) / 0.9) * 0.6 + pulse, color, 2 + 1.6 * k + pulse * 2);
+  if (k > 0.1 && Math.random() < k * 0.8) {
+    fx.emit(tmp.set(rand(-0.4, 0.4), rand(0.2, 1.7), rand(-0.25, 0.35)), {
+      count: 1, color, color2: 0xffffff, bright: 1.8, speed: 0.5, life: 0.7, size: 0.13, gravity: 2.2, up: 0.4, dragK: 3,
+    });
+  }
+  // arcs from 60% charge, faster as it fills
+  if (k >= 0.6 && (arcT -= dt) <= 0) {
+    arcT = S.skill ? 0.12 : 0.6 - 0.45 * (k - 0.6) / 0.4;
+    const from = new THREE.Vector3(rand(-0.45, 0.45), rand(0.4, 1.8), rand(-0.3, 0.25));
+    const to = from.clone().add(new THREE.Vector3(rand(-0.6, 0.6), rand(-0.6, 0.6), rand(-0.2, 0.2)));
+    fx.bolt(from, to, { color: S.skill ? color : 0xfff0b0, width: 0.06, dur: 0.16, jag: 0.3, sparks: 4 });
+  }
+}
+
 // per frame while playing: the short safety after a hit, the pad lock after a
-// miss, and the combo aura (sparks rising around the hero, coloured by tier)
+// miss, and the hero's charge aura
 export function updateCombat(dt) {
   if (S.invuln > 0) S.invuln -= dt;
   if (S.cooldown > 0) {
     S.cooldown -= dt;
     if (S.cooldown <= 0) pad.setEnabled(true);
   }
-  if (S.combo >= 5) {
-    const tier = S.combo >= 20 ? 3 : S.combo >= 10 ? 2 : 1;
-    fx.emit(tmp.set(rand(-0.35, 0.35), rand(0.3, 1.6), rand(-0.2, 0.35)), {
-      count: tier, color: auraColor(), color2: 0xffffff, bright: 1.8, speed: 0.5, life: 0.6, size: 0.12, gravity: 2, up: 0.4, dragK: 3,
-    });
-  }
+  updateAura(dt);
 }

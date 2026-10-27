@@ -22,7 +22,7 @@ export function later(delay, fn) { queue.push({ t: delay, fn }); }
 /* ===================== nights ===================== */
 // the run cycles through these, one every NIGHT_EVERY metres; each changes the scene
 // (scene/themes.js) and one rule while it lasts
-const NIGHT_EVERY = 1000;
+const NIGHT_EVERY = 500;
 const CYCLE = ['night', 'moon', 'fog', 'parade', 'fox'];
 export const NIGHTS = {
   night: {},                                   // the usual festival night

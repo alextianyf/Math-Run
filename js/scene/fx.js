@@ -140,6 +140,23 @@ export function createFx(scene, camera) {
     }
   }
 
+  // a glow that stays at one spot (the hero's back-light); its strength is set each frame
+  function aura(pos) {
+    const s = new THREE.Sprite(haloMat(0xffc84a));
+    s.position.copy(pos);
+    s.visible = false;
+    scene.add(s);
+    return {
+      set(k, color, scale) {
+        s.visible = k > 0.01;
+        if (!s.visible) return;
+        s.material.color.copy(glow(color, 1.6));
+        s.material.opacity = Math.min(1, k);
+        s.scale.setScalar(scale);
+      },
+    };
+  }
+
   // a brief burst of light where a spell lands, so the hit reads as an impact
   function flash(p, { color = 0xfff0c0, scale = 4, dur = 0.18 } = {}) {
     const s = new THREE.Sprite(haloMat(color));
@@ -376,7 +393,7 @@ export function createFx(scene, camera) {
   }
 
   return {
-    emit, flash, ring, talisman, magicCircle, seal, bolt, pillar, dome,
+    emit, aura, flash, ring, talisman, magicCircle, seal, bolt, pillar, dome,
     setScale(px) { uniforms.uScale.value = px; },
     // one object per effect material, to be compiled once and then kept (hidden)
     warmObjects() {

@@ -16,9 +16,13 @@ function render() {
   // the four skills, each with its seal in the colour it glows when ready
   const skills = Object.entries(SKILLS).map(([id, s]) => `<li style="--sk:#${s.color.toString(16).padStart(6, '0')}"><span class="rules-skill">${s.ch}</span>
     <div><b>${ui.t(`sk_${id}`)}</b><small>${ui.t(`skd_${id}`)}</small></div></li>`).join('');
+  // the keys: send, skill, pause (on a touch screen the buttons do the same)
+  const keys = [[ui.t('rulesKeyCap1'), 1], ['F', 2], ['Esc', 3]].map(([cap, i]) => `<li><kbd class="rules-key">${cap}</kbd>
+    <div><b>${ui.t(`rulesKeyN${i}`)}</b><small>${ui.t(`rulesKeys${i}`)}</small></div></li>`).join('');
   const section = (title, items) => `<section><h3>${ui.t(title)}</h3><ul>${items.map((k) => `<li>${ui.t(k, { h: MAX_HEARTS })}</li>`).join('')}</ul></section>`;
   $('rules-body').innerHTML = [
     section('rulesBasicsT', ['rulesBasics1', 'rulesBasics2', 'rulesBasics3']),
+    `<section><h3>${ui.t('rulesKeysT')}</h3><ol class="rules-ranks rules-keys">${keys}</ol></section>`,
     section('rulesHeartsT', ['rulesHearts1', 'rulesHearts2', 'rulesHearts3', 'rulesHearts4']),
     `<section><h3>${ui.t('rulesRanksT')}</h3><p>${ui.t('rulesRanks1')}</p><ol class="rules-ranks">${ranks}</ol><ul>
       <li>${ui.t('rulesRanks2')}</li><li>${ui.t('rulesRanks3')}</li><li>${ui.t('rulesRanks4')}</li></ul></section>`,

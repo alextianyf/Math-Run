@@ -54,7 +54,14 @@ export function setHearts(n, max) {
   });
   box.setAttribute('aria-label', `${n}/${max}`);
 }
-export function setScore(n) { $('score').textContent = n.toLocaleString(); }
+let shownScore = 0;
+export function setScore(n) {
+  const el = $('score');
+  el.textContent = n.toLocaleString();
+  // points coming in: the counter jumps and flashes gold
+  if (n > shownScore) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  shownScore = n;
+}
 export function setDistance(m) { $('dist').textContent = Math.floor(m).toLocaleString(); }
 export function setBest(n) {
   $('best').textContent = n.toLocaleString();
@@ -246,6 +253,11 @@ export function armTalisman(ms) {
 }
 export function disarmTalisman() { $('pad-timer').classList.remove('run'); }
 
+// a kill: a quick warm flash over the whole screen
+export function killFlash() {
+  const v = $('vignette');
+  v.classList.remove('zap'); void v.offsetWidth; v.classList.add('zap');
+}
 export function damageFlash() {
   const v = $('vignette');
   v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
