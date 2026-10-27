@@ -89,6 +89,7 @@ export const sfx = {
   hit(combo = 0) {
     if (!ok()) return;
     bell(SCALE[Math.min(SCALE.length - 1, 2 + (combo % 6))], now(), 0.32);
+    drum(now(), { f0: 170, f1: 55, vol: 0.45, dur: 0.2 });          // the thump under the chime
   },
   multi(n) {
     if (!ok()) return;

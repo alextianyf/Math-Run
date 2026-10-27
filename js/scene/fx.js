@@ -140,6 +140,16 @@ export function createFx(scene, camera) {
     }
   }
 
+  // a brief burst of light where a spell lands, so the hit reads as an impact
+  function flash(p, { color = 0xfff0c0, scale = 4, dur = 0.18 } = {}) {
+    const s = new THREE.Sprite(haloMat(color));
+    s.position.copy(p);
+    addTimed(s, dur, (k, o) => {
+      o.scale.setScalar(scale * (0.6 + 0.4 * k));
+      o.material.opacity = 1 - k * k;
+    });
+  }
+
   function ring(p, { color = 0xffd36b, scale = 3, dur = 0.45 } = {}) {
     const s = new THREE.Sprite(ringMat(color));
     s.position.copy(p);
@@ -366,7 +376,7 @@ export function createFx(scene, camera) {
   }
 
   return {
-    emit, ring, talisman, magicCircle, seal, bolt, pillar, dome,
+    emit, flash, ring, talisman, magicCircle, seal, bolt, pillar, dome,
     setScale(px) { uniforms.uScale.value = px; },
     // one object per effect material, to be compiled once and then kept (hidden)
     warmObjects() {

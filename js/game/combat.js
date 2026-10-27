@@ -165,8 +165,14 @@ function impact(e, n) {
   fx.emit(p, { count: 14, color: 0xf6d670, color2: 0xd09a30, bright: 1, speed: 3, life: 1.3, size: 0.2, gravity: -5 });
   fx.emit(p, { count: 16, color: 0x8fe8ff, color2: 0xb47dff, bright: 1.8, speed: 1.2, life: 1.4, size: 0.22, gravity: 2.2, up: 0.4, dragK: 2.5 });
   fx.ring(p, { color: 0xffd36b, scale: e.boss ? 6.5 : 3.4 });
+  fx.flash(p, { scale: e.boss ? 8 : n >= 2 ? 6 : 4.5 });
   sfx.hit(S.combo);
-  S.hitstop = Math.max(S.hitstop, e.boss ? 0.11 : n >= 2 ? 0.08 : 0.055);
+  // a hit-stop and a little camera kick, except on the oni's last answer: its
+  // finisher has a slow motion and a zoom of its own
+  if (!(e.boss && e.hpDone + 1 >= e.hpTotal)) {
+    S.hitstop = Math.max(S.hitstop, e.boss ? 0.12 : n >= 2 ? 0.1 : 0.075);
+    world.punch(n >= 2 || e.boss ? 1.07 : 1.045);
+  }
 
   if (e.hpDone + 1 < e.hpTotal) {
     // a boss (or the two-lived nekomata) takes a hit: staggers, gets a new
