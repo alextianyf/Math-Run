@@ -69,7 +69,7 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 - An MLP trained on MNIST (**98.28%** test accuracy), converted to TensorFlow.js and run on the **WASM** backend, which keeps the GPU free for the 3D scene.
 - **My own preprocessing pipeline**, written without OpenCV: grayscale → Otsu threshold → crop → resize → centroid alignment (see [Model Pipeline Workflow](#model-pipeline-workflow)).
 - **Context-aware decoding**: the model's probabilities are combined with the answers currently on screen. A sloppy 3 that looks a bit like an 8 still counts when a "3" yokai is present, while a clearly written wrong digit is a miss. The game-over card shows how often this corrected the model.
-- A live guess while you write, and an **"AI view"** panel showing the 28×28 image the model actually sees and its top predictions.
+- A live guess while you write, and an **"AI reads"** panel showing the 28×28 image the model actually sees and its top predictions.
 
 ### Adaptive difficulty
 
