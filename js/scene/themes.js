@@ -9,42 +9,43 @@ export const THEMES = {
   // the usual festival night
   night: {
     skyTop: 0x03020c, skyMid: 0x140f38, horizon: 0x2a2056, fogNear: 24, fogFar: 95,
-    moon: 0xffffff, moonK: 1.6, moonScale: 50, halo: 0x8f86ff, haloOpacity: 0.5, clouds: 0x9a90d8,
+    moon: 0xffffff, moonK: 1.6, moonScale: 50, moonX: -70, moonY: 85, halo: 0x8f86ff, haloOpacity: 0.5, clouds: 0x9a90d8,
     mist: 0x9d93e6, mistK: 1, banks: 0, fireflies: 0xd9ff8f, firefliesK: 1.6,
     hemi: 0x8783f2, hemiI: 1.3, moonLight: 0xc8ceff, moonLightI: 1.8, exposure: 1.25, bloom: 0.9,
   },
-  // full moon: a huge bright moon, silver light, a clearer sky
+  // full moon: a huge golden moon low over the path, a clear deep-blue sky and the
+  // whole shrine washed in cold silver light
   moon: {
-    skyTop: 0x050a22, skyMid: 0x1d2a62, horizon: 0x3a3f80, fogNear: 30, fogFar: 120,
-    moon: 0xfff4d8, moonK: 1.1, moonScale: 85, halo: 0xffe0a0, haloOpacity: 0.4, clouds: 0xb8c0f0,
-    mist: 0xb0b8f0, mistK: 0.8, banks: 0, fireflies: 0xfff2a0, firefliesK: 1.8,
-    hemi: 0xa0aaff, hemiI: 1.5, moonLight: 0xeef2ff, moonLightI: 2.3, exposure: 1.28, bloom: 0.85,
+    skyTop: 0x020a26, skyMid: 0x0d2558, horizon: 0x24407e, fogNear: 34, fogFar: 130,
+    moon: 0xffdc8a, moonK: 1.05, moonScale: 120, moonX: -18, moonY: 46, halo: 0xffc860, haloOpacity: 0.32, clouds: 0x5a6aa0,
+    mist: 0x9ab8ff, mistK: 0.7, banks: 0, fireflies: 0xfff2a0, firefliesK: 1.8,
+    hemi: 0x8fb0ff, hemiI: 1.55, moonLight: 0xdfe9ff, moonLightI: 2.8, exposure: 1.26, bloom: 0.8,
   },
   // night mist: a grey-lilac murk close around the path, the moon only a smudge
   fog: {
     skyTop: 0x34304c, skyMid: 0x56527a, horizon: 0x67638a, fogNear: 10, fogFar: 46,
-    moon: 0xd8d8e8, moonK: 0.45, moonScale: 44, halo: 0xb0aac8, haloOpacity: 0.15, clouds: 0x8a86a0,
+    moon: 0xd8d8e8, moonK: 0.45, moonScale: 44, moonX: -70, moonY: 85, halo: 0xb0aac8, haloOpacity: 0.15, clouds: 0x8a86a0,
     mist: 0xd0cce8, mistK: 2, banks: 1, fireflies: 0xd9ff8f, firefliesK: 1.1,
     hemi: 0xa8a4c8, hemiI: 1.45, moonLight: 0xd0d0e8, moonLightI: 1.3, exposure: 1.3, bloom: 0.8,
   },
   // the parade passes: a blood moon over a crimson sky
   parade: {
     skyTop: 0x0c0206, skyMid: 0x3a0a1c, horizon: 0x5a1830, fogNear: 22, fogFar: 90,
-    moon: 0xff4a2a, moonK: 2, moonScale: 70, halo: 0xff3a2a, haloOpacity: 0.7, clouds: 0xc0506a,
+    moon: 0xff4a2a, moonK: 2, moonScale: 70, moonX: -70, moonY: 85, halo: 0xff3a2a, haloOpacity: 0.7, clouds: 0xc0506a,
     mist: 0xe0607a, mistK: 1.1, banks: 0, fireflies: 0xff9a4a, firefliesK: 2,
     hemi: 0xf08aa0, hemiI: 1.25, moonLight: 0xffa0a0, moonLightI: 1.8, exposure: 1.25, bloom: 1.05,
   },
   // the fox's blessing: violet sky, teal foxfire everywhere
   fox: {
     skyTop: 0x06021a, skyMid: 0x241052, horizon: 0x3c1f78, fogNear: 24, fogFar: 95,
-    moon: 0xd8c8ff, moonK: 1.7, moonScale: 56, halo: 0xb47dff, haloOpacity: 0.7, clouds: 0xa88ae0,
+    moon: 0xd8c8ff, moonK: 1.7, moonScale: 56, moonX: -70, moonY: 85, halo: 0xb47dff, haloOpacity: 0.7, clouds: 0xa88ae0,
     mist: 0x9a7aff, mistK: 1.3, banks: 0, fireflies: 0x7af0ff, firefliesK: 2.2,
     hemi: 0x9a8aff, hemiI: 1.35, moonLight: 0xd0c0ff, moonLightI: 1.8, exposure: 1.28, bloom: 1.0,
   },
 };
 
 const COLORS = ['skyTop', 'skyMid', 'horizon', 'moon', 'halo', 'clouds', 'mist', 'fireflies', 'hemi', 'moonLight'];
-const NUMBERS = ['fogNear', 'fogFar', 'moonK', 'moonScale', 'haloOpacity', 'mistK', 'banks', 'firefliesK', 'hemiI', 'moonLightI', 'exposure', 'bloom'];
+const NUMBERS = ['fogNear', 'fogFar', 'moonK', 'moonScale', 'moonX', 'moonY', 'haloOpacity', 'mistK', 'banks', 'firefliesK', 'hemiI', 'moonLightI', 'exposure', 'bloom'];
 
 // a theme as live values (Colors and numbers), so two can be blended
 function values(theme) {
@@ -71,6 +72,8 @@ export function createThemer(t) {
     t.scene.fog.far = cur.fogFar;
     t.look.moon.material.color.copy(tmp.copy(cur.moon).multiplyScalar(cur.moonK));
     t.look.moon.scale.setScalar(cur.moonScale);
+    t.look.moon.position.x = t.look.halo.position.x = cur.moonX;
+    t.look.moon.position.y = t.look.halo.position.y = cur.moonY;
     t.look.halo.material.color.copy(cur.halo);
     t.look.halo.material.opacity = cur.haloOpacity;
     t.look.halo.scale.setScalar(cur.moonScale * 4.8);
