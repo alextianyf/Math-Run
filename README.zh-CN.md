@@ -60,9 +60,9 @@
 | 动作 | 鼠标和键盘 | 触屏 |
 |---|---|---|
 | 写字 | 在符纸上写 | 用手指或触控笔在符纸上写 |
-| 提交 | 停笔一会儿自动提交，或按**空格**（也可以点符纸底部的红色印章） | 停笔一会儿，或点符纸旁边的大红色**令**字印章 |
-| 技能 | **F**（Q、E 也行），或点左下角的符印 | 点左下角的符印 |
-| 暂停 | **Esc** 或 **P** | 右上角的暂停键 |
+| 提交 | 停笔一会儿自动提交，或按 <kbd>空格</kbd>（也可以点符纸底部的红色印章） | 停笔一会儿，或点符纸旁边的大红色**令**字印章 |
+| 技能 | <kbd>F</kbd>（<kbd>Q</kbd>、<kbd>E</kbd> 也行），或点左下角的符印 | 点左下角的符印 |
+| 暂停 | <kbd>Esc</kbd> 或 <kbd>P</kbd> | 右上角的暂停键 |
 
 ### 生命与回血
 
@@ -74,13 +74,13 @@
 
 答对会提升你隐藏的 Elo 式**实力分**。分数够高时，大鬼会现身进行**晋升考核**：连续答对它头上的 3 道题（阴阳头之后是 4 道）就能晋升。考核失败只扣一颗心，之后还有机会再挑战。每局都从阴阳生重新开始，首页会记住你到过的最高段位。
 
-| 段位 | 解锁题型 |
-|---|---|
-| 阴阳生 | 加减 |
-| 阴阳师 | 乘除 |
-| 阴阳博士 | 括号 |
-| 阴阳头 | 平方与开平方 |
-| 晴明 | 立方、开立方与 2 的乘方 |
+| | 段位 | 解锁题型 |
+|:-:|---|---|
+| <img src="docs/media/icons/rank-0.svg" width="28" height="28" alt="生" align="absmiddle"> | 阴阳生 | 加减 |
+| <img src="docs/media/icons/rank-1.svg" width="28" height="28" alt="师" align="absmiddle"> | 阴阳师 | 乘除 |
+| <img src="docs/media/icons/rank-2.svg" width="28" height="28" alt="博" align="absmiddle"> | 阴阳博士 | 括号 |
+| <img src="docs/media/icons/rank-3.svg" width="28" height="28" alt="头" align="absmiddle"> | 阴阳头 | 平方与开平方 |
+| <img src="docs/media/icons/rank-4.svg" width="28" height="28" alt="明" align="absmiddle"> | 晴明 | 立方、开立方与 2 的乘方 |
 
 降伏考核大鬼时会放出终结技**百鬼退散**，横扫参道上的其他妖怪。
 
@@ -95,24 +95,24 @@
 
 左下角的符印主要靠击杀妖怪充能（时间流逝也会慢慢充）。充能越多，主角身上的金光越亮，快充满时还会噼啪闪出电弧。充满后随机获得下面一个技能：
 
-| 技能 | 效果 |
-|---|---|
-| 停 · 时停·封 | 所有妖怪定住 5 秒 |
-| 雷 · 雷神 | 雷击场上所有妖怪 |
-| 結 · 护身结界 | 挡下下一只冲到你面前的妖怪 |
-| 福 · 招福 | 12 秒内分数 ×2 |
+| | 技能 | 效果 |
+|:-:|---|---|
+| <img src="docs/media/icons/skill-freeze.svg" width="28" height="28" alt="停" align="absmiddle"> | 时停·封 | 所有妖怪定住 5 秒 |
+| <img src="docs/media/icons/skill-thunder.svg" width="28" height="28" alt="雷" align="absmiddle"> | 雷神 | 雷击场上所有妖怪 |
+| <img src="docs/media/icons/skill-barrier.svg" width="28" height="28" alt="結" align="absmiddle"> | 护身结界 | 挡下下一只冲到你面前的妖怪 |
+| <img src="docs/media/icons/skill-lucky.svg" width="28" height="28" alt="福" align="absmiddle"> | 招福 | 12 秒内分数 ×2 |
 
 ### 夜晚
 
 每跑 **500 米**换一个夜晚，天空、地面各不相同，还各有一条特殊规则：
 
-| 夜晚 | 规则 |
-|---|---|
-| 祭典之夜 | 平常的夜晚 |
-| 满月之夜 | 分数 ×2，妖怪更快 |
-| 夜雾之夜 | 妖怪从雾里冒出来，离你更近 |
-| 赤月·百鬼过境 | 同时出现的妖怪更多 |
-| 狐火之夜 | 技能充能 ×2 |
+| | 夜晚 | 规则 |
+|:-:|---|---|
+| <img src="docs/media/icons/night-night.svg" width="28" height="28" alt="" align="absmiddle"> | 祭典之夜 | 平常的夜晚 |
+| <img src="docs/media/icons/night-moon.svg" width="28" height="28" alt="" align="absmiddle"> | 满月之夜 | 分数 ×2，妖怪更快 |
+| <img src="docs/media/icons/night-fog.svg" width="28" height="28" alt="" align="absmiddle"> | 夜雾之夜 | 妖怪从雾里冒出来，离你更近 |
+| <img src="docs/media/icons/night-parade.svg" width="28" height="28" alt="" align="absmiddle"> | 赤月·百鬼过境 | 同时出现的妖怪更多 |
+| <img src="docs/media/icons/night-fox.svg" width="28" height="28" alt="" align="absmiddle"> | 狐火之夜 | 技能充能 ×2 |
 
 ### 有本事的妖怪
 

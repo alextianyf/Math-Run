@@ -60,9 +60,9 @@ Yokai walk down the shrine path toward you, each carrying an equation whose answ
 | Action | Mouse & keyboard | Touch screen |
 |---|---|---|
 | Write | Draw on the talisman | Draw on the talisman with a finger or pen |
-| Send | Pause and it sends itself, or press **Space** (or click the red seal at the foot of the talisman) | Pause, or tap the big red **令** seal beside the talisman |
-| Skill | **F** (Q and E work too), or click the seal at the bottom left | Tap the seal at the bottom left |
-| Pause | **Esc** or **P** | The pause button, top right |
+| Send | Pause and it sends itself, or press <kbd>Space</kbd> (or click the red seal at the foot of the talisman) | Pause, or tap the big red **令** seal beside the talisman |
+| Skill | <kbd>F</kbd> (<kbd>Q</kbd> and <kbd>E</kbd> work too), or click the seal at the bottom left | Tap the seal at the bottom left |
+| Pause | <kbd>Esc</kbd> or <kbd>P</kbd> | The pause button, top right |
 
 ### Hearts and healing
 
@@ -74,13 +74,13 @@ Yokai walk down the shrine path toward you, each carrying an equation whose answ
 
 Right answers raise a hidden, Elo-style **rating**. When it is high enough, the oni appears for a **rank trial**: answer its 3 problems in a row (4 from Grand Master on) to be promoted. A failed trial only costs a heart and comes back later. Every run starts again at Apprentice; the title screen remembers the best rank reached.
 
-| Rank | Unlocks |
-|---|---|
-| 阴阳生 Apprentice | + − |
-| 阴阳师 Onmyōji | × ÷ |
-| 阴阳博士 Master | brackets ( ) |
-| 阴阳头 Grand Master | squares and square roots |
-| 晴明 Seimei | cubes, cube roots and powers of 2 |
+| | Rank | Unlocks |
+|:-:|---|---|
+| <img src="docs/media/icons/rank-0.svg" width="28" height="28" alt="生" align="absmiddle"> | 阴阳生 Apprentice | + − |
+| <img src="docs/media/icons/rank-1.svg" width="28" height="28" alt="师" align="absmiddle"> | 阴阳师 Onmyōji | × ÷ |
+| <img src="docs/media/icons/rank-2.svg" width="28" height="28" alt="博" align="absmiddle"> | 阴阳博士 Master | brackets ( ) |
+| <img src="docs/media/icons/rank-3.svg" width="28" height="28" alt="头" align="absmiddle"> | 阴阳头 Grand Master | squares and square roots |
+| <img src="docs/media/icons/rank-4.svg" width="28" height="28" alt="明" align="absmiddle"> | 晴明 Seimei | cubes, cube roots and powers of 2 |
 
 Banishing the trial oni sets off the finisher, **百鬼退散**, which sweeps every other yokai off the path.
 
@@ -95,24 +95,24 @@ Banishing the trial oni sets off the finisher, **百鬼退散**, which sweeps ev
 
 The seal at the bottom left charges as you banish yokai (and slowly with time); the hero glows gold as it fills and crackles with lightning near the top. When it is full you get one of four skills at random:
 
-| Skill | Effect |
-|---|---|
-| 停 Time Seal | Every yokai freezes for 5 s |
-| 雷 Thunder God | Lightning strikes every yokai on the path |
-| 結 Barrier | Blocks the next yokai that reaches you |
-| 福 Good Fortune | Double points for 12 s |
+| | Skill | Effect |
+|:-:|---|---|
+| <img src="docs/media/icons/skill-freeze.svg" width="28" height="28" alt="停" align="absmiddle"> | Time Seal | Every yokai freezes for 5 s |
+| <img src="docs/media/icons/skill-thunder.svg" width="28" height="28" alt="雷" align="absmiddle"> | Thunder God | Lightning strikes every yokai on the path |
+| <img src="docs/media/icons/skill-barrier.svg" width="28" height="28" alt="結" align="absmiddle"> | Barrier | Blocks the next yokai that reaches you |
+| <img src="docs/media/icons/skill-lucky.svg" width="28" height="28" alt="福" align="absmiddle"> | Good Fortune | Double points for 12 s |
 
 ### Nights
 
 Every **500 m** the run moves on to another night, each with its own sky, ground and one rule of its own:
 
-| Night | Rule |
-|---|---|
-| Festival Night | The usual night |
-| Full Moon | Double points, faster yokai |
-| Night Mist | Yokai loom out of the fog, closer than usual |
-| Blood Moon Parade | More yokai at once |
-| Foxfire Night | Skills charge twice as fast |
+| | Night | Rule |
+|:-:|---|---|
+| <img src="docs/media/icons/night-night.svg" width="28" height="28" alt="" align="absmiddle"> | Festival Night | The usual night |
+| <img src="docs/media/icons/night-moon.svg" width="28" height="28" alt="" align="absmiddle"> | Full Moon | Double points, faster yokai |
+| <img src="docs/media/icons/night-fog.svg" width="28" height="28" alt="" align="absmiddle"> | Night Mist | Yokai loom out of the fog, closer than usual |
+| <img src="docs/media/icons/night-parade.svg" width="28" height="28" alt="" align="absmiddle"> | Blood Moon Parade | More yokai at once |
+| <img src="docs/media/icons/night-fox.svg" width="28" height="28" alt="" align="absmiddle"> | Foxfire Night | Skills charge twice as fast |
 
 ### Yokai with tricks
 
