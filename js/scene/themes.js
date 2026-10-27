@@ -22,7 +22,7 @@ export const THEMES = {
   },
   // night mist: a grey-lilac murk close around the path, the moon only a smudge
   fog: {
-    skyTop: 0x34304c, skyMid: 0x56527a, horizon: 0x67638a, fogNear: 4, fogFar: 34,
+    skyTop: 0x34304c, skyMid: 0x56527a, horizon: 0x67638a, fogNear: 10, fogFar: 46,
     moon: 0xd8d8e8, moonK: 0.45, moonScale: 44, halo: 0xb0aac8, haloOpacity: 0.15, clouds: 0x8a86a0,
     mist: 0xd0cce8, mistK: 2, banks: 1, fireflies: 0xd9ff8f, firefliesK: 1.1,
     hemi: 0xa8a4c8, hemiI: 1.45, moonLight: 0xd0d0e8, moonLightI: 1.3, exposure: 1.3, bloom: 0.8,

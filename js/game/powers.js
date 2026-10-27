@@ -27,7 +27,7 @@ const CYCLE = ['night', 'moon', 'fog', 'parade', 'fox'];
 export const NIGHTS = {
   night: {},                                   // the usual festival night
   moon: { score: 2, pace: 1.25 },              // full moon: double points, faster yokai
-  fog: { fog: true },                          // mist: equations only show up close
+  fog: { fog: true, depth: 0.7, time: 0.85 }, // mist: yokai come out of the fog nearer, with a little less time
   parade: { spawn: 0.6, alive: 1 },            // the parade: more yokai at once
   fox: { charge: 2 },                          // the fox's blessing: skills charge twice as fast
 };
@@ -44,8 +44,13 @@ export const spawnMult = () => rules().spawn ?? 1;
 export const aliveBonus = () => rules().alive ?? 0;
 export const frozen = () => S.freeze > 0;
 export const holdSpawns = () => !S.tut && S.night.state !== 'on';
-// in the mist an equation fades in only as its yokai comes near (0 far → 1 at the hero)
-export const tagVisibility = (near) => (rules().fog ? THREE.MathUtils.smoothstep(near, 0.32, 0.55) : 1);
+// how far down the path yokai appear (1 = the usual spawn point) and how much of the
+// usual time they take to arrive from there
+export const spawnDepth = () => rules().depth ?? 1;
+export const travelMult = () => rules().time ?? 1;
+// in the mist an equation shows only once its yokai has come out of the fog
+// (near: 0 at the usual spawn point → 1 at the hero)
+export const tagVisibility = (near) => (rules().fog ? THREE.MathUtils.smoothstep(near, 0.34, 0.46) : 1);
 
 function stepNight(dt) {
   const n = S.night;

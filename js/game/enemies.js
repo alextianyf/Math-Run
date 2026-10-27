@@ -11,7 +11,7 @@ import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
 import { emit } from './events.js';
 import { rand, easeOutBack, smooth01 } from './helpers.js';
-import { paceMult, spawnMult, aliveBonus, frozen, holdSpawns, tagVisibility, yokaiHint } from './powers.js';
+import { paceMult, spawnMult, aliveBonus, frozen, holdSpawns, tagVisibility, yokaiHint, spawnDepth, travelMult } from './powers.js';
 import { TRAITS } from './yokaiInfo.js';
 
 // × travel time: the slower ones give a little more thinking time
@@ -41,7 +41,7 @@ function pickType() {
 
 // prefer lanes with nothing near the spawn point, so equation tags don't overlap
 function chooseLane() {
-  const free = [0, 1, 2].filter((l) => !S.enemies.some((e) => e.lane === l && !e.dying && e.z < SPAWN_Z + 16));
+  const free = [0, 1, 2].filter((l) => !S.enemies.some((e) => e.lane === l && !e.dying && e.z < SPAWN_Z * spawnDepth() + 16));
   const pool = free.length ? free : [0, 1, 2];
   return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -56,7 +56,7 @@ export function spawn(boss = false, forced = null, pack = null) {
   // ~30%: reuse an answer already on screen (different expression) → multi-banish chance
   const reuse = pack ? pack.answer : live.length && Math.random() < 0.3 ? live[Math.floor(Math.random() * live.length)].answer : undefined;
   const prob = forced ?? director.nextProblem({ answer: reuse, avoid: new Set(live.map((e) => e.text)), boss });
-  const z0 = forced?.z ?? pack?.z ?? SPAWN_Z;
+  const z0 = forced?.z ?? pack?.z ?? SPAWN_Z * spawnDepth();
   const trait = forced || boss ? null : TRAITS[type] ?? null;
 
   // drift in from the forest on either side, settling into the lane as it approaches
@@ -73,7 +73,7 @@ export function spawn(boss = false, forced = null, pack = null) {
   const e = {
     yokai, lane, boss, x0, trait,
     z: z0,
-    speed: forced?.speed ?? (HIT_Z - SPAWN_Z) / (qTravel * TYPE_PACE[type]),
+    speed: forced?.speed ?? (HIT_Z - SPAWN_Z * spawnDepth()) / (qTravel * TYPE_PACE[type] * travelMult()),
     problem: prob, qStart: 0, qTravel,
     answer: prob.answer, text: prob.text,
     tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && ui.t(`tr_${trait}`) }),
