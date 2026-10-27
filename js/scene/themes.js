@@ -37,7 +37,7 @@ export const THEMES = {
     moon: 0xff4a2a, moonK: 2, moonScale: 70, moonX: -70, moonY: 85, halo: 0xff3a2a, haloOpacity: 0.7, clouds: 0xc0506a,
     mist: 0xe0607a, mistK: 1.1, banks: 0, foxfire: 0, fireflies: 0xff9a4a, firefliesK: 2,
     hemi: 0xf08aa0, hemiI: 1.25, moonLight: 0xffa0a0, moonLightI: 1.8, exposure: 1.25, bloom: 1.05,
-    stone: 0xffa49a, grass: 0xff7a6a, groundGlow: 0x240406,
+    stone: 0xb0605a, grass: 0xa04840, groundGlow: 0x120203,
   },
   // the fox's blessing: a deep teal night lit by foxfire along the path
   fox: {
