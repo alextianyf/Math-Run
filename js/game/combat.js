@@ -170,8 +170,8 @@ function impact(e, n) {
   // a hit-stop and a little camera kick, except on the oni's last answer: its
   // finisher has a slow motion and a zoom of its own
   if (!(e.boss && e.hpDone + 1 >= e.hpTotal)) {
-    S.hitstop = Math.max(S.hitstop, e.boss || n >= 2 ? 0.14 : 0.1);
-    world.punch(n >= 2 || e.boss ? 1.09 : 1.06);
+    S.hitstop = Math.max(S.hitstop, e.boss || n >= 2 ? 0.16 : 0.12);
+    world.punch(n >= 2 || e.boss ? 1.1 : 1.07);
   }
 
   if (e.hpDone + 1 < e.hpTotal) {
@@ -198,7 +198,7 @@ function impact(e, n) {
 
   // banished: more points the farther away it was (the rokurokubi: the nearer), and
   // for several at once
-  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.28 : 0.18); ui.killFlash(); }
+  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.33 : 0.22); ui.killFlash(); }
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
