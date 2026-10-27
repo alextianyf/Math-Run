@@ -15,6 +15,7 @@ export function createCoach() {
   demoPath.style.strokeDasharray = `${pathLen}`;
 
   let target = null;          // () => { x, y, w, h, round } in viewport px, or null
+  let anchor = null;          // what the bubble sits beside, when not the target itself
   let demoOn = false, demoT = 0, demoRect = null;
   const pos = { x: 0, y: 0, ready: false };
 
@@ -22,6 +23,7 @@ export function createCoach() {
     const r = target?.();
     return r && r.w > 0 ? r : null;
   }
+  const anchorOf = () => { const r = anchor?.(); return r && r.w > 0 ? r : rectOf(); };
 
   // Bubble beside the spotlight: below, above, left or right — whichever fits
   function placeBubble(r, snap) {
@@ -73,11 +75,13 @@ export function createCoach() {
   return {
     show(on) {
       root.hidden = !on;
-      if (!on) { target = null; demoOn = false; demoSvg.toggleAttribute('hidden', true); bubble.hidden = true; pos.ready = false; }
+      if (!on) { target = null; anchor = null; demoOn = false; demoSvg.toggleAttribute('hidden', true); bubble.hidden = true; pos.ready = false; }
     },
-    // spotlight a target (function returning a rect) or nothing; dim the rest or not
-    focus(fn, { dim = true } = {}) {
+    // spotlight a target (function returning a rect) or nothing; dim the rest or not;
+    // near: the bubble sits beside this instead (so it never covers what matters)
+    focus(fn, { dim = true, near = null } = {}) {
       target = fn;
+      anchor = near;
       root.classList.toggle('dim', dim);
       placeHole(rectOf());
     },
@@ -93,7 +97,7 @@ export function createCoach() {
         return el;
       }));
       bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
-      placeBubble(rectOf(), true);
+      placeBubble(anchorOf(), true);
       actions.querySelector('.primary')?.focus({ preventScroll: true });
     },
     // swap the bubble text with a little nudge (wrong answer, unreadable digit…)
@@ -112,7 +116,7 @@ export function createCoach() {
       if (root.hidden) return;
       const r = rectOf();
       placeHole(r);
-      placeBubble(r, false);
+      placeBubble(anchorOf(), false);
       animateDemo(dt);
     },
     async countdown(labels, onTick) {

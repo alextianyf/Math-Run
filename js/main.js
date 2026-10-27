@@ -54,7 +54,10 @@ initAudio();
 let muted = ui.store.get('muted', false);
 setMuted(muted);
 document.body.classList.toggle('muted', muted);
-document.body.classList.toggle('ai-open', ui.store.get('aiPanel', window.innerWidth >= 900));
+// the AI view starts open on a wide screen with a mouse, closed on phones, tablets and narrow windows
+// (each remembers its own choice, so a phone never inherits the desktop's)
+const aiKey = matchMedia('(pointer: fine)').matches && window.innerWidth >= 900 ? 'aiPanel' : 'aiPanelSmall';
+document.body.classList.toggle('ai-open', ui.store.get(aiKey, aiKey === 'aiPanel'));
 
 // what a reading of the talisman does: the tutorial handles it while it runs
 onTalisman({
@@ -187,7 +190,7 @@ $('btn-mute').addEventListener('click', () => {
 $('btn-ai').addEventListener('click', () => {
   const open = !document.body.classList.contains('ai-open');
   document.body.classList.toggle('ai-open', open);
-  ui.store.set('aiPanel', open);
+  ui.store.set(aiKey, open);
 });
 $('btn-lang').addEventListener('click', () => {
   ui.setLang(ui.getLang() === 'zh' ? 'en' : 'zh');

@@ -72,8 +72,11 @@ function tutStep(step) {
   } else if (step === 'send') {
     // the pen has rested: the seal pulses (the bubble stays off the written digit)
     coach.demo(false);
-    const touch = !!$('send-big').offsetParent;     // the big seal shows on touch screens only
-    coach.focus(elSpot(touch ? 'send-big' : 'talisman', touch ? 8 : 12), { dim: false });
+    // the big seal shows on touch screens only; side by side (landscape) everything
+    // but the seal dims, with the bubble above the talisman so the digit stays clear
+    const touch = !!$('send-big').offsetParent;
+    if (matchMedia('(max-aspect-ratio: 4/5)').matches) coach.focus(elSpot(touch ? 'send-big' : 'talisman', touch ? 8 : 12), { dim: false });
+    else coach.focus(elSpot(touch ? 'send-big' : 'pad-send', 8), { near: elSpot('talisman', 12) });
     $('dock').classList.add('teach');
     coach.say({ title: ui.t('tutSendT'), text: ui.t(touch ? 'tutSendTouch' : 'tutSend'), buttons: [skip] });
   } else if (step === 'nice') {
