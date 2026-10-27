@@ -151,14 +151,18 @@
 
     <!-- Writing dock: AI panel + talisman -->
     <div id="dock">
-      <aside id="ai-panel" class="panel" aria-label="AI view">
-        <div class="ai-head"><span data-i18n="aiTitle"></span><span id="ai-meta" class="ai-meta"></span></div>
-        <div class="ai-body">
-          <canvas id="ai-input" width="28" height="28" aria-label="28×28 model input"></canvas>
-          <ol id="ai-top" class="ai-top"></ol>
-        </div>
-        <div id="ai-verdict" class="ai-verdict"></div>
-      </aside>
+      <div class="dock-side">
+        <aside id="ai-panel" class="panel" aria-label="AI view">
+          <div class="ai-head"><span data-i18n="aiTitle"></span><span id="ai-meta" class="ai-meta"></span></div>
+          <div class="ai-body">
+            <canvas id="ai-input" width="28" height="28" aria-label="28×28 model input"></canvas>
+            <ol id="ai-top" class="ai-top"></ol>
+          </div>
+          <div id="ai-verdict" class="ai-verdict"></div>
+        </aside>
+        <!-- touch screens: a big send seal right beside the talisman -->
+        <button id="send-big" class="send-big" type="button" tabindex="-1" data-i18n-label="padSend"><b>令</b><small data-i18n="sendBig"></small></button>
+      </div>
 
       <div id="talisman" class="talisman">
         <div class="tal-head" aria-hidden="true">敕令</div>

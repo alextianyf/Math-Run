@@ -72,9 +72,10 @@ function tutStep(step) {
   } else if (step === 'send') {
     // the pen has rested: the seal pulses (the bubble stays off the written digit)
     coach.demo(false);
-    coach.focus(elSpot('talisman', 12), { dim: false });
-    $('talisman').classList.add('teach');
-    coach.say({ title: ui.t('tutSendT'), text: ui.t('tutSend'), buttons: [skip] });
+    const touch = !!$('send-big').offsetParent;     // the big seal shows on touch screens only
+    coach.focus(elSpot(touch ? 'send-big' : 'talisman', touch ? 8 : 12), { dim: false });
+    $('dock').classList.add('teach');
+    coach.say({ title: ui.t('tutSendT'), text: ui.t(touch ? 'tutSendTouch' : 'tutSend'), buttons: [skip] });
   } else if (step === 'nice') {
     coach.focus(null, { dim: false });
     coach.say({ title: ui.t('tutNiceT'), text: ui.t('tutNice'), buttons: next('danger') });
@@ -117,7 +118,7 @@ export function tutorialWriting() {
 export function tutorialAnswer({ dec, result, pct, paper }) {
   const T = S.tut;
   if (T.step !== 'write' && T.step !== 'send') return;
-  $('talisman').classList.remove('teach');
+  $('dock').classList.remove('teach');
   if (dec.kind === 'hit') {
     ui.showAI(result.img28, result.probs, { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     pad.setEnabled(false);
@@ -159,7 +160,7 @@ export async function finishTutorial() {
   if (!T || T.step === 'countdown') return;
   T.step = 'countdown';
   T.frozen = false;
-  $('talisman').classList.remove('teach');
+  $('dock').classList.remove('teach');
   coach.hush();
   coach.demo(false);
   coach.focus(null, { dim: false });

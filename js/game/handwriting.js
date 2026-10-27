@@ -22,11 +22,11 @@ export const pad = createPad($('pad'), {
   onFinish: readTalisman,
   onArm: (ms) => ui.armTalisman(ms),
   onDisarm: () => ui.disarmTalisman(),
-  onInk: (has) => $('talisman').classList.toggle('inked', has),
+  onInk: (has) => $('dock').classList.toggle('inked', has),
   holdAuto: () => !!S.tut,                     // the tutorial teaches the seal: it waits for it
 });
-// the seal at the talisman's foot (or Space) sends it at once
-$('pad-send').addEventListener('click', (e) => { e.currentTarget.blur(); pad.send(); });
+// the seal at the talisman's foot, the big one beside it (touch) or Space sends it at once
+for (const id of ['pad-send', 'send-big']) $(id).addEventListener('click', (e) => { e.currentTarget.blur(); pad.send(); });
 new ResizeObserver(() => pad.resize()).observe($('pad'));
 
 // while the player writes: what the model sees right now (at most ~7 times a second)
