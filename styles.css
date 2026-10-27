@@ -255,6 +255,26 @@ body:not(.in-game) #dock { opacity: 0; transform: translateY(30px); pointer-even
 }
 .tal-head { font-size: 22px; letter-spacing: 0.3em; padding-left: 0.3em; line-height: 1.1; }
 .tal-foot { font-size: 12px; letter-spacing: 0.35em; opacity: 0.8; }
+/* the foot is also the send seal: dim while the talisman is blank, a red stamp once written */
+#pad-send {
+  justify-self: center; display: flex; align-items: center; gap: 6px;
+  min-height: 26px; margin-top: 2px; padding: 3px 8px 3px calc(8px + 0.35em);
+  border: 1px solid transparent; border-radius: 4px; background: none;
+  cursor: pointer; transition: background 0.15s, color 0.15s, opacity 0.15s, transform 0.08s;
+  -webkit-tap-highlight-color: transparent;
+}
+#pad-send kbd { display: none; font: 700 9px/1 var(--font-ui); letter-spacing: 0; padding: 2px 4px; border-radius: 3px; border: 1px solid currentColor; opacity: 0.75; }
+.talisman.inked #pad-send {
+  pointer-events: auto; opacity: 1; color: #fff3d6;
+  background: linear-gradient(180deg, #d8322a, #a8160f);
+  border-color: rgba(90, 10, 0, 0.5);
+  box-shadow: 0 2px 6px rgba(120, 20, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.talisman.inked #pad-send:active { transform: scale(0.93); }
+@media (hover: hover) and (pointer: fine) {
+  .talisman.inked #pad-send kbd { display: inline-block; }
+  .talisman.inked #pad-send:hover { filter: brightness(1.12); }
+}
 #pad { position: relative; z-index: 2; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 
 .guess {
@@ -299,6 +319,17 @@ body:not(.in-game) #dock { opacity: 0; transform: translateY(30px); pointer-even
 .pad-toast.show { opacity: 1; }
 
 .talisman.cast { animation: castFlash 0.45s ease-out; }
+/* a hit: the written digit glows gold and lifts off the paper */
+.ink-flare {
+  position: absolute; z-index: 3; pointer-events: none;
+  filter: drop-shadow(0 0 3px #ff9a1a) drop-shadow(0 0 10px #e8401a);
+  animation: inkFlare 0.45s ease-out forwards;
+}
+@keyframes inkFlare {
+  0% { opacity: 1; transform: none; }
+  35% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 0; transform: translateY(-18px) scale(1.14); }
+}
 .talisman.fizzle { animation: fizzle 0.6s ease-out; }
 .talisman.shake { animation: shake 0.4s ease-in-out; }
 @keyframes castFlash {

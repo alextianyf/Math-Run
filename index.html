@@ -110,7 +110,7 @@
         <span class="stamp"><b id="hint-seal"></b></span>
         <div><b id="hint-title"></b><span id="hint-text"></span></div>
       </div>
-      <!-- the skill seal, bottom left: charges as yokai are banished; full, a random skill (tap or Space) -->
+      <!-- the skill seal, bottom left: charges as yokai are banished; full, a random skill (tap or F) -->
       <div id="skill-box" class="skill-box">
         <button id="skill" class="skill" disabled><b id="skill-ch" class="skill-ch">符</b></button>
         <div class="skill-info"><b id="skill-title"></b><span id="skill-desc"></span></div>
@@ -163,7 +163,7 @@
       <div id="talisman" class="talisman">
         <div class="tal-head" aria-hidden="true">敕令</div>
         <canvas id="pad" aria-label="Handwrite your answer here"></canvas>
-        <div class="tal-foot" aria-hidden="true">急急如律令</div>
+        <button id="pad-send" class="tal-foot" type="button" tabindex="-1" data-i18n-label="padSend">急急如律令<kbd>Space</kbd></button>
         <div id="guess" class="guess" aria-hidden="true"></div>
         <div id="pad-timer" class="pad-timer" aria-hidden="true"><i></i></div>
         <div id="pad-toast" class="pad-toast" role="status"></div>

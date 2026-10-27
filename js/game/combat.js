@@ -166,6 +166,7 @@ function impact(e, n) {
   fx.emit(p, { count: 16, color: 0x8fe8ff, color2: 0xb47dff, bright: 1.8, speed: 1.2, life: 1.4, size: 0.22, gravity: 2.2, up: 0.4, dragK: 2.5 });
   fx.ring(p, { color: 0xffd36b, scale: e.boss ? 6.5 : 3.4 });
   sfx.hit(S.combo);
+  S.hitstop = Math.max(S.hitstop, e.boss ? 0.11 : n >= 2 ? 0.08 : 0.055);
 
   if (e.hpDone + 1 < e.hpTotal) {
     // a boss (or the two-lived nekomata) takes a hit: staggers, gets a new
@@ -191,7 +192,7 @@ function impact(e, n) {
 
   // banished: more points the farther away it was (the rokurokubi: the nearer), and
   // for several at once
-  if (!e.boss) fx.seal(p);
+  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.1 : 0.06); }
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;

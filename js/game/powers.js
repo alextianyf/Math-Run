@@ -247,7 +247,7 @@ export function resetPowers() {
   queue.length = 0;
   hinted.clear();
   Object.assign(S, {
-    charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false, slowmo: 0,
+    charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false, slowmo: 0, hitstop: 0,
     night: { id: 'night', state: 'on', t: 0 }, nextNightAt: NIGHT_EVERY,
   });
   barrierFx = null;

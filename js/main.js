@@ -16,7 +16,7 @@ import { S, MAX_HEARTS, targets } from './game/state.js';
 import { world, hero, fx, director, prewarm } from './game/stage.js';
 import { showRank, saveBest } from './game/progress.js';
 import { spawn, updateSpawner, updateEnemies } from './game/enemies.js';
-import { onTalisman, decide } from './game/handwriting.js';
+import { onTalisman, decide, pad } from './game/handwriting.js';
 import { answer, cast, fizzle, playerHit, updateCombat } from './game/combat.js';
 import { coach, updateTutorial, tutorialWriting, tutorialAnswer } from './game/tutorial.js';
 import { beginCapture, updateCapture, animateCaptor, skipCapture } from './game/capture.js';
@@ -155,6 +155,8 @@ function frame(now) {
       S.slowmo -= realDt;
       slow = Math.min(slow, 0.3 + 0.7 * smooth01(1 - S.slowmo / 0.5));
     }
+    // a hit lands: the world holds still for a few frames (hit-stop)
+    if (S.hitstop > 0) { S.hitstop -= realDt; slow = Math.min(slow, 0.04); }
     const dt = realDt * slow;
     S.t += dt;
     step(dt, realDt);
@@ -170,7 +172,7 @@ $('btn-start').addEventListener('click', () => startGame(false));
 $('btn-share').addEventListener('click', shareRun);
 $('btn-share-best').addEventListener('click', shareBest);
 $('btn-retry').addEventListener('click', retryRun);
-$('skill').addEventListener('click', useSkill);
+$('skill').addEventListener('click', (e) => { e.currentTarget.blur(); useSkill(); });
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
 $('btn-over-title').addEventListener('click', toTitle);
@@ -204,8 +206,10 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
     if (S.mode === 'playing') pause(); else if (S.mode === 'paused') resume();
   } else if (e.key === ' ' && S.mode === 'playing') {
-    e.preventDefault();
-    useSkill();
+    e.preventDefault();                          // never "clicks" a focused button
+    if (!e.repeat) pad.send();
+  } else if ((e.code === 'KeyF' || e.code === 'KeyQ' || e.code === 'KeyE') && S.mode === 'playing') {
+    if (!e.repeat) useSkill();
   } else if ((e.key === 'Enter' || e.key === ' ') && (S.mode === 'title' || S.mode === 'over') && document.activeElement?.tagName !== 'BUTTON') {
     e.preventDefault();
     startGame(S.mode === 'over');
@@ -213,7 +217,7 @@ document.addEventListener('keydown', (e) => {
     debugCast(Number(e.key));
   } else if (DEBUG && S.mode === 'playing' && e.key === 'k') {
     charge(1);                                   // ?debug: a skill now
-  } else if (DEBUG && S.mode === 'playing' && e.key === 'e') {
+  } else if (DEBUG && S.mode === 'playing' && e.key === 'n') {
     S.nextNightAt = S.distance;                  // ?debug: on to the next night
   } else if (DEBUG && S.mode === 'playing' && e.key === 'b') {
     S.pendingBoss = true;                        // ?debug: a rank trial

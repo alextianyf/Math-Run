@@ -22,7 +22,10 @@ export const pad = createPad($('pad'), {
   onFinish: readTalisman,
   onArm: (ms) => ui.armTalisman(ms),
   onDisarm: () => ui.disarmTalisman(),
+  onInk: (has) => $('talisman').classList.toggle('inked', has),
 });
+// the seal at the talisman's foot (or Space) sends it at once
+$('pad-send').addEventListener('click', (e) => { e.currentTarget.blur(); pad.send(); });
 new ResizeObserver(() => pad.resize()).observe($('pad'));
 
 // while the player writes: what the model sees right now (at most ~7 times a second)
@@ -61,7 +64,7 @@ export function decide(probs) {
   return { kind: 'unclear', ...top };
 }
 
-// the pen has rested long enough: read the talisman once, for real
+// the pen has rested long enough (or the player sent it): read the talisman once, for real
 async function readTalisman() {
   ui.disarmTalisman();
   if (!pad.hasInk() || pad.writing) return;
@@ -70,7 +73,7 @@ async function readTalisman() {
 
   pad.setEnabled(false);
   const paper = pad.snapshot();              // the written talisman, to fly at the yokai
-  const began = pad.startedAt;
+  const pace = pad.paceTime;
   let result;
   try {
     result = await classify(rgba, MODEL_SIZE);
@@ -78,13 +81,14 @@ async function readTalisman() {
     console.error('[math-run] classify failed', err);
   }
   // pen down → reading: what one answer costs this player, so yokai never come faster
-  if (result) director.noteWrite((performance.now() - began) / 1000);
+  if (result) director.noteWrite(pace);
+  const dec = result && S.mode === 'playing' ? decide(result.probs) : null;
+  if (dec?.kind === 'hit') pad.flare();
   pad.clear();
   ui.setGuess(null);
   if (S.mode === 'playing' && S.cooldown <= 0) pad.setEnabled(true);
-  if (!result || S.mode !== 'playing') return;
+  if (!dec) return;
 
-  const dec = decide(result.probs);
   onRead({ dec, result, paper, pct: Math.round(dec.p * 100) });
   ui.setAIMeta(`${aiInfo.backend} · ${aiInfo.latency.toFixed(1)} ms`, `${aiInfo.model} on ${aiInfo.backend}`);
 }

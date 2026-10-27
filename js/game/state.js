@@ -26,7 +26,7 @@ export const S = {
   // powers.js: the skill charge (0–1) and the skill it offers, skills still running,
   // the night ({ id, state, t }) and where the next begins, and the finisher's slow motion
   charge: 0, skill: null, freeze: 0, lucky: 0, barrier: false,
-  night: { id: 'night', state: 'on', t: 0 }, nextNightAt: 0, slowmo: 0,
+  night: { id: 'night', state: 'on', t: 0 }, nextNightAt: 0, slowmo: 0, hitstop: 0,
 };
 
 // yokai the player can still answer: not dying, not already hit, not in the capture scene

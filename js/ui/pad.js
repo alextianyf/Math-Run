@@ -70,7 +70,8 @@ export function modelRenderer() {
 }
 
 // onArm(ms) fires when the submit countdown starts, onDisarm() when it's cancelled
-export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
+// onInk(has) fires when the talisman goes from blank to written or back
+export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk } = {}) {
   const ctx = canvas.getContext('2d');
   const modelCanvas = document.createElement('canvas');
   modelCanvas.width = modelCanvas.height = MODEL_SIZE;
@@ -83,6 +84,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
   let pointerType = 'mouse';
   let enabled = true;
   let startedAt = 0;                 // performance.now() of the first stroke since the last clear
+  let endedAt = 0, endWait = 0;      // when the pen last lifted, and the wait it armed
 
   const inkWidth = () => Math.max(7, Math.min(w, h) * 0.07);
 
@@ -118,7 +120,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     try { canvas.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
     disarm();
     pointerType = e.pointerType in WAITS ? e.pointerType : 'mouse';
-    if (!strokes.length) startedAt = performance.now();
+    if (!strokes.length) { startedAt = performance.now(); onInk?.(true); }
     current = [pos(e)];
     strokes.push(current);
     redraw();
@@ -138,6 +140,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     try { canvas.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
     current = null;
     const wait = WAITS[pointerType][strokes.length > 1 ? 1 : 0];
+    endedAt = performance.now(); endWait = wait;
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { idleTimer = 0; onFinish?.(); }, wait);
     onArm?.(wait);
@@ -164,9 +167,35 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm } = {}) {
     resize,
     get writing() { return !!current; },
     get startedAt() { return startedAt; },
+    // first stroke → the auto-read the last pen-lift armed, whether or not it was
+    // sent sooner, so sending early never makes the game think the player is faster
+    get paceTime() { return (endedAt + endWait - startedAt) / 1000; },
     hasInk() { return strokes.length > 0; },
     setEnabled(v) { enabled = v; if (!v) { current = null; disarm(); } },
+    // a read that hit: the ink glows gold and lifts off the paper as it is cleared
+    flare() {
+      if (!strokes.length) return;
+      const c = document.createElement('canvas');
+      c.className = 'ink-flare';
+      c.width = canvas.width; c.height = canvas.height;
+      Object.assign(c.style, { left: `${canvas.offsetLeft}px`, top: `${canvas.offsetTop}px`, width: `${w}px`, height: `${h}px` });
+      const g = c.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      styleInk(g, inkWidth(), '#fffbe8');
+      for (const s of strokes) tracePath(g, s);
+      c.addEventListener('animationend', () => c.remove());
+      canvas.parentElement.appendChild(c);
+    },
+    // send what is written now instead of waiting for the pen to rest
+    send() {
+      if (!enabled || current || !strokes.length) return false;
+      clearTimeout(idleTimer);
+      idleTimer = 0;
+      onFinish?.();
+      return true;
+    },
     clear() {
+      if (strokes.length) onInk?.(false);
       strokes = [];
       current = null;
       disarm();
