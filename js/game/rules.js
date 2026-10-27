@@ -4,6 +4,7 @@
 import * as ui from '../ui/ui.js';
 import { RANKS } from '../difficulty/adaptive.js';
 import { MAX_HEARTS } from './state.js';
+import { SKILLS } from './powers.js';
 import { $ } from './helpers.js';
 
 // what each rank unlocks, by operation, as shown on the problems
@@ -12,6 +13,9 @@ const UNLOCKS = ['+ −', '× ÷', '( )', 'x² √', 'x³ ∛ 2ⁿ'];
 function render() {
   const ranks = RANKS.map((r, i) => `<li><span class="stamp"><b>${ui.rankSeal(i)}</b></span>
     <div><b>${ui.t(`rank${i}`)}</b><small>${UNLOCKS[i]}</small></div></li>`).join('');
+  // the four skills, each with its seal in the colour it glows when ready
+  const skills = Object.entries(SKILLS).map(([id, s]) => `<li style="--sk:#${s.color.toString(16).padStart(6, '0')}"><span class="rules-skill">${s.ch}</span>
+    <div><b>${ui.t(`sk_${id}`)}</b><small>${ui.t(`skd_${id}`)}</small></div></li>`).join('');
   const section = (title, items) => `<section><h3>${ui.t(title)}</h3><ul>${items.map((k) => `<li>${ui.t(k, { h: MAX_HEARTS })}</li>`).join('')}</ul></section>`;
   $('rules-body').innerHTML = [
     section('rulesBasicsT', ['rulesBasics1', 'rulesBasics2', 'rulesBasics3']),
@@ -19,7 +23,8 @@ function render() {
     `<section><h3>${ui.t('rulesRanksT')}</h3><p>${ui.t('rulesRanks1')}</p><ol class="rules-ranks">${ranks}</ol><ul>
       <li>${ui.t('rulesRanks2')}</li><li>${ui.t('rulesRanks3')}</li><li>${ui.t('rulesRanks4')}</li></ul></section>`,
     section('rulesScoreT', ['rulesScore1', 'rulesScore2', 'rulesScore3', 'rulesScore4']),
-    section('rulesSkillsT', ['rulesSkills1', 'rulesSkills2', 'rulesSkills3', 'rulesSkills4']),
+    `<section><h3>${ui.t('rulesSkillsT')}</h3><p>${ui.t('rulesSkills1')}</p><ol class="rules-ranks rules-skills">${skills}</ol><ul>
+      <li>${ui.t('rulesSkills2')}</li><li>${ui.t('rulesSkills3')}</li><li>${ui.t('rulesSkills4')}</li></ul></section>`,
     section('rulesFairT', ['rulesFair1', 'rulesFair2', 'rulesFair3']),
   ].join('');
 }
