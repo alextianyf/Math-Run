@@ -92,6 +92,20 @@ export const fogBankTex = (n) => make(`fogBank${n}`, 256, 256, (g, w, h) => {
   g.fillStyle = grd; g.fillRect(0, 0, w, h);
 });
 
+// a foxfire flame: a bright teardrop with a soft glow, tip up
+export const foxfireTex = () => make('foxfire', 64, 128, (g, w, h) => {
+  radial(g, w / 2, h * 0.68, w * 0.5, [[0, 'rgba(255,255,255,0.55)'], [1, 'rgba(255,255,255,0)']]);
+  const grd = g.createRadialGradient(w / 2, h * 0.7, 0, w / 2, h * 0.7, w * 0.3);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(1, 'rgba(255,255,255,0.35)');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.moveTo(w / 2, h * 0.12);                                      // the flickering tip
+  g.bezierCurveTo(w * 0.62, h * 0.38, w * 0.8, h * 0.55, w * 0.78, h * 0.7);
+  g.arc(w / 2, h * 0.7, w * 0.28, 0, Math.PI);
+  g.bezierCurveTo(w * 0.2, h * 0.55, w * 0.38, h * 0.38, w / 2, h * 0.12);
+  g.fill();
+});
+
 export const cloudTex = () => make('cloud', 256, 128, (g) => {
   for (let i = 0; i < 26; i++) {
     const x = 40 + Math.random() * 176, y = 50 + Math.random() * 40, r = 18 + Math.random() * 30;

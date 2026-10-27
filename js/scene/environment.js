@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { toon, glow, place, lathe, taperedTube } from './toon.js';
-import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex, fogBankTex } from './textures.js';
+import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex, fogBankTex, foxfireTex } from './textures.js';
 
 export const FOG_COLOR = 0x2a2056;
 const NEAR = 30;                 // props wrap once they pass this z (behind the camera)
@@ -535,14 +535,57 @@ function buildFogBanks(scene) {
   };
 }
 
+// foxfire (kitsunebi) on the fox's night: blue-green flames hovering along both
+// sides of the path, bobbing, wandering and flickering, each with a soft glow round
+// it. Hidden (not drawn at all) on every other night.
+function buildFoxfire(scene) {
+  const group = new THREE.Group();
+  group.visible = false;
+  const flameMap = foxfireTex(), glowMap = glowTex();
+  const wisps = [];
+  for (let i = 0; i < 28; i++) {
+    const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameMap, color: glow(0x6ff6ff, 2.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, color: 0x22c8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+    const size = rand(0.8, 1.15);
+    group.add(halo, flame);
+    wisps.push({
+      flame, halo, size, x: (i % 2 ? 1 : -1) * rand(3.2, 5.6), y: rand(1, 2.4),
+      z: NEAR - (i / 28) * SPAN + rand(-3, 3), p: Math.random() * Math.PI * 2,
+    });
+  }
+  scene.add(group);
+  let amount = 0;
+  const hide = (w, dz) => { w.z += dz; if (w.z > NEAR) w.z -= SPAN; };
+  return {
+    // 0..1 from the night's theme
+    set amount(v) { amount = v; group.visible = v > 0.01; },
+    step(dz, t) {
+      if (!group.visible) { for (const w of wisps) hide(w, dz); return; }
+      for (const w of wisps) {
+        hide(w, dz);
+        const flick = 1 + Math.sin(t * 11 + w.p) * 0.08 + Math.sin(t * 17 + w.p * 3) * 0.06;
+        const x = w.x + Math.sin(t * 0.5 + w.p) * 0.6, y = w.y + Math.sin(t * 1.3 + w.p * 2) * 0.25;
+        w.flame.position.set(x, y, w.z);
+        w.halo.position.set(x, y - w.size * 0.2, w.z);
+        w.flame.scale.set(w.size * flick, w.size * 2 * (2 - flick), 1);
+        w.halo.scale.setScalar(w.size * 4.2);
+        // fade in out of the distance, out again before it reaches the camera
+        const k = amount * THREE.MathUtils.smoothstep(w.z, -110, -80) * (1 - THREE.MathUtils.smoothstep(w.z, 0, 5));
+        w.flame.material.opacity = k * (0.85 + Math.sin(t * 7 + w.p) * 0.15);
+        w.halo.material.opacity = k * 0.4;
+      }
+    },
+  };
+}
+
 /* ===================== assemble ===================== */
 
 export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
   const mist = buildMist(scene);
-  const banks = buildFogBanks(scene);
-  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks];
+  const banks = buildFogBanks(scene), foxfire = buildFoxfire(scene);
+  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks, foxfire];
   const particles = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
@@ -558,8 +601,8 @@ export function createEnvironment(scene) {
     }),
   ];
   return {
-    // what a change of night recolours: sky, moon, clouds, ground mist, fog banks and fireflies
-    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material, banks },
+    // what a change of night recolours: sky, moon, clouds, ground mist, fog banks, foxfire and fireflies
+    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material, banks, foxfire },
     // arches overhead would fill the play camera's view right after passing the runner
     set hideToriiBeyond(z) { torii.hideZ = z; },
     step(dz, t, dt) {

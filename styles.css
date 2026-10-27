@@ -971,7 +971,7 @@ body.cinematic .hint, body:not(.in-game) .hint { display: none; }
 .fx-chip i { position: absolute; left: 0; bottom: 0; height: 3px; width: calc(var(--left) * 100%); background: currentColor; opacity: 0.7; }
 .fx-chip.ev { color: #ffd98a; border-color: rgba(246, 201, 91, 0.4); }
 .fx-chip.ev.fog { color: #c9d6ff; border-color: rgba(180, 200, 255, 0.4); }
-.fx-chip.ev.fox { color: #d9b8ff; border-color: rgba(190, 150, 255, 0.45); }
+.fx-chip.ev.fox { color: #8af4ff; border-color: rgba(90, 230, 255, 0.45); }
 .fx-chip.ev.parade { color: #ff9b8a; border-color: rgba(255, 120, 100, 0.45); }
 .fx-chip.sk b { color: inherit; }
 .fx-chip.sk.freeze { color: #6fd0ff; }
@@ -1014,7 +1014,7 @@ body.frozen #vignette { background: radial-gradient(ellipse at 50% 45%, rgba(120
 body.frozen #labels .tag-in { filter: saturate(0.4) hue-rotate(160deg) brightness(1.05); }
 body.lucky #vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(255, 190, 60, 0.32) 100%); }
 body[data-night="parade"] #vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(200, 30, 40, 0.42) 100%); }
-body[data-night="fox"] #vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(150, 90, 255, 0.4) 100%); }
+body[data-night="fox"] #vignette { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(40, 210, 220, 0.32) 100%); }
 
 @media (prefers-reduced-motion: reduce) {
   .skill-box.ready .skill, .banner.finisher.show, .hint.show { animation: none; }
