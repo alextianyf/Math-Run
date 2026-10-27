@@ -249,8 +249,9 @@ function buildGround(scene) {
     m.position.set(x, y, -110);
     scene.add(m);
   };
-  flat(240, toon(0xffffff, { map: moss }), 0, 0);
-  flat(PATH_W, toon(0xffffff, { map: stone }), 0, 0.02);
+  const mossMat = toon(0xffffff, { map: moss }), stoneMat = toon(0xffffff, { map: stone });
+  flat(240, mossMat, 0, 0);
+  flat(PATH_W, stoneMat, 0, 0.02);
   const gravelMat = toon(0xffffff, { map: gravel });
   flat(1.5, gravelMat, -(PATH_W / 2 + 0.75), 0.015);
   flat(1.5, gravelMat, PATH_W / 2 + 0.75, 0.015);
@@ -263,6 +264,8 @@ function buildGround(scene) {
   }
 
   return {
+    // what a change of night tints: the path, the gravel and curbs beside it, the ground
+    look: { stone: stoneMat, gravel: gravelMat, curb: curbMat, grass: mossMat },
     step(dz) {
       stone.offset.y += dz / PATH_W;
       gravel.offset.y += dz / 1.5;
@@ -584,8 +587,8 @@ export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
   const mist = buildMist(scene);
-  const banks = buildFogBanks(scene), foxfire = buildFoxfire(scene);
-  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks, foxfire];
+  const banks = buildFogBanks(scene), foxfire = buildFoxfire(scene), ground = buildGround(scene);
+  const parts = [ground, torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks, foxfire];
   const particles = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
@@ -601,8 +604,8 @@ export function createEnvironment(scene) {
     }),
   ];
   return {
-    // what a change of night recolours: sky, moon, clouds, ground mist, fog banks, foxfire and fireflies
-    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material, banks, foxfire },
+    // what a change of night recolours: sky, moon, clouds, ground mist, fog banks, foxfire, fireflies and the ground underfoot
+    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material, banks, foxfire, ground: ground.look },
     // arches overhead would fill the play camera's view right after passing the runner
     set hideToriiBeyond(z) { torii.hideZ = z; },
     step(dz, t, dt) {
