@@ -385,44 +385,45 @@ body:not(.in-game) #dock { opacity: 0; transform: translateY(30px); pointer-even
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-/* the AI view: a second, smaller paper slip beside the talisman, written in the
-   same ink — what the model sees shows as ink on the paper */
-#ai-panel {
-  display: none; width: 176px; padding: 12px 13px 12px; position: relative;
-  border-radius: 6px; border: 0;
-  background:
-    repeating-linear-gradient(97deg, rgba(160, 110, 20, 0.06) 0 2px, transparent 2px 7px),
-    linear-gradient(180deg, #f6e3a6, #e9c66e);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(90, 50, 0, 0.35), inset 0 0 24px rgba(140, 80, 0, 0.2);
-  transform: rotate(1.2deg);
-  color: #4a2a10;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
+/* the AI view: a readout, not a second talisman. Like the skill seal across the
+   screen, a round piece over a dark HUD card: a sacred mirror (bronze rim) in
+   which the model's 28×28 view glows spirit-blue, and its reading under it */
+#ai-panel { display: none; width: 164px; flex-direction: column; align-items: center; pointer-events: none; }
+body.ai-open #ai-panel { display: flex; }
+.ai-mirror {
+  position: relative; z-index: 1; width: 78px; height: 78px; margin-bottom: -16px; border-radius: 50%;
+  padding: 5px;
+  background: conic-gradient(from 210deg, #8a5a22, #f0c870, #9a6a2a, #e8b85a, #7a4a18, #f0c870, #8a5a22);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 18px rgba(120, 220, 255, 0.25);
 }
-#ai-panel::before { content: ""; position: absolute; inset: 5px; pointer-events: none; border: 1px solid rgba(179, 23, 15, 0.55); border-radius: 3px; }
-body.ai-open #ai-panel { display: block; }
-.ai-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(179, 23, 15, 0.3); }
-.ai-head > span:first-child { font: 400 16px/1 var(--font-accent); color: var(--vermilion-2); letter-spacing: 0.08em; }
-.ai-meta { font: 600 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; color: rgba(74, 42, 16, 0.55); }
-.ai-body { display: flex; gap: 10px; margin-top: 8px; align-items: center; }
 #ai-input {
-  width: 64px; height: 64px; flex: none;
+  display: block; width: 100%; height: 100%; border-radius: 50%;
   image-rendering: pixelated;
-  background: #000; border: 1px solid rgba(179, 23, 15, 0.5); border-radius: 2px;
-  filter: invert(1) sepia(0.6) saturate(1.4) brightness(0.98); mix-blend-mode: multiply;
+  background: #000;
+  box-shadow: inset 0 0 0 2px rgba(60, 30, 5, 0.8);
+  filter: sepia(1) hue-rotate(150deg) saturate(2.6) brightness(1.15);
 }
-.ai-top { list-style: none; margin: 0; padding: 0; flex: 1; display: grid; gap: 5px; }
-.ai-top li { display: grid; grid-template-columns: 12px 1fr 30px; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: rgba(74, 42, 16, 0.6); }
-.ai-top b { color: #4a2a10; font: 800 13px/1 var(--font-display); }
-.ai-top .bar { height: 5px; border-radius: 3px; background: rgba(120, 60, 10, 0.15); overflow: hidden; }
-.ai-top .bar i { display: block; height: 100%; background: rgba(74, 42, 16, 0.45); border-radius: 3px; transition: width 0.15s; }
-.ai-top .lead b { color: var(--vermilion-2); }
-.ai-top .lead .bar i { background: linear-gradient(90deg, var(--vermilion-2), var(--vermilion)); }
+.ai-card {
+  width: 100%; padding: 20px 10px 8px; border-radius: 10px;
+  background: rgba(12, 8, 30, 0.62);
+  font: 600 11px/1.2 var(--font-ui); color: var(--dim);
+}
+.ai-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+.ai-head > span:first-child { font: 800 12px/1 var(--font-ui); color: var(--ink); letter-spacing: 0.04em; }
+.ai-meta { font: 600 9px/1 var(--font-ui); color: rgba(255, 255, 255, 0.4); }
+.ai-top { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ai-top li { display: grid; grid-template-columns: 12px 1fr 30px; align-items: center; gap: 5px; }
+.ai-top b { color: var(--ink); font: 800 13px/1 var(--font-display); }
+.ai-top .bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.ai-top .bar i { display: block; height: 100%; background: rgba(255, 255, 255, 0.4); border-radius: 3px; transition: width 0.15s; }
+.ai-top .lead b { color: #8fe8ff; }
+.ai-top .lead .bar i { background: linear-gradient(90deg, #4fb8e8, #8fe8ff); }
 .ai-top em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
-.ai-verdict { margin-top: 8px; min-height: 16px; font-size: 12px; font-weight: 800; color: rgba(74, 42, 16, 0.65); }
-.ai-verdict.ok { color: #2f6b1e; }
-.ai-verdict.fix { color: #9a5a00; }
-.ai-verdict.warn { color: #b0560a; }
-.ai-verdict.bad { color: var(--vermilion-2); }
+.ai-verdict { margin-top: 6px; min-height: 14px; font-size: 11.5px; font-weight: 800; color: var(--dim); }
+.ai-verdict.ok { color: var(--ok); }
+.ai-verdict.fix { color: var(--gold); }
+.ai-verdict.warn { color: var(--warn); }
+.ai-verdict.bad { color: var(--bad); }
 
 /* ===================== overlays ===================== */
 .overlay {
@@ -695,13 +696,13 @@ body.ai-open #ai-panel { display: block; }
   body:not(.in-game) #dock, body.cinematic #dock { height: 0; padding: 0; overflow: hidden; transform: none; border: 0; }
   body.cinematic #app { grid-template-rows: 1fr 0; }
   .talisman { width: auto; height: 100%; }
-  #ai-panel { width: 128px; padding: 8px 10px 10px; }
+  #ai-panel { width: 128px; }
+  .ai-mirror { width: 62px; height: 62px; padding: 4px; margin-bottom: -12px; }
+  .ai-card { padding: 15px 8px 6px; }
   .ai-meta { display: none; }                 /* no room for the timing beside the title */
   .dock-side { align-self: stretch; justify-content: center; }
   body.ai-open .send-big { width: 100%; height: 52px; flex-direction: row; gap: 8px; }
   body.ai-open .send-big b { font-size: 28px; }
-  .ai-body { flex-direction: column; align-items: stretch; }
-  #ai-input { width: 56px; height: 56px; align-self: center; }
   .guess { right: -10px; }
 
   .overlay.title {
