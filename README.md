@@ -53,12 +53,91 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 
 ## How to Play
 
-- Every yokai carries an equation. Its answer is always a single digit, 0–9.
-- Write the answer on the talisman. When you lift the pen, the AI reads it.
-- One talisman hits **every** yokai with that answer — spot the shared answers for bonus points.
-- A yokai that reaches you costs a heart. Lose all three and the great oni catches you.
-- Right answers raise your hidden **rating**. When it is high enough, a **rank-trial boss** appears; beat it to be promoted, from 阴阳生 *Apprentice* up to 晴明 *Seimei*. Each rank unlocks new kinds of problems.
-- Every run started from the title opens with a short playable tutorial. Works with mouse, touch or pen, in Chinese or English.
+Yokai walk down the shrine path toward you, each carrying an equation whose answer is a single digit, 0–9. **Write the answer on the talisman** and the AI reads it: one talisman flies at **every** yokai with that answer. Every run started from the title opens with a short playable tutorial; the full rules are also in the game, under **How to play**. It works with a mouse, a finger or a pen, in Chinese or English.
+
+### Controls
+
+| Action | Mouse & keyboard | Touch screen |
+|---|---|---|
+| Write | Draw on the talisman | Draw on the talisman with a finger or pen |
+| Send | Pause and it sends itself, or press **Space** (or click the red seal at the foot of the talisman) | Pause, or tap the big red **令** seal beside the talisman |
+| Skill | **F** (Q and E work too), or click the seal at the bottom left | Tap the seal at the bottom left |
+| Pause | **Esc** or **P** | The pause button, top right |
+
+### Hearts and healing
+
+- You have **3 hearts**. A yokai that reaches you takes one and resets your combo.
+- **8 right answers in a row** win a heart back, and so does **passing a rank trial**.
+- Lose every heart and the great oni carries you off: the run is over.
+
+### Ranks and trials
+
+Right answers raise a hidden, Elo-style **rating**. When it is high enough, the oni appears for a **rank trial**: answer its 3 problems in a row (4 from Grand Master on) to be promoted. A failed trial only costs a heart and comes back later. Every run starts again at Apprentice; the title screen remembers the best rank reached.
+
+| Rank | Unlocks |
+|---|---|
+| 阴阳生 Apprentice | + − |
+| 阴阳师 Onmyōji | × ÷ |
+| 阴阳博士 Master | brackets ( ) |
+| 阴阳头 Grand Master | squares and square roots |
+| 晴明 Seimei | cubes, cube roots and powers of 2 |
+
+Banishing the trial oni sets off the finisher, **百鬼退散**, which sweeps every other yokai off the path.
+
+### Scoring
+
+- 100 points per yokai, plus up to 60 more the **earlier** you hit it.
+- Several yokai with one talisman: **+50%** for each extra one.
+- **Combo**: +10% per hit in a row, up to ×3; a wrong answer or a hit resets it.
+- The trial oni: 200 points per right answer, 1,000 and up when it is banished.
+
+### Skills
+
+The seal at the bottom left charges as you banish yokai (and slowly with time); the hero glows gold as it fills and crackles with lightning near the top. When it is full you get one of four skills at random:
+
+| Skill | Effect |
+|---|---|
+| 停 Time Seal | Every yokai freezes for 5 s |
+| 雷 Thunder God | Lightning strikes every yokai on the path |
+| 結 Barrier | Blocks the next yokai that reaches you |
+| 福 Good Fortune | Double points for 12 s |
+
+### Nights
+
+Every **500 m** the run moves on to another night, each with its own sky, ground and one rule of its own:
+
+| Night | Rule |
+|---|---|
+| Festival Night | The usual night |
+| Full Moon | Double points, faster yokai |
+| Night Mist | Yokai loom out of the fog, closer than usual |
+| Blood Moon Parade | More yokai at once |
+| Foxfire Night | Skills charge twice as fast |
+
+### Yokai with tricks
+
+Fourteen kinds of yokai walk the path. Some have a trick, shown by a purple badge on their tag:
+
+| Yokai | Trick |
+|---|---|
+| Ittan-momen | Weaves from side to side |
+| Kitsunebi | Vanishes halfway and reappears in another lane |
+| Nopperabō | Its equation fades after a moment; remember it |
+| Kamaitachi | Comes as a trio with the same answer |
+| Karasu-tengu | Dawdles, then swoops in |
+| Nekomata | Two lives: it takes two answers |
+| Rokurokubi | Worth more the later you hit it |
+
+### Achievements, bestiary and sharing
+
+- **16 achievements** and a **bestiary** of every yokai you have met (with a turning 3D model), each with its own tile on the title screen.
+- Everything is saved in your browser only; a **transfer code** under Achievements moves it to another device.
+- **Share** a run as a link: whoever opens it sees your result card first, then can take up the challenge. No server involved.
+
+### Fair play
+
+- Pausing or leaving the page hides the problems, and every yokai gets a new problem when you go on.
+- A clearly written wrong answer counts as wrong and locks the talisman for 0.7 s.
 
 ---
 
@@ -84,6 +163,7 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 - **Three.js** with toon shading, outlines and bloom; a **VRM** character as the hero; every sound synthesized with the **Web Audio API** (no audio files).
 - No backend, no API keys, **no build step**: libraries load from a CDN through an import map, so GitHub Pages hosts it for free.
 - Smooth on modest PCs: every shader is compiled and every model uploaded while the page loads, and the graphics quality steps down automatically if frames get slow.
+- **Game feel**: a hit-stop, camera kick and flash on every banish, the written digit glowing off the paper, the hero's aura growing with the skill charge, five themed nights, and screens that unroll like hanging scrolls.
 
 ---
 
@@ -150,9 +230,17 @@ This section provides a detailed overview of the project directory structure to 
 │   │   ├── stage.js            # Shared 3D world, effects and difficulty director (+ shader prewarm)
 │   │   ├── enemies.js          # Yokai: spawning, moving, equation tags
 │   │   ├── handwriting.js      # Talisman pad → AI reading → decision
-│   │   ├── combat.js           # Casting talismans, hits, misses, damage
-│   │   ├── progress.js         # Score, hearts, waves, ranks, saved records
+│   │   ├── combat.js           # Casting talismans, hits, misses, damage, the hero's charge aura
+│   │   ├── powers.js           # Skills, the nights and their rules, the oni's finisher
+│   │   ├── progress.js         # Score, hearts, ranks, saved records
 │   │   ├── tutorial.js         # The opening tutorial
+│   │   ├── rules.js            # The in-game How to play
+│   │   ├── achievements.js     # Achievements and the bestiary record
+│   │   ├── collection.js       # The Achievements and Bestiary screens, transfer code
+│   │   ├── bestiaryView.js     # The bestiary's turning 3D yokai
+│   │   ├── yokaiInfo.js        # Each yokai's seal, colour and trick
+│   │   ├── shareCard.js        # Result cards shared as a link (no server)
+│   │   ├── events.js           # A tiny event bus (game → achievements)
 │   │   ├── capture.js          # The "caught by the oni" cinematic
 │   │   ├── flow.js             # Start / pause / game over / back to title
 │   │   └── helpers.js          # Small shared helpers
@@ -165,10 +253,11 @@ This section provides a detailed overview of the project directory structure to 
 │   │   └── utils.js            # Image helpers (Otsu, connected components, centroid, blur…)
 │   ├── scene/                  # 3D graphics (Three.js)
 │   │   ├── world.js            # Renderer, bloom, lights, camera, auto quality
+│   │   ├── themes.js           # The nights: sky, fog, moon, ground, blended without recompiling
 │   │   ├── environment.js      # The shrine path, torii, lanterns, trees, sky
 │   │   ├── hero.js, heroRobe.js, heroStyle.js   # The VRM onmyōji and his robes
 │   │   ├── yokai.js, oni.js    # The parade and the great oni
-│   │   ├── fx.js               # Spell effects: particles, talismans, magic circles
+│   │   ├── fx.js               # Spell effects: particles, talismans, magic circles, lightning
 │   │   └── toon.js, textures.js   # Toon materials, outlines, painted textures
 │   └── ui/                     # Screen, text and sound
 │       ├── ui.js               # HUD, equation tags, banners, AI panel, settings
@@ -328,7 +417,7 @@ The project consists of two major parts:
    - Export model as TensorFlow `SavedModel` and convert to **TensorFlow.js** for web deployment.  
 
 2. **Inference Pipeline** (`js/ai/` and `js/game/handwriting.js`)
-   - Capture handwriting on the talisman (mouse, touch or pen). The pad waits a moment after the pen lifts — longer for a mouse — so digits drawn in several strokes, like 4, aren't read half-written.
+   - Capture handwriting on the talisman (mouse, touch or pen). The pad waits a moment after the pen lifts — longer for a mouse — so digits drawn in several strokes, like 4, aren't read half-written; the player can also send it at once with the seal or Space.
    - Apply preprocessing steps:
      - Convert RGBA → grayscale
      - Otsu thresholding (binarization, adaptive inversion)
