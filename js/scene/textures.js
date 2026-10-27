@@ -77,6 +77,21 @@ export const mistTex = () => make('mist', 256, 256, (g, w) => {
   }
 }, { repeat: true });
 
+// a bank of fog: soft billows heaped into one cloud, lit from above (bright tops,
+// lilac-grey undersides) so it reads as something with volume, not a grey wash
+export const fogBankTex = (n) => make(`fogBank${n}`, 256, 256, (g, w, h) => {
+  for (let i = 0; i < 46; i++) {
+    const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random());
+    const x = w / 2 + Math.cos(a) * d * 82, y = h * 0.56 + Math.sin(a) * d * 46 - (1 - d) * 18;
+    const r = (1 - d * 0.55) * (26 + Math.random() * 30);
+    radial(g, x, y, r, [[0, 'rgba(255,255,255,0.55)'], [0.5, 'rgba(255,255,255,0.28)'], [1, 'rgba(255,255,255,0)']]);
+  }
+  g.globalCompositeOperation = 'source-atop';           // shade what was drawn: light from above
+  const grd = g.createLinearGradient(0, h * 0.25, 0, h * 0.85);
+  grd.addColorStop(0, 'rgba(255,255,255,0)'); grd.addColorStop(1, 'rgba(96,88,140,0.7)');
+  g.fillStyle = grd; g.fillRect(0, 0, w, h);
+});
+
 export const cloudTex = () => make('cloud', 256, 128, (g) => {
   for (let i = 0; i < 26; i++) {
     const x = 40 + Math.random() * 176, y = 50 + Math.random() * 40, r = 18 + Math.random() * 30;

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { toon, glow, place, lathe, taperedTube } from './toon.js';
-import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex } from './textures.js';
+import { glowTex, moonTex, petalTex, mistTex, cloudTex, plaqueTex, fogBankTex } from './textures.js';
 
 export const FOG_COLOR = 0x2a2056;
 const NEAR = 30;                 // props wrap once they pass this z (behind the camera)
@@ -492,13 +492,57 @@ function buildMist(scene) {
   };
 }
 
+// banks of fog rolling along and across the path, only on the misty night: big
+// soft billboards that drift and slowly turn, fading out as they reach the camera
+// so it never sits inside one. Hidden (not drawn at all) on every other night.
+function buildFogBanks(scene) {
+  const tex = [0, 1, 2].map((n) => fogBankTex(n));
+  const group = new THREE.Group();
+  group.visible = false;
+  const banks = [];
+  for (let i = 0; i < 28; i++) {
+    const onPath = i % 3 === 0;                          // a third drift across the path itself
+    const material = new THREE.SpriteMaterial({ map: tex[i % 3], transparent: true, depthWrite: false, opacity: 0 });
+    const s = new THREE.Sprite(material);
+    const w = onPath ? rand(7, 11) : rand(9, 16);
+    s.scale.set(w, w * rand(0.55, 0.75), 1);
+    group.add(s);
+    banks.push({
+      s, w, x: onPath ? rand(-3, 3) : (i % 2 ? 1 : -1) * rand(3.5, 13), y: onPath ? rand(0.3, 1.2) : rand(0.6, 2.6),
+      z: NEAR - (i / 28) * SPAN + rand(-2, 2), p: Math.random() * Math.PI * 2, spin: rand(-0.04, 0.04),
+    });
+  }
+  scene.add(group);
+  let amount = 0;
+  return {
+    group,
+    // 0..1 from the night's theme; the colour follows the mist
+    set amount(v) { amount = v; group.visible = v > 0.01; },
+    color: new THREE.Color(),
+    step(dz, t) {
+      if (!group.visible) { for (const b of banks) { b.z += dz; if (b.z > NEAR) b.z -= SPAN; } return; }
+      for (const b of banks) {
+        b.z += dz;
+        if (b.z > NEAR) b.z -= SPAN;
+        b.s.position.set(b.x + Math.sin(t * 0.07 + b.p) * 2.2, b.y + Math.sin(t * 0.13 + b.p * 2) * 0.25, b.z);
+        b.s.material.rotation = b.p + t * b.spin;
+        // fade in out of the distance, out again before it reaches the camera (z ≈ 6)
+        const near = THREE.MathUtils.smoothstep(b.z, -1, 4), far = THREE.MathUtils.smoothstep(b.z, -95, -70);
+        b.s.material.opacity = amount * far * (1 - near);
+        b.s.material.color.copy(this.color);
+      }
+    },
+  };
+}
+
 /* ===================== assemble ===================== */
 
 export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
   const mist = buildMist(scene);
-  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist];
+  const banks = buildFogBanks(scene);
+  const parts = [buildGround(scene), torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks];
   const particles = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
@@ -514,8 +558,8 @@ export function createEnvironment(scene) {
     }),
   ];
   return {
-    // what a change of night recolours: sky, moon, clouds, ground mist and fireflies
-    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material },
+    // what a change of night recolours: sky, moon, clouds, ground mist, fog banks and fireflies
+    look: { ...sky.look, mist: mist.materials, fireflies: particles[0].material, banks },
     // arches overhead would fill the play camera's view right after passing the runner
     set hideToriiBeyond(z) { torii.hideZ = z; },
     step(dz, t, dt) {
