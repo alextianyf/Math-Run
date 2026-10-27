@@ -16,15 +16,15 @@ export const THEMES = {
   // full moon: a huge bright moon, silver light, a clearer sky
   moon: {
     skyTop: 0x050a22, skyMid: 0x1d2a62, horizon: 0x3a3f80, fogNear: 30, fogFar: 120,
-    moon: 0xfff4d8, moonK: 2.2, moonScale: 120, halo: 0xffe0a0, haloOpacity: 0.75, clouds: 0xb8c0f0,
+    moon: 0xfff4d8, moonK: 1.1, moonScale: 85, halo: 0xffe0a0, haloOpacity: 0.4, clouds: 0xb8c0f0,
     mist: 0xb0b8f0, mistK: 0.8, fireflies: 0xfff2a0, firefliesK: 1.8,
-    hemi: 0xa0aaff, hemiI: 1.6, moonLight: 0xeef2ff, moonLightI: 2.6, exposure: 1.35, bloom: 1.0,
+    hemi: 0xa0aaff, hemiI: 1.5, moonLight: 0xeef2ff, moonLightI: 2.3, exposure: 1.28, bloom: 0.85,
   },
   // night mist: a grey-lilac murk close around the path, the moon only a smudge
   fog: {
-    skyTop: 0x14121e, skyMid: 0x3a3650, horizon: 0x5b5878, fogNear: 6, fogFar: 40,
-    moon: 0xd8d8e8, moonK: 0.8, moonScale: 44, halo: 0xb0aac8, haloOpacity: 0.35, clouds: 0x8a86a0,
-    mist: 0xd0cce8, mistK: 1.9, fireflies: 0xd9ff8f, firefliesK: 1.1,
+    skyTop: 0x4a4662, skyMid: 0x6a6688, horizon: 0x7a7698, fogNear: 2, fogFar: 26,
+    moon: 0xd8d8e8, moonK: 0.45, moonScale: 44, halo: 0xb0aac8, haloOpacity: 0.15, clouds: 0x8a86a0,
+    mist: 0xd0cce8, mistK: 2.6, fireflies: 0xd9ff8f, firefliesK: 1.1,
     hemi: 0xa8a4c8, hemiI: 1.45, moonLight: 0xd0d0e8, moonLightI: 1.3, exposure: 1.3, bloom: 0.8,
   },
   // the parade passes: a blood moon over a crimson sky
