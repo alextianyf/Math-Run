@@ -988,6 +988,28 @@ body.paused #labels { visibility: hidden; }
   box-shadow: 0 0 10px var(--sk);
   font: 900 15px/1 var(--font-display); color: var(--sk); text-shadow: 0 0 8px var(--sk);
 }
+/* a night: its sky with the moon in it (the same colours as scene/themes.js) */
+.rules-night {
+  flex: none; width: 30px; height: 30px; border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 44%, var(--moon) 0 var(--r, 22%), var(--glow) calc(var(--r, 22%) + 4%), transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.rules-night.n-night { --sky1: #140f38; --sky2: #2a2056; --moon: #ffffff; --glow: rgba(143, 134, 255, 0.6); }
+.rules-night.n-moon { --sky1: #0d2558; --sky2: #24407e; --moon: #ffdc8a; --glow: rgba(255, 200, 96, 0.6); --r: 30%; }
+.rules-night.n-fog { --sky1: #56527a; --sky2: #67638a; --moon: #d8d8e8; --glow: rgba(176, 170, 200, 0.6);
+  background:
+    linear-gradient(180deg, transparent 58%, rgba(232, 228, 244, 0.5) 60% 72%, transparent 74%, rgba(232, 228, 244, 0.35) 78% 88%, transparent 90%),
+    radial-gradient(circle at 50% 44%, var(--moon) 0 22%, var(--glow) 26%, transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2)); }
+.rules-night.n-parade { --sky1: #3a0a1c; --sky2: #5a1830; --moon: #ff4a2a; --glow: rgba(255, 58, 42, 0.65); }
+.rules-night.n-fox { --sky1: #06303c; --sky2: #0f4a54; --moon: #d0fff4; --glow: rgba(64, 224, 208, 0.6);
+  background:
+    radial-gradient(ellipse 9% 15% at 24% 80%, #7af0ff 0 60%, transparent 100%),
+    radial-gradient(ellipse 8% 13% at 76% 84%, #7af0ff 0 60%, transparent 100%),
+    radial-gradient(circle at 50% 44%, var(--moon) 0 22%, var(--glow) 26%, transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2)); }
 /* a key cap, for the controls */
 .rules-key {
   flex: none; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px;

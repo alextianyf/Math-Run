@@ -4,7 +4,7 @@
 import * as ui from '../ui/ui.js';
 import { RANKS } from '../difficulty/adaptive.js';
 import { MAX_HEARTS } from './state.js';
-import { SKILLS } from './powers.js';
+import { SKILLS, NIGHTS } from './powers.js';
 import { $ } from './helpers.js';
 
 // what each rank unlocks, by operation, as shown on the problems
@@ -16,6 +16,9 @@ function render() {
   // the four skills, each with its seal in the colour it glows when ready
   const skills = Object.entries(SKILLS).map(([id, s]) => `<li style="--sk:#${s.color.toString(16).padStart(6, '0')}"><span class="rules-skill">${s.ch}</span>
     <div><b>${ui.t(`sk_${id}`)}</b><small>${ui.t(`skd_${id}`)}</small></div></li>`).join('');
+  // the nights, in the order the run meets them, each with a little moon in its sky
+  const nights = Object.keys(NIGHTS).map((id) => `<li><span class="rules-night n-${id}"></span>
+    <div><b>${ui.t(`ev_${id}`)}</b><small>${ui.t(`evd_${id}`)}</small></div></li>`).join('');
   // the keys: send, skill, pause (on a touch screen the buttons do the same)
   const keys = [[ui.t('rulesKeyCap1'), 1], ['F', 2], ['Esc', 3]].map(([cap, i]) => `<li><kbd class="rules-key">${cap}</kbd>
     <div><b>${ui.t(`rulesKeyN${i}`)}</b><small>${ui.t(`rulesKeys${i}`)}</small></div></li>`).join('');
@@ -28,7 +31,8 @@ function render() {
       <li>${ui.t('rulesRanks2')}</li><li>${ui.t('rulesRanks3')}</li><li>${ui.t('rulesRanks4')}</li></ul></section>`,
     section('rulesScoreT', ['rulesScore1', 'rulesScore2', 'rulesScore3', 'rulesScore4']),
     `<section><h3>${ui.t('rulesSkillsT')}</h3><p>${ui.t('rulesSkills1')}</p><ol class="rules-ranks rules-skills">${skills}</ol><ul>
-      <li>${ui.t('rulesSkills2')}</li><li>${ui.t('rulesSkills3')}</li><li>${ui.t('rulesSkills4')}</li></ul></section>`,
+      <li>${ui.t('rulesSkills2')}</li><li>${ui.t('rulesSkills4')}</li></ul></section>`,
+    `<section><h3>${ui.t('rulesNightsT')}</h3><p>${ui.t('rulesNights1')}</p><ol class="rules-ranks rules-nights">${nights}</ol></section>`,
     section('rulesFairT', ['rulesFair1', 'rulesFair2', 'rulesFair3']),
   ].join('');
 }
