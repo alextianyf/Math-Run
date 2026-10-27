@@ -902,28 +902,47 @@ body.paused #labels { visibility: hidden; }
 .collection-list li.locked > div > b { color: var(--dim); }
 .collection-list small.progress { display: block; height: 4px; margin-top: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .collection-list small.progress i { display: block; height: 100%; background: linear-gradient(90deg, #b9781f, var(--gold)); }
-/* the screens opened from the title tiles hang like a scroll: wooden rods with gold
-   caps top and bottom, a gold-lined mounting; it unrolls downwards when it opens and
-   rolls back up when it closes (--roll: how much of it is still rolled up) */
+/* the screens opened from the title tiles hang like a scroll (kakejiku): a brocade
+   mounting — wider bands top and bottom — around a dark silk panel, turned wooden
+   rods with grain and gilt end caps; it unrolls downwards when it opens and rolls
+   back up when it closes (--roll: how much of it is still rolled up) */
 @property --roll { syntax: '<length-percentage>'; inherits: true; initial-value: 0%; }
 .card.scroll {
-  position: relative; border-radius: 6px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 5px rgba(10, 6, 26, 0.55), inset 0 0 0 6px rgba(246, 201, 91, 0.35);
-  clip-path: inset(-30px -30px var(--roll) -30px);
+  position: relative; border-radius: 3px;
+  border: solid transparent; border-width: 28px 12px 32px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 5px) padding-box,
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(120, 100, 200, 0.12), transparent 70%) padding-box,
+    linear-gradient(180deg, #1d1642, #120d2c) padding-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Crect width='18' height='18' fill='%23301f55'/%3E%3Cpath d='M9 1.5 16.5 9 9 16.5 1.5 9Z' fill='none' stroke='%23d9a94a' stroke-opacity='.42'/%3E%3Ccircle cx='9' cy='9' r='1.6' fill='%23f0c870' fill-opacity='.55'/%3E%3Ccircle cx='0' cy='0' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='18' cy='0' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='0' cy='18' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='18' cy='18' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3C/svg%3E") border-box;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(246, 201, 91, 0.5),              /* a gilt line round the silk */
+    inset 0 12px 14px -10px rgba(0, 0, 0, 0.7),           /* the silk curls in under the rods */
+    inset 0 -12px 14px -10px rgba(0, 0, 0, 0.6);
+  /* measured on the padding box, like the bottom rod's offset, so the rod rides the edge */
+  clip-path: inset(-40px -40px calc(var(--roll) - 40px) -40px) padding-box;
   animation: unroll 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+/* the rods: a turned cylinder (dark at the edges, a sheen along the top), wood grain,
+   and gilt caps with a collar */
 .scroll::before, .scroll::after {
-  content: ""; position: absolute; z-index: 5; left: -14px; right: -14px; height: 16px; border-radius: 8px; pointer-events: none;
+  content: ""; position: absolute; z-index: 5; left: -27px; right: -27px; height: 20px; border-radius: 10px; pointer-events: none;
   background:
-    linear-gradient(90deg, #f0c870 0 12px, #8a5a22 12px 14px, transparent 14px calc(100% - 14px), #8a5a22 calc(100% - 14px) calc(100% - 12px), #f0c870 calc(100% - 12px)),
-    linear-gradient(180deg, #9a5a2c, #5a2c10 55%, #2e1406);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 18%, rgba(255, 236, 200, 0.45) 30%, rgba(255, 255, 255, 0) 44%) 16px 0 / calc(100% - 32px) 100% no-repeat,
+    linear-gradient(180deg, #fff4c8, #f0c870 28%, #b07a2a 62%, #6a420e 85%, #c89848) 0 0 / 16px 100% no-repeat,
+    linear-gradient(180deg, #fff4c8, #f0c870 28%, #b07a2a 62%, #6a420e 85%, #c89848) 100% 0 / 16px 100% no-repeat,
+    linear-gradient(90deg, transparent 15px, rgba(40, 20, 4, 0.9) 15px 17px, transparent 17px calc(100% - 17px), rgba(40, 20, 4, 0.9) calc(100% - 17px) calc(100% - 15px), transparent calc(100% - 15px)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 6px, rgba(255, 210, 160, 0.07) 6px 8px, transparent 8px 15px),
+    linear-gradient(180deg, #2a1206 0%, #8a4e26 24%, #a8683a 34%, #6a3618 58%, #3a1a08 82%, #1a0a02 100%);
+  box-shadow: 0 7px 12px rgba(0, 0, 0, 0.55), 0 2px 3px rgba(0, 0, 0, 0.5);
 }
-.scroll::before { top: -9px; }
-.scroll::after { bottom: calc(var(--roll) - 9px); }
+.scroll::before { top: -34px; }
+.scroll::after { bottom: calc(var(--roll) - 38px); }
 .card.scroll.rolling-up { animation: rollUp 0.38s cubic-bezier(0.5, 0, 0.8, 0.4) both; }
-@keyframes unroll { from { --roll: calc(100% - 8px); } to { --roll: 0%; } }
-@keyframes rollUp { from { --roll: 0%; } to { --roll: calc(100% - 8px); } }
+@keyframes unroll { from { --roll: 100%; } to { --roll: 0%; } }
+@keyframes rollUp { from { --roll: 0%; } to { --roll: 100%; } }
 @media (prefers-reduced-motion: reduce) { .card.scroll { animation: none; } }
 
 /* the result card (own or from a shared link): a talisman-paper card */
