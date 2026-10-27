@@ -80,7 +80,7 @@ function stepNight(dt) {
 // The seal charges mostly by banishing yokai, and slowly with time; full, it offers
 // one skill, picked at random.
 // (about ten banished yokai fill it; the answers stay the heart of the game)
-const CHARGE_PER_KILL = 0.1, CHARGE_PER_SECOND = 1 / 150;
+const CHARGE_PER_KILL = 0.12, CHARGE_PER_SECOND = 1 / 150;
 // each skill has its own colour: the seal turns that colour when it is ready
 export const SKILLS = {
   freeze: { ch: '停', color: 0x6fd0ff },        // time seal (ice blue): every yokai stands still

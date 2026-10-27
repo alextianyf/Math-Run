@@ -21,7 +21,7 @@ function resetRun() {
   clearEnemies();
   endCapture();
   Object.assign(S, {
-    hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, wave: 1,
+    hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0,
     spawnTimer: 1.2, pendingBoss: false, trialHold: 0, cooldown: 0, invuln: 0,
     ai: { reads: 0, fixed: 0, unclear: 0 },
   });

@@ -12,7 +12,7 @@ export const S = {
   introT: 0, caughtT: 0,           // time since the run's intro / the capture began
   speed: 3,                        // how fast the hero runs (and the world scrolls)
   hearts: MAX_HEARTS, score: 0, distance: 0, banished: 0,
-  combo: 0, maxCombo: 0, wave: 1,
+  combo: 0, maxCombo: 0,
   spawnTimer: 0,                   // seconds until the next yokai may appear
   pendingBoss: false,              // a rank trial is due
   trialHold: 0,                    // seconds to wait before it may start

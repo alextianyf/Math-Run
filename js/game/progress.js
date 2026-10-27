@@ -1,4 +1,4 @@
-// progress.js — keeping score: points, hearts, "wave" beats, the rating and the
+// progress.js — keeping score: points, hearts, the rating and the
 // rank (via the director), and the saved records.
 import { RANKS } from '../difficulty/adaptive.js';
 import { sfx, setTempo } from '../ui/audio.js';
@@ -8,7 +8,6 @@ import { director } from './stage.js';
 import { emit } from './events.js';
 
 const HEAL_STREAK = 8;        // this many right in a row wins a heart back
-const KILLS_PER_WAVE = 6;     // a "wave" beat (banner + chime) every this many yokai banished
 
 export function addScore(n) {
   S.score += n;
@@ -42,16 +41,8 @@ export function heal(announce) {
   if (announce) ui.banner(ui.t('heal'), 'heal', 1);
 }
 
-// every few yokai banished: a "wave" beat, a banner and a chime to mark progress
-// (how hard and how fast is the director's business, not the wave's)
 export function advance(kills) {
   S.banished += kills;
-  const wave = 1 + Math.floor(S.banished / KILLS_PER_WAVE);
-  if (wave > S.wave) {
-    S.wave = wave;
-    ui.banner(ui.t('wave', { n: wave }), 'wave', 1);
-    sfx.wave();
-  }
 }
 
 // the rank trial was passed: promotion, a heart back, and maybe a new best rank

@@ -188,7 +188,7 @@ export const sfx = {
 };
 
 /* ---------- background loop ---------- */
-// 8-step pattern: taiko accents + sparse koto notes, tempo rises with the wave
+// 8-step pattern: taiko accents + sparse koto notes, tempo rises with the rank
 const TAIKO = [1, 0, 0, 0.5, 0.8, 0, 0.4, 0];
 
 function schedule() {

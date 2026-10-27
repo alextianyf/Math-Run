@@ -182,7 +182,7 @@ export function popup(text, x, y, cls = '') {
 
 let bannerTimer = 0, bannerLevel = 0, bannerNext = null;
 // level: a banner never cuts off a more important one still on screen
-// (2 promotion / rank trial · 1 wave / heal · 0 the rest); a level-1 banner
+// (2 promotion / rank trial / finisher · 1 heal / night / skill · 0 the rest); a level-1 banner
 // waits its turn, a passing one (multi-kill) is simply dropped.
 // html: markup we build ourselves (never user text); ms: how long it stays
 export function banner(text, cls = '', level = 0, { html = null, ms = 1500 } = {}) {

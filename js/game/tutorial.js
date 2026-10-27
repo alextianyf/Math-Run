@@ -151,7 +151,7 @@ export async function finishTutorial() {
   if (S.tut !== T) return;                  // the run was left meanwhile
   S.tut = null;
   coach.show(false);
-  Object.assign(S, { score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, wave: 1, spawnTimer: 0.4, ai: { reads: 0, fixed: 0, unclear: 0 } });
+  Object.assign(S, { score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, spawnTimer: 0.4, ai: { reads: 0, fixed: 0, unclear: 0 } });
   ui.setScore(0);
   ui.setDistance(0);
   ui.setCombo(0);
