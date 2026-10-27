@@ -70,8 +70,9 @@ export function modelRenderer() {
 }
 
 // onArm(ms) fires when the submit countdown starts, onDisarm() when it's cancelled
-// onInk(has) fires when the talisman goes from blank to written or back
-export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk } = {}) {
+// onInk(has) fires when the talisman goes from blank to written or back; while
+// holdAuto() is true a resting pen sends nothing (only send() does)
+export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, holdAuto } = {}) {
   const ctx = canvas.getContext('2d');
   const modelCanvas = document.createElement('canvas');
   modelCanvas.width = modelCanvas.height = MODEL_SIZE;
@@ -141,6 +142,7 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk } 
     current = null;
     const wait = WAITS[pointerType][strokes.length > 1 ? 1 : 0];
     endedAt = performance.now(); endWait = wait;
+    if (holdAuto?.()) return;
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => { idleTimer = 0; onFinish?.(); }, wait);
     onArm?.(wait);

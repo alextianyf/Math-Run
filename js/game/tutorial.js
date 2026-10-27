@@ -1,8 +1,8 @@
 // tutorial.js — the opening tutorial, played inside the real run (every Start from
 // the title; never on "Run again"). The first yokai drifts in and the game pauses
 // on it. The coach spotlights the yokai, its equation, then the talisman (with a
-// writing demo) and waits for a correct answer — wrong answers are coached, not
-// punished. Then it explains hearts, asks "got it?", and counts the run in: 3, 2, 1.
+// writing demo), then the seal that sends it, and waits for a correct answer —
+// wrong answers are coached, not punished. Then it explains hearts, asks "got it?", and counts the run in: 3, 2, 1.
 import * as THREE from 'three';
 import { createCoach } from '../ui/coach.js';
 import { sfx } from '../ui/audio.js';
@@ -40,7 +40,7 @@ function tagSpot() {
 const elSpot = (id, p = 10) => () => padded($(id).getBoundingClientRect(), p);
 
 /* ---------- the steps ---------- */
-// approach → yokai → equation → write → flying → banished → nice → danger → ready → countdown
+// approach → yokai → equation → write → send → flying → banished → nice → danger → ready → countdown
 export function startTutorial() {
   S.tut = { step: 'approach', frozen: false, e: null, misses: 0, timer: 0 };
   coach.show(true);
@@ -69,6 +69,12 @@ function tutStep(step) {
     coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite'), buttons: [skip] });
     coach.demo(true, () => $('pad').getBoundingClientRect());
     pad.setEnabled(true);
+  } else if (step === 'send') {
+    // the pen has rested: the seal pulses (the bubble stays off the written digit)
+    coach.demo(false);
+    coach.focus(elSpot('talisman', 12), { dim: false });
+    $('talisman').classList.add('teach');
+    coach.say({ title: ui.t('tutSendT'), text: ui.t('tutSend'), buttons: [skip] });
   } else if (step === 'nice') {
     coach.focus(null, { dim: false });
     coach.say({ title: ui.t('tutNiceT'), text: ui.t('tutNice'), buttons: next('danger') });
@@ -92,6 +98,11 @@ export function updateTutorial(dt) {
   const T = S.tut;
   if (T.step === 'approach' && T.e && T.e.z >= TUT_FREEZE_Z) T.frozen = true;   // the parade halts…
   if (T.step === 'approach' && T.frozen && (S.mode === 'playing' || S.introT > 1.2)) tutStep('yokai');   // …and as the camera lands, the coach takes over
+  // written and resting a moment: on to the seal (writing again keeps it waiting)
+  if (T.step === 'write') {
+    T.timer = pad.hasInk() && !pad.writing ? T.timer + dt : 0;
+    if (T.timer > 0.45) tutStep('send');
+  }
   if (T.step === 'flying' && T.e.dying) { T.step = 'banished'; T.timer = 0.9; }   // let the seal and sparks play first
   if (T.step === 'banished' && (T.timer -= dt) <= 0) tutStep('nice');
   coach.update(dt);
@@ -105,7 +116,8 @@ export function tutorialWriting() {
 // the talisman was read during the tutorial
 export function tutorialAnswer({ dec, result, pct, paper }) {
   const T = S.tut;
-  if (T.step !== 'write') return;
+  if (T.step !== 'write' && T.step !== 'send') return;
+  $('talisman').classList.remove('teach');
   if (dec.kind === 'hit') {
     ui.showAI(result.img28, result.probs, { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     pad.setEnabled(false);
@@ -119,6 +131,12 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
   ui.showAI(result.img28, result.probs, { text: ui.t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
   ui.talismanState('shake');
   sfx.unclear();
+  if (T.step === 'send') {                  // back to writing, with the coaching below
+    T.step = 'write';
+    T.timer = 0;
+    coach.focus(elSpot('talisman', 12));
+    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite'), buttons: [{ label: ui.t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() }] });
+  }
   if (dec.kind === 'unclear') coach.nudge(ui.t('tutUnclear'));
   else {
     T.misses++;
@@ -129,7 +147,7 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
 
 function replayTutorial() {
   for (const e of [...S.enemies]) removeEnemy(e);
-  Object.assign(S.tut, { step: 'approach', frozen: false, misses: 0 });
+  Object.assign(S.tut, { step: 'approach', frozen: false, misses: 0, timer: 0 });
   coach.hush();
   coach.focus(null, { dim: false });
   S.tut.e = spawn(false, TUT_YOKAI);
@@ -141,6 +159,7 @@ export async function finishTutorial() {
   if (!T || T.step === 'countdown') return;
   T.step = 'countdown';
   T.frozen = false;
+  $('talisman').classList.remove('teach');
   coach.hush();
   coach.demo(false);
   coach.focus(null, { dim: false });

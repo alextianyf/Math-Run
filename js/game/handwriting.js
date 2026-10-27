@@ -23,6 +23,7 @@ export const pad = createPad($('pad'), {
   onArm: (ms) => ui.armTalisman(ms),
   onDisarm: () => ui.disarmTalisman(),
   onInk: (has) => $('talisman').classList.toggle('inked', has),
+  holdAuto: () => !!S.tut,                     // the tutorial teaches the seal: it waits for it
 });
 // the seal at the talisman's foot (or Space) sends it at once
 $('pad-send').addEventListener('click', (e) => { e.currentTarget.blur(); pad.send(); });
