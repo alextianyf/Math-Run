@@ -902,6 +902,30 @@ body.paused #labels { visibility: hidden; }
 .collection-list li.locked > div > b { color: var(--dim); }
 .collection-list small.progress { display: block; height: 4px; margin-top: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .collection-list small.progress i { display: block; height: 100%; background: linear-gradient(90deg, #b9781f, var(--gold)); }
+/* the screens opened from the title tiles hang like a scroll: wooden rods with gold
+   caps top and bottom, a gold-lined mounting; it unrolls downwards when it opens and
+   rolls back up when it closes (--roll: how much of it is still rolled up) */
+@property --roll { syntax: '<length-percentage>'; inherits: true; initial-value: 0%; }
+.card.scroll {
+  position: relative; border-radius: 6px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 5px rgba(10, 6, 26, 0.55), inset 0 0 0 6px rgba(246, 201, 91, 0.35);
+  clip-path: inset(-30px -30px var(--roll) -30px);
+  animation: unroll 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.scroll::before, .scroll::after {
+  content: ""; position: absolute; z-index: 5; left: -14px; right: -14px; height: 16px; border-radius: 8px; pointer-events: none;
+  background:
+    linear-gradient(90deg, #f0c870 0 12px, #8a5a22 12px 14px, transparent 14px calc(100% - 14px), #8a5a22 calc(100% - 14px) calc(100% - 12px), #f0c870 calc(100% - 12px)),
+    linear-gradient(180deg, #9a5a2c, #5a2c10 55%, #2e1406);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+}
+.scroll::before { top: -9px; }
+.scroll::after { bottom: calc(var(--roll) - 9px); }
+.card.scroll.rolling-up { animation: rollUp 0.38s cubic-bezier(0.5, 0, 0.8, 0.4) both; }
+@keyframes unroll { from { --roll: calc(100% - 8px); } to { --roll: 0%; } }
+@keyframes rollUp { from { --roll: 0%; } to { --roll: calc(100% - 8px); } }
+@media (prefers-reduced-motion: reduce) { .card.scroll { animation: none; } }
+
 /* the result card (own or from a shared link): a talisman-paper card */
 #ov-card { z-index: 32; background: rgba(10, 6, 26, 0.7); }
 .share-panel { width: min(400px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 22px; text-align: center;

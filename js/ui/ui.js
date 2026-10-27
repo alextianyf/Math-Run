@@ -291,4 +291,14 @@ export function resetAI() {
 export function setAIMeta(text, title = '') { $('ai-meta').textContent = text; $('ai-meta').title = title; }
 
 /* ===================== overlays ===================== */
-export function show(id, v = true) { $(id).hidden = !v; }
+// show or hide an overlay; a scroll card (.scroll) rolls itself up before it goes
+export function show(id, v = true) {
+  const el = $(id);
+  const scroll = el.querySelector(':scope > .scroll');
+  scroll?.classList.remove('rolling-up');
+  if (v || el.hidden || !scroll || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.hidden = !v; return; }
+  scroll.classList.add('rolling-up');
+  const done = () => { if (scroll.classList.contains('rolling-up')) { scroll.classList.remove('rolling-up'); el.hidden = true; } };
+  scroll.addEventListener('animationend', done, { once: true });
+  setTimeout(done, 450);                     // in case the animation never runs
+}
