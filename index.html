@@ -211,11 +211,16 @@
         </button>
         <!-- whether the handwriting AI is ready: what the Start button waits for -->
         <div id="ai-chip" class="status-ai"><i class="dot"></i><span id="ai-status" data-i18n="loading"></span></div>
-        <!-- everything else, as three tiles (line icons, so they don't read as rank seals): achievements & bestiary, how to play, share the best run -->
+        <!-- everything else, as four tiles (line icons, so they don't read as rank seals): what you
+             have collected on top (achievements, bestiary), then how to play and sharing the best run -->
         <nav class="title-tiles">
-          <button id="btn-collection" class="tile" data-i18n-label="collection">
+          <button id="btn-achievements" class="tile" data-i18n-label="tabAchievements">
             <svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="5.2" /><path d="m12 6.6.8 1.7 1.8.2-1.3 1.2.4 1.8-1.7-.9-1.7.9.4-1.8-1.3-1.2 1.8-.2z" /><path d="M8.6 13.2 7.2 21l4.8-2.6 4.8 2.6-1.4-7.8" /></svg>
-            <span class="tile-text"><span data-i18n="collectionShort"></span><small id="collection-count"></small></span>
+            <span class="tile-text"><span data-i18n="tabAchievements"></span><small id="collection-count"></small></span>
+          </button>
+          <button id="btn-bestiary" class="tile" data-i18n-label="tabBestiary">
+            <svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 8.6 5.6 3.5l4 3M16.6 8.6l1.8-5.1-4 3" /><circle cx="12" cy="13.5" r="6.5" /><path d="M9 12.6h1.2M13.8 12.6H15M9.6 16.6q2.4 1.4 4.8 0" /></svg>
+            <span class="tile-text"><span data-i18n="tabBestiary"></span><small id="bestiary-count"></small></span>
           </button>
           <button id="btn-rules" class="tile" data-i18n-label="rulesTitle">
             <svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h10.5a2 2 0 0 1 2 2v14H8.5a2 2 0 0 1-2-2z" /><path d="M6.5 18a2 2 0 0 1 2-2H19" /><path d="M10 8h5.5M10 11.2h5.5" /></svg>
@@ -287,12 +292,8 @@
     <section id="ov-collection" class="overlay" hidden>
       <div class="card collection-card">
         <div class="collection-head">
-          <h2 data-i18n="collectionTitle"></h2>
+          <h2 id="collection-title"></h2>
           <button id="btn-collection-close" class="icon-btn" data-i18n-label="close">✕</button>
-        </div>
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-tab="achievement-list" role="tab" data-i18n="tabAchievements"></button>
-          <button class="tab" data-tab="bestiary-pane" role="tab" data-i18n="tabBestiary"></button>
         </div>
         <ul id="achievement-list" class="collection-list"></ul>
         <div id="bestiary-pane" class="bestiary-pane" hidden>

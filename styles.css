@@ -537,7 +537,7 @@ body.ai-open #ai-panel { display: flex; }
 .btn.start:disabled::after { display: none; }
 @keyframes sheen { 0%, 62% { transform: translateX(-110%); } 100% { transform: translateX(110%); } }
 
-.title-tiles { margin-top: 12px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }   /* one row of three tiles */
+.title-tiles { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }   /* two by two: collections on top */
 .tile {
   display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px 8px 10px; text-align: left;
   border-radius: 14px; border: 1px solid rgba(246, 201, 91, 0.28); background: rgba(20, 14, 46, 0.55);
@@ -720,8 +720,7 @@ body.ai-open #ai-panel { display: flex; }
   .title-card .btn { width: 100%; }
   .title-status { flex-wrap: wrap; }
   .title-tiles { gap: 8px; }
-  .tile { flex-direction: column; justify-content: center; gap: 6px; padding: 10px 6px; text-align: center; font-size: clamp(12px, 3.8vw, 14px); }
-  .tile-text { align-items: center; }
+  .tile { min-height: 50px; padding: 7px 10px 7px 8px; font-size: clamp(12.5px, 3.8vw, 14px); }
   .tagline { font-size: 14px; }
   .score { font-size: 24px; }
   /* narrow screens: the buttons on top, score and distance under them, so the bar fits */
@@ -892,9 +891,6 @@ body.paused #labels { visibility: hidden; }
 #ov-collection { z-index: 30; background: rgba(10, 6, 26, 0.6); }
 .collection-head { display: flex; align-items: center; justify-content: space-between; }
 .collection-head h2 { margin: 0; font: 700 26px/1.2 var(--font-accent); letter-spacing: 0.08em; }
-.tabs { display: flex; gap: 6px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
-.tab { flex: 1; padding: 8px; border: 0; border-radius: 9px; background: none; color: var(--dim); font: 600 14px/1 var(--font-ui); cursor: pointer; }
-.tab.active { background: rgba(246, 201, 91, 0.16); color: var(--gold); }
 .collection-list { margin: 0; padding: 0 4px 0 0; list-style: none; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; }
 .collection-list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
 .collection-list li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }

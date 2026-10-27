@@ -1,6 +1,7 @@
-// collection.js — the Collection screen: achievements (unearned ones greyed out, with
-// progress where it counts up), the yokai bestiary, and a transfer code that moves
-// everything saved in this browser to another device — no server needed.
+// collection.js — the Achievements screen (unearned ones greyed out, with progress
+// where it counts up, and a transfer code that moves everything saved in this browser
+// to another device — no server needed) and the yokai Bestiary. Each has its own tile
+// on the title; they share one overlay.
 import * as ui from '../ui/ui.js';
 import { ACHIEVEMENTS, YOKAI_TYPES, collection, progressOf, onUnlock } from './achievements.js';
 import { showYokai, hideYokai } from './bestiaryView.js';
@@ -12,7 +13,9 @@ const CODE_PREFIX = 'MR1.';
 const day = (time) => new Date(time).toLocaleDateString(ui.getLang() === 'zh' ? 'zh-CN' : 'en');
 
 export function refreshCollectionChip() {
-  $('collection-count').textContent = `${Object.keys(collection().earned).length}/${ACHIEVEMENTS.length}`;
+  const { earned, seen } = collection();
+  $('collection-count').textContent = `${Object.keys(earned).length}/${ACHIEVEMENTS.length}`;
+  $('bestiary-count').textContent = `${YOKAI_TYPES.filter((t) => seen[t]).length}/${YOKAI_TYPES.length}`;
 }
 
 function renderAchievements() {
@@ -77,13 +80,21 @@ function importCode(code) {
 }
 
 /* ---------- the screen ---------- */
-export function openCollection() {
-  renderAchievements();
-  renderBestiary();
-  if (!$('bestiary-pane').hidden) openBestiary();
-  $('transfer-out').value = exportCode();
-  $('transfer-in').placeholder = ui.t('transferPaste');
-  $('transfer-msg').textContent = '';
+// which: 'achievements' (with the transfer code) or 'bestiary'
+export function openCollection(which) {
+  const bestiary = which === 'bestiary';
+  $('collection-title').textContent = ui.t(bestiary ? 'tabBestiary' : 'tabAchievements');
+  $('achievement-list').hidden = bestiary;
+  $('bestiary-pane').hidden = !bestiary;
+  document.querySelector('#ov-collection .transfer').hidden = bestiary;
+  if (bestiary) openBestiary();
+  else {
+    hideYokai();
+    renderAchievements();
+    $('transfer-out').value = exportCode();
+    $('transfer-in').placeholder = ui.t('transferPaste');
+    $('transfer-msg').textContent = '';
+  }
   ui.show('ov-collection');
 }
 
@@ -94,17 +105,9 @@ export function initCollection() {
     ui.achievementToast(a.icon, ui.t('unlocked'), ui.t(`a_${a.id}`));
     refreshCollectionChip();
   });
-  $('btn-collection').addEventListener('click', openCollection);
+  $('btn-achievements').addEventListener('click', () => openCollection('achievements'));
+  $('btn-bestiary').addEventListener('click', () => openCollection('bestiary'));
   $('btn-collection-close').addEventListener('click', () => { hideYokai(); ui.show('ov-collection', false); });
-  for (const tab of document.querySelectorAll('#ov-collection .tab')) {
-    tab.addEventListener('click', () => {
-      for (const other of document.querySelectorAll('#ov-collection .tab')) {
-        other.classList.toggle('active', other === tab);
-        $(other.dataset.tab).hidden = other !== tab;
-      }
-      if (tab.dataset.tab === 'bestiary-pane') openBestiary(); else hideYokai();
-    });
-  }
   const pick = (e) => { const li = e.target.closest('li[data-type]'); if (li) view(li.dataset.type); };
   $('bestiary-list').addEventListener('click', pick);
   $('bestiary-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });

@@ -123,7 +123,7 @@ function buildOnibi(body, seed) {
   body.add(halo);
   const sparks = [0, 1].map(() => { const s = glowSprite(glow(0x9fe4ff, 1.4), 0.2, 1); body.add(s); return s; });
   return (t) => {
-    flame.material.uniforms.time.value = t;
+    if (flame.material.uniforms) flame.material.uniforms.time.value = t;   // a bestiary silhouette has a plain material
     halo.material.opacity = 0.3 + 0.08 * Math.sin(t * 6 + seed);
     sparks.forEach((s, i) => {
       const a = t * 2.2 + i * Math.PI + seed;
@@ -333,7 +333,7 @@ function buildKitsunebi(body, seed) {
   body.add(glowSprite(0x7a5aff, 2, 0.35));
   const wisps = [0, 1, 2].map(() => { const w = glowSprite(glow(0xc4b0ff, 1.4), 0.22, 1); body.add(w); return w; });
   return (t) => {
-    for (const f of flames) f.material.uniforms.time.value = t;
+    for (const f of flames) if (f.material.uniforms) f.material.uniforms.time.value = t;
     mask.rotation.z = Math.sin(t * 1.4 + seed) * 0.12;
     mask.rotation.y = Math.sin(t * 0.7 + seed) * 0.3;
     mask.position.y = Math.sin(t * 3 + seed) * 0.04;
