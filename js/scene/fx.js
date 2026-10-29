@@ -54,20 +54,25 @@ export function createFx(scene, camera) {
   points.frustumCulled = false;
   scene.add(points);
 
-  const cA = new THREE.Color(), cB = new THREE.Color();
+  const cA = new THREE.Color();
+  const cB = new THREE.Color();
   const setColor = (c, v) => (v && v.isColor ? c.copy(v) : c.set(v));
 
   function emit(p, {
     count = 20, color = 0xffd36b, color2 = color, bright = 1.6, speed = 4, life: l = 0.7, size: s = 0.25,
     gravity = -4, up = 0.6, spread = 1, dragK = 1.6, dir = null,
   } = {}) {
-    setColor(cA, color); setColor(cB, color2);
+    setColor(cA, color);
+    setColor(cB, color2);
     for (let n = 0; n < count; n++) {
-      const i = cursor; cursor = (cursor + 1) % MAX_PARTICLES;
+      const i = cursor;
+      cursor = (cursor + 1) % MAX_PARTICLES;
       pos[i * 3] = p.x + (Math.random() - 0.5) * 0.2 * spread;
       pos[i * 3 + 1] = p.y + (Math.random() - 0.5) * 0.2 * spread;
       pos[i * 3 + 2] = p.z + (Math.random() - 0.5) * 0.2 * spread;
-      const th = Math.random() * Math.PI * 2, u = Math.random() * 2 - 1, r = Math.sqrt(1 - u * u);
+      const th = Math.random() * Math.PI * 2;
+      const u = Math.random() * 2 - 1;
+      const r = Math.sqrt(1 - u * u);
       const v = speed * (0.35 + Math.random() * 0.65);
       vel[i * 3] = (dir ? dir.x : 0) + Math.cos(th) * r * v;
       vel[i * 3 + 1] = (dir ? dir.y : 0) + u * v + up * speed * 0.5;
@@ -85,11 +90,16 @@ export function createFx(scene, camera) {
 
   function updateParticles(dt) {
     for (let i = 0; i < MAX_PARTICLES; i++) {
-      if (life[i] <= 0) { alpha[i] = 0; continue; }
+      if (life[i] <= 0) {
+        alpha[i] = 0;
+        continue;
+      }
       life[i] -= dt;
       const k = Math.max(0, life[i] / maxLife[i]);
       const dk = Math.max(0, 1 - drag[i] * dt);
-      vel[i * 3] *= dk; vel[i * 3 + 1] = vel[i * 3 + 1] * dk + grav[i] * dt; vel[i * 3 + 2] *= dk;
+      vel[i * 3] *= dk;
+      vel[i * 3 + 1] = vel[i * 3 + 1] * dk + grav[i] * dt;
+      vel[i * 3 + 2] *= dk;
       pos[i * 3] += vel[i * 3] * dt;
       pos[i * 3 + 1] += vel[i * 3 + 1] * dt;
       pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
@@ -106,14 +116,36 @@ export function createFx(scene, camera) {
   // Every effect gets its own material (its colour and fade are its own) and frees
   // it when done. warmObjects() keeps one spare of each kind, so their shaders stay
   // compiled and no cast ever waits for the GPU to compile one.
-  const ringMat = (color) => new THREE.SpriteMaterial({ map: ringTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-  const haloMat = (color) => new THREE.SpriteMaterial({ map: glowTex(), color: glow(color, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-  const sealMat = (ch) => new THREE.SpriteMaterial({ map: sealTex(ch), transparent: true, depthTest: false, depthWrite: false });
+  const ringMat = (color) => new THREE.SpriteMaterial({
+    map: ringTex(),
+    color: glow(color, 1.6),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const haloMat = (color) => new THREE.SpriteMaterial({
+    map: glowTex(),
+    color: glow(color, 1.6),
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const sealMat = (ch) => new THREE.SpriteMaterial({
+    map: sealTex(ch),
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
   const circleMat = (color, bright) => new THREE.MeshBasicMaterial({
     map: magicCircleTex(), color: glow(color, bright), transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
   });
-  const paperMat = (texture) => new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true, fog: false });
+  const paperMat = (texture) => new THREE.MeshBasicMaterial({
+    map: texture,
+    side: THREE.DoubleSide,
+    transparent: true,
+    fog: false,
+  });
   const trailMat = (color) => new THREE.ShaderMaterial({
     uniforms: { color: { value: glow(color, 2.4) }, fade: { value: 1 } },
     vertexShader: 'attribute float ta; varying float vA; void main(){ vA = ta; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -141,9 +173,9 @@ export function createFx(scene, camera) {
   }
 
   // a glow that stays at one spot (the hero's back-light); its strength is set each frame
-  function aura(pos) {
+  function aura(at) {
     const s = new THREE.Sprite(haloMat(0xffc84a));
-    s.position.copy(pos);
+    s.position.copy(at);
     s.visible = false;
     scene.add(s);
     return {
@@ -188,7 +220,10 @@ export function createFx(scene, camera) {
       const e = 1 - Math.pow(1 - grow, 3);
       o.scale.setScalar(scale * (0.3 + 0.7 * e));
       if (ground) o.rotation.z = k * spin;
-      else { o.quaternion.copy(camera.quaternion); o.rotateZ(k * spin); }
+      else {
+        o.quaternion.copy(camera.quaternion);
+        o.rotateZ(k * spin);
+      }
       o.material.opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
     });
   }
@@ -212,16 +247,25 @@ export function createFx(scene, camera) {
   const talGeo = new THREE.PlaneGeometry(0.4, 0.6);
   const flights = [];
   const fading = [];
-  const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3(), cur = new THREE.Vector3();
-  const side = new THREE.Vector3(), tan = new THREE.Vector3(), view = new THREE.Vector3();
+  const p0 = new THREE.Vector3();
+  const p1 = new THREE.Vector3();
+  const p2 = new THREE.Vector3();
+  const cur = new THREE.Vector3();
+  const side = new THREE.Vector3();
+  const tan = new THREE.Vector3();
+  const view = new THREE.Vector3();
 
   function makeTrail(color) {
     const g = new THREE.BufferGeometry();
-    const tp = new Float32Array(TRAIL_N * 2 * 3), ta = new Float32Array(TRAIL_N * 2);
+    const tp = new Float32Array(TRAIL_N * 2 * 3);
+    const ta = new Float32Array(TRAIL_N * 2);
     g.setAttribute('position', new THREE.BufferAttribute(tp, 3));
     g.setAttribute('ta', new THREE.BufferAttribute(ta, 1));
     const idx = [];
-    for (let i = 0; i < TRAIL_N - 1; i++) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    for (let i = 0; i < TRAIL_N - 1; i++) {
+      const k = i * 2;
+      idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+    }
     g.setIndex(idx);
     const mesh = new THREE.Mesh(g, trailMat(color));
     mesh.frustumCulled = false;
@@ -233,14 +277,16 @@ export function createFx(scene, camera) {
     if (tr.hist.length > TRAIL_N) tr.hist.pop();
     const n = tr.hist.length;
     for (let i = 0; i < TRAIL_N; i++) {
-      const a = tr.hist[Math.min(i, n - 1)], b = tr.hist[Math.min(i + 1, n - 1)];
+      const a = tr.hist[Math.min(i, n - 1)];
+      const b = tr.hist[Math.min(i + 1, n - 1)];
       tan.subVectors(a, b);
       if (tan.lengthSq() < 1e-6) tan.set(0, 1, 0);
       view.subVectors(camera.position, a);
       side.crossVectors(tan, view).normalize().multiplyScalar(width * (1 - i / TRAIL_N));
       tr.tp.set([a.x + side.x, a.y + side.y, a.z + side.z, a.x - side.x, a.y - side.y, a.z - side.z], i * 6);
       const al = i < n ? Math.pow(1 - i / TRAIL_N, 1.5) : 0;
-      tr.ta[i * 2] = al; tr.ta[i * 2 + 1] = al;
+      tr.ta[i * 2] = al;
+      tr.ta[i * 2 + 1] = al;
     }
     tr.g.attributes.position.needsUpdate = true;
     tr.g.attributes.ta.needsUpdate = true;
@@ -248,7 +294,12 @@ export function createFx(scene, camera) {
 
   // texture: CanvasTexture shared by all talismans of one cast (ref-counted);
   // null flies a bare orb of foxfire instead of paper
-  function talisman(texture, from, getTarget, { dur = 0.34, side: bend = 0, lift = 1.5, onHit, color = 0xffc84a } = {}) {
+  function talisman(
+    texture,
+    from,
+    getTarget,
+    { dur = 0.34, side: bend = 0, lift = 1.5, onHit, color = 0xffc84a } = {}
+  ) {
     if (texture) texture.userData.refs = (texture.userData.refs || 0) + 1;
     const mesh = texture ? new THREE.Mesh(talGeo, paperMat(texture)) : new THREE.Object3D();
     const halo = new THREE.Sprite(haloMat(color));
@@ -256,7 +307,21 @@ export function createFx(scene, camera) {
     mesh.add(halo);
     mesh.position.copy(from);
     scene.add(mesh);
-    flights.push({ mesh, halo, texture, trail: makeTrail(color), from: from.clone(), getTarget, t: 0, dur, bend, lift, onHit, color, spin: (Math.random() - 0.5) * 10 });
+    flights.push({
+      mesh,
+      halo,
+      texture,
+      trail: makeTrail(color),
+      from: from.clone(),
+      getTarget,
+      t: 0,
+      dur,
+      bend,
+      lift,
+      onHit,
+      color,
+      spin: (Math.random() - 0.5) * 10,
+    });
   }
 
   function updateFlights(dt) {
@@ -290,7 +355,10 @@ export function createFx(scene, camera) {
       fd.k -= dt / 0.25;
       fd.trail.mesh.material.uniforms.fade.value = Math.max(0, fd.k);
       updateTrail(fd.trail, fd.head, 0.13);
-      if (fd.k <= 0) disposeTrail(fd.trail), fading.splice(i, 1);
+      if (fd.k <= 0) {
+        disposeTrail(fd.trail);
+        fading.splice(i, 1);
+      }
     }
   }
   /* ===================== lightning, pillars, barrier ===================== */
@@ -299,7 +367,16 @@ export function createFx(scene, camera) {
   const bA = new THREE.Vector3();
   function bolt(from, to, { color = 0xbfe6ff, dur = 0.32, width = 0.16, jag = 0.55, sparks = 26 } = {}) {
     bolts.push({ tr: makeTrail(color), from: from.clone(), to: to.clone(), t: 0, dur, width, jag, next: 0 });
-    emit(to, { count: sparks, color: 0xffffff, color2: color, bright: 2.4, speed: 6, life: 0.4, size: 0.22, gravity: -2 });
+    emit(to, {
+      count: sparks,
+      color: 0xffffff,
+      color2: color,
+      bright: 2.4,
+      speed: 6,
+      life: 0.4,
+      size: 0.22,
+      gravity: -2,
+    });
   }
   function shapeBolt(b) {
     const tr = b.tr;
@@ -309,12 +386,14 @@ export function createFx(scene, camera) {
       const j = Math.sin(Math.PI * k) * b.jag;
       bA.x += (Math.random() - 0.5) * j * 2;
       bA.z += (Math.random() - 0.5) * j;
-      const a = bA, w = b.width * (1 - 0.6 * k);
+      const a = bA;
+      const w = b.width * (1 - 0.6 * k);
       tan.set(0, 1, 0);
       view.subVectors(camera.position, a);
       side.crossVectors(tan, view).normalize().multiplyScalar(w);
       tr.tp.set([a.x + side.x, a.y + side.y, a.z + side.z, a.x - side.x, a.y - side.y, a.z - side.z], i * 6);
-      tr.ta[i * 2] = 1; tr.ta[i * 2 + 1] = 1;
+      tr.ta[i * 2] = 1;
+      tr.ta[i * 2 + 1] = 1;
     }
     tr.g.attributes.position.needsUpdate = true;
     tr.g.attributes.ta.needsUpdate = true;
@@ -323,10 +402,16 @@ export function createFx(scene, camera) {
     for (let i = bolts.length - 1; i >= 0; i--) {
       const b = bolts[i];
       b.t += dt / b.dur;
-      if ((b.next -= dt) <= 0) { shapeBolt(b); b.next = 0.045; }
+      if ((b.next -= dt) <= 0) {
+        shapeBolt(b);
+        b.next = 0.045;
+      }
       const flicker = b.t < 0.5 ? 1 : (1 - b.t) * 2 * (0.6 + Math.random() * 0.4);
       b.tr.mesh.material.uniforms.fade.value = Math.max(0, flicker) * 1.6;
-      if (b.t >= 1) { disposeTrail(b.tr); bolts.splice(i, 1); }
+      if (b.t >= 1) {
+        disposeTrail(b.tr);
+        bolts.splice(i, 1);
+      }
     }
   }
 
@@ -348,7 +433,13 @@ export function createFx(scene, camera) {
       o.rotation.y = k * 3;
       o.material.uniforms.fade.value = k < 0.5 ? 1 : 1 - (k - 0.5) / 0.5;
     });
-    magicCircle(new THREE.Vector3(p.x, 0.05, p.z), { color, scale: radius * 3.2, dur: dur * 1.2, ground: true, spin: 2 });
+    magicCircle(new THREE.Vector3(p.x, 0.05, p.z), {
+      color,
+      scale: radius * 3.2,
+      dur: dur * 1.2,
+      ground: true,
+      spin: 2,
+    });
   }
 
   // the barrier: a dome of light around a point, kept until dropped
@@ -382,7 +473,11 @@ export function createFx(scene, camera) {
       d.m.scale.setScalar(d.radius * (d.dropping ? 1 + (1 - d.k) * 0.6 : e) * (1 + d.flash * 0.15));
       d.m.material.uniforms.time.value = d.t;
       d.m.material.uniforms.fade.value = Math.max(0, d.k) * (1 + d.flash * 2);
-      if (d.dropping && d.k <= 0) { scene.remove(d.m); d.m.material.dispose(); domes.splice(i, 1); }
+      if (d.dropping && d.k <= 0) {
+        scene.remove(d.m);
+        d.m.material.dispose();
+        domes.splice(i, 1);
+      }
     }
   }
 
@@ -419,10 +514,16 @@ export function createFx(scene, camera) {
     },
     clear() {
       life.fill(0);
-      for (const f of flights.splice(0)) { scene.remove(f.mesh); disposeTrail(f.trail); }
+      for (const f of flights.splice(0)) {
+        scene.remove(f.mesh);
+        disposeTrail(f.trail);
+      }
       for (const fd of fading.splice(0)) disposeTrail(fd.trail);
       for (const b of bolts.splice(0)) disposeTrail(b.tr);
-      for (const d of domes.splice(0)) { scene.remove(d.m); d.m.material.dispose(); }
+      for (const d of domes.splice(0)) {
+        scene.remove(d.m);
+        d.m.material.dispose();
+      }
       for (const it of timed.splice(0)) scene.remove(it.obj);
     },
   };

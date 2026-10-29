@@ -6,8 +6,13 @@ import { NEAR, SPAN } from './shared.js';
 import { rand } from '../../core/math.js';
 
 export function buildParticles(scene, { count, area, size, color, additive, map = glowTex(), fall = 0, drift = 0 }) {
-  const base = new Float32Array(count * 3), pos = new Float32Array(count * 3), phase = new Float32Array(count);
-  for (let i = 0; i < count; i++) { base.set(area(i), i * 3); phase[i] = Math.random() * Math.PI * 2; }
+  const base = new Float32Array(count * 3);
+  const pos = new Float32Array(count * 3);
+  const phase = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    base.set(area(i), i * 3);
+    phase[i] = Math.random() * Math.PI * 2;
+  }
   pos.set(base);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -88,17 +93,27 @@ export function buildFogBanks(scene) {
   return {
     group,
     // 0..1 from the night's theme; the colour follows the mist
-    set amount(v) { amount = v; group.visible = v > 0.01; },
+    set amount(v) {
+      amount = v;
+      group.visible = v > 0.01;
+    },
     color: new THREE.Color(),
     step(dz, t) {
-      if (!group.visible) { for (const b of banks) { b.z += dz; if (b.z > NEAR) b.z -= SPAN; } return; }
+      if (!group.visible) {
+        for (const b of banks) {
+          b.z += dz;
+          if (b.z > NEAR) b.z -= SPAN;
+        }
+        return;
+      }
       for (const b of banks) {
         b.z += dz;
         if (b.z > NEAR) b.z -= SPAN;
         b.s.position.set(b.x + Math.sin(t * 0.07 + b.p) * 2.2, b.y + Math.sin(t * 0.13 + b.p * 2) * 0.25, b.z);
         b.s.material.rotation = b.p + t * b.spin;
         // fade in out of the distance, out again before it reaches the camera (z ≈ 6)
-        const near = THREE.MathUtils.smoothstep(b.z, -1, 4), far = THREE.MathUtils.smoothstep(b.z, -95, -70);
+        const near = THREE.MathUtils.smoothstep(b.z, -1, 4);
+        const far = THREE.MathUtils.smoothstep(b.z, -95, -70);
         b.s.material.opacity = amount * far * (1 - near);
         b.s.material.color.copy(this.color);
       }
@@ -112,11 +127,30 @@ export function buildFogBanks(scene) {
 export function buildFoxfire(scene) {
   const group = new THREE.Group();
   group.visible = false;
-  const flameMap = foxfireTex(), glowMap = glowTex();
+  const flameMap = foxfireTex();
+  const glowMap = glowTex();
   const wisps = [];
   for (let i = 0; i < 28; i++) {
-    const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameMap, color: glow(0x6ff6ff, 2.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, color: 0x22c8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+    const flame = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: flameMap,
+        color: glow(0x6ff6ff, 2.4),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+      })
+    );
+    const halo = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowMap,
+        color: 0x22c8ff,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        opacity: 0,
+      })
+    );
     const size = rand(0.8, 1.15);
     group.add(halo, flame);
     wisps.push({
@@ -126,16 +160,26 @@ export function buildFoxfire(scene) {
   }
   scene.add(group);
   let amount = 0;
-  const hide = (w, dz) => { w.z += dz; if (w.z > NEAR) w.z -= SPAN; };
+  const hide = (w, dz) => {
+    w.z += dz;
+    if (w.z > NEAR) w.z -= SPAN;
+  };
   return {
     // 0..1 from the night's theme
-    set amount(v) { amount = v; group.visible = v > 0.01; },
+    set amount(v) {
+      amount = v;
+      group.visible = v > 0.01;
+    },
     step(dz, t) {
-      if (!group.visible) { for (const w of wisps) hide(w, dz); return; }
+      if (!group.visible) {
+        for (const w of wisps) hide(w, dz);
+        return;
+      }
       for (const w of wisps) {
         hide(w, dz);
         const flick = 1 + Math.sin(t * 11 + w.p) * 0.08 + Math.sin(t * 17 + w.p * 3) * 0.06;
-        const x = w.x + Math.sin(t * 0.5 + w.p) * 0.6, y = w.y + Math.sin(t * 1.3 + w.p * 2) * 0.25;
+        const x = w.x + Math.sin(t * 0.5 + w.p) * 0.6;
+        const y = w.y + Math.sin(t * 1.3 + w.p * 2) * 0.25;
         w.flame.position.set(x, y, w.z);
         w.halo.position.set(x, y - w.size * 0.2, w.z);
         w.flame.scale.set(w.size * flick, w.size * 2 * (2 - flick), 1);

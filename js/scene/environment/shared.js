@@ -29,8 +29,11 @@ export class Scroller {
     this.meshes = meshes;
     this.items = items;
     this.hideZ = Infinity;
-    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler();
-    this._p = new THREE.Vector3(); this._s = new THREE.Vector3();
+    this._m = new THREE.Matrix4();
+    this._q = new THREE.Quaternion();
+    this._e = new THREE.Euler();
+    this._p = new THREE.Vector3();
+    this._s = new THREE.Vector3();
     this.apply();
   }
   step(dz) {
@@ -55,7 +58,8 @@ export class Scroller {
 
 export function canvasTexture(w, h, draw, repeat) {
   const c = document.createElement('canvas');
-  c.width = w; c.height = h;
+  c.width = w;
+  c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

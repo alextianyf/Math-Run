@@ -10,8 +10,15 @@ function pagodaShape() {
   const left = [];
   let y = 0;
   for (let i = 0; i < 5; i++) {
-    const body = 6.2 - i * 0.8, eave = body / 2 + 2.6 - i * 0.25;
-    left.push([-body / 2, y], [-body / 2, y + 2.6], [-eave, y + 2.9], [-eave - 0.4, y + 3.5], [-body / 2 + 0.6, y + 4.1]);
+    const body = 6.2 - i * 0.8;
+    const eave = body / 2 + 2.6 - i * 0.25;
+    left.push(
+      [-body / 2, y],
+      [-body / 2, y + 2.6],
+      [-eave, y + 2.9],
+      [-eave - 0.4, y + 3.5],
+      [-body / 2 + 0.6, y + 4.1]
+    );
     y += 4.1;
   }
   left.push([-0.25, y], [-0.25, y + 7]);
@@ -52,9 +59,13 @@ export function buildSky(scene) {
   scene.add(sky);
 
   // stars
-  const n = 600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  const n = 600;
+  const pos = new Float32Array(n * 3);
+  const col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
-    const th = Math.random() * Math.PI * 2, y = rand(0.1, 1), r = Math.sqrt(1 - y * y);
+    const th = Math.random() * Math.PI * 2;
+    const y = rand(0.1, 1);
+    const r = Math.sqrt(1 - y * y);
     pos.set([Math.cos(th) * r * 400, y * 400, Math.sin(th) * r * 400], i * 3);
     const b = rand(0.3, 1);
     col.set([b, b, b * rand(0.85, 1)], i * 3);
@@ -62,19 +73,45 @@ export function buildSky(scene) {
   const sg = new THREE.BufferGeometry();
   sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   sg.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 1.7, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false })));
+  scene.add(
+    new THREE.Points(
+      sg,
+      new THREE.PointsMaterial({ size: 1.7, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false })
+    )
+  );
 
   // moon, halo, drifting clouds
   const moonPos = new THREE.Vector3(-70, 85, -320);
-  const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonTex(), color: glow(0xffffff, 1.6), fog: false, depthWrite: false }));
+  const moon = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: moonTex(), color: glow(0xffffff, 1.6), fog: false, depthWrite: false })
+  );
   moon.position.copy(moonPos);
   moon.scale.setScalar(50);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0x8f86ff, fog: false, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const halo = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex(),
+      color: 0x8f86ff,
+      fog: false,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
   halo.position.copy(moonPos);
   halo.scale.setScalar(240);
   scene.add(halo, moon);
   const clouds = [0, 1, 2, 3].map((i) => {
-    const c = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex(), color: 0x9a90d8, fog: false, transparent: true, opacity: 0.55, depthWrite: false }));
+    const c = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: cloudTex(),
+        color: 0x9a90d8,
+        fog: false,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+      })
+    );
     c.position.set(-140 + i * 70, 70 + i * 9, -300);
     c.scale.set(120, 45, 1);
     c.userData.speed = 1.2 + i * 0.4;
@@ -95,16 +132,28 @@ export function buildSky(scene) {
     shape.moveTo(-W / 2, -40);
     for (let i = 0; i <= 90; i++) {
       const x = -W / 2 + (i / 90) * W;
-      shape.lineTo(x, L.base + L.amp * (0.5 + 0.35 * Math.sin(i * 0.37 + L.seed) + 0.25 * Math.sin(i * 1.13 + L.seed * 3)) + rand(-2, 2));
+      shape.lineTo(
+        x,
+        L.base + L.amp * (0.5 + 0.35 * Math.sin(i * 0.37 + L.seed) + 0.25 * Math.sin(i * 1.13 + L.seed * 3)) + rand(
+          -2,
+          2
+        )
+      );
     }
     shape.lineTo(W / 2, -40);
-    const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: L.color, fog: false, side: THREE.DoubleSide }));
+    const m = new THREE.Mesh(
+      new THREE.ShapeGeometry(shape),
+      new THREE.MeshBasicMaterial({ color: L.color, fog: false, side: THREE.DoubleSide })
+    );
     m.position.z = L.z;
     scene.add(m);
   }
 
   // pagoda on the middle ridge, with lit windows and a lantern trail up the slope
-  const pagoda = new THREE.Mesh(new THREE.ShapeGeometry(pagodaShape()), new THREE.MeshBasicMaterial({ color: 0x150f30, fog: false }));
+  const pagoda = new THREE.Mesh(
+    new THREE.ShapeGeometry(pagodaShape()),
+    new THREE.MeshBasicMaterial({ color: 0x150f30, fog: false })
+  );
   pagoda.position.set(62, 30, -262);
   pagoda.scale.setScalar(1.35);
   scene.add(pagoda);

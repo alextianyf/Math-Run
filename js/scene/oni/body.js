@@ -32,30 +32,49 @@ const BULK = {
 // the sculpted body, once the VRM has loaded (null until then, or if it failed)
 export let template = null;
 export const templateReady = new GLTFLoader().loadAsync('./models/hero.vrm')
-  .then((gltf) => { template = buildTemplate(gltf.scene); return template; })
-  .catch((err) => { console.error('[math-run] oni body failed to load', err); return null; });
+  .then((gltf) => {
+    template = buildTemplate(gltf.scene);
+    return template;
+  })
+  .catch((err) => {
+    console.error('[math-run] oni body failed to load', err);
+    return null;
+  });
 
-const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _n = new THREE.Vector3();
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
 const ONE = new THREE.Vector3(1, 1, 1);
 
 function buildTemplate(scene) {
   // keep the bare body, drop face, eyes, hair and clothes
-  const meshes = [], drop = [];
+  const meshes = [];
+  const drop = [];
   scene.traverse((o) => {
     if (!o.isMesh) return;
     if (o.isSkinnedMesh && /Body_00_SKIN/.test([].concat(o.material)[0].name)) meshes.push(o);
     else drop.push(o);
   });
-  for (const o of drop) { o.removeFromParent(); o.geometry.dispose(); }
+  for (const o of drop) {
+    o.removeFromParent();
+    o.geometry.dispose();
+  }
   scene.updateMatrixWorld(true);
 
   // per-bone stretch, and the bones' old and new rest positions (model space)
   const bones = [];
-  scene.traverse((o) => { if (o.isBone) bones.push(o); });       // parents before children
-  const S = new Map(), oldP = new Map(), newP = new Map();
+  scene.traverse((o) => {
+    if (o.isBone) bones.push(o);
+  });       // parents before children
+  const S = new Map();
+  const oldP = new Map();
+  const newP = new Map();
   for (const b of bones) {
     const s = BULK[b.name.replace('_R_', '_L_')];
-    S.set(b, s ? new THREE.Vector3(...s) : b.parent?.isBone ? S.get(b.parent) : new THREE.Vector3(1, 1, 1));
+    if (s) S.set(b, new THREE.Vector3(...s));
+    else if (b.parent?.isBone) S.set(b, S.get(b.parent));     // a bone with no entry stretches like its parent
+    else S.set(b, new THREE.Vector3(1, 1, 1));
     oldP.set(b, b.getWorldPosition(new THREE.Vector3()));
   }
   for (const b of bones) {
@@ -66,29 +85,38 @@ function buildTemplate(scene) {
   // Each skin relates bind space to the scene by C = boneWorld · boneInverse (the same
   // for every bone at rest). Move every vertex with its bones in scene space:
   //   v' = Σ w · (newStart + S ⊙ (v − oldStart))
-  const C = new Map(), Cinv = new Map();
+  const C = new Map();
+  const Cinv = new Map();
   for (const mesh of meshes) {
-    const sk = mesh.skeleton, c = sk.bones[0].matrixWorld.clone().multiply(sk.boneInverses[0]);
-    C.set(mesh, c); Cinv.set(mesh, c.clone().invert());
+    const sk = mesh.skeleton;
+    const c = sk.bones[0].matrixWorld.clone().multiply(sk.boneInverses[0]);
+    C.set(mesh, c);
+    Cinv.set(mesh, c.clone().invert());
   }
   const done = new Set();          // the body's primitives share one vertex buffer: move it once
   for (const mesh of meshes) {
-    const g = mesh.geometry, pos = g.attributes.position, nor = g.attributes.normal;
+    const g = mesh.geometry;
+    const pos = g.attributes.position;
+    const nor = g.attributes.normal;
     g.userData.oniTemplate = true;
     if (done.has(pos.array)) continue;
     done.add(pos.array);
-    const skI = g.attributes.skinIndex, skW = g.attributes.skinWeight, sk = mesh.skeleton.bones;
+    const skI = g.attributes.skinIndex;
+    const skW = g.attributes.skinWeight;
+    const sk = mesh.skeleton.bones;
     const toWorld = C.get(mesh).clone().multiply(mesh.bindMatrix);
     const toLocal = mesh.bindMatrixInverse.clone().multiply(Cinv.get(mesh));
     for (let i = 0; i < pos.count; i++) {
       _v.fromBufferAttribute(pos, i).applyMatrix4(toWorld);
-      _a.set(0, 0, 0); _b.set(0, 0, 0);
+      _a.set(0, 0, 0);
+      _b.set(0, 0, 0);
       if (nor) _n.fromBufferAttribute(nor, i);
       let wsum = 0;
       for (let k = 0; k < 4; k++) {
         const w = skW.getComponent(i, k);
         if (!w) continue;
-        const bone = sk[skI.getComponent(i, k)], s = S.get(bone) ?? ONE;
+        const bone = sk[skI.getComponent(i, k)];
+        const s = S.get(bone) ?? ONE;
         _a.addScaledVector(_v.clone().sub(oldP.get(bone)).multiply(s).add(newP.get(bone)), w);
         if (nor) _b.addScaledVector(_n.clone().divide(s), w);
         wsum += w;
@@ -96,11 +124,15 @@ function buildTemplate(scene) {
       _a.divideScalar(wsum || 1);
       _a.applyMatrix4(toLocal);
       pos.setXYZ(i, _a.x, _a.y, _a.z);
-      if (nor) { _b.normalize(); nor.setXYZ(i, _b.x, _b.y, _b.z); }
+      if (nor) {
+        _b.normalize();
+        nor.setXYZ(i, _b.x, _b.y, _b.z);
+      }
     }
     pos.needsUpdate = true;
     if (nor) nor.needsUpdate = true;
-    g.computeBoundingBox(); g.computeBoundingSphere();
+    g.computeBoundingBox();
+    g.computeBoundingSphere();
     g.userData.oniTemplate = true;
   }
   // re-place the bones and re-bind each skin to them (keeping its C)
@@ -117,10 +149,15 @@ function buildTemplate(scene) {
   // measurements the props are fitted to (model units, relative to the bones)
   const byName = (n) => bones.find((b) => b.name === n);
   const P = (n) => newP.get(byName(n));
-  const verts = [], seen = new Set();
+  const verts = [];
+  const seen = new Set();
   for (const mesh of meshes) {
-    const g = mesh.geometry, pos = g.attributes.position, toWorld = C.get(mesh).clone().multiply(mesh.bindMatrix);
-    const skI = g.attributes.skinIndex, skW = g.attributes.skinWeight, sk = mesh.skeleton.bones;
+    const g = mesh.geometry;
+    const pos = g.attributes.position;
+    const toWorld = C.get(mesh).clone().multiply(mesh.bindMatrix);
+    const skI = g.attributes.skinIndex;
+    const skW = g.attributes.skinWeight;
+    const sk = mesh.skeleton.bones;
     const ids = g.index ? g.index.array : Array.from({ length: pos.count }, (_, i) => i);
     for (const i of ids) {
       if (seen.has(i)) continue;
@@ -135,13 +172,17 @@ function buildTemplate(scene) {
   const minY = Math.min(...verts.map((v) => v.y));          // the soles
   // radius of the limb around the segment a→b at fraction t
   const radius = (a, b, t) => {
-    const A = P(a), B = P(b), d = B.clone().sub(A), len = d.length();
+    const A = P(a);
+    const B = P(b);
+    const d = B.clone().sub(A);
+    const len = d.length();
     d.divideScalar(len);
     let r = 0;
     const part = a.replace('J_Bip_', '');
     for (const v of verts) {
       if (!v.bone.includes(part)) continue;
-      const rel = v.clone().sub(A), ax = rel.dot(d) / len;
+      const rel = v.clone().sub(A);
+      const ax = rel.dot(d) / len;
       if (Math.abs(ax - t) > 0.06) continue;
       const rad = rel.addScaledVector(d, -rel.dot(d)).length();
       r = Math.max(r, rad);
@@ -150,10 +191,14 @@ function buildTemplate(scene) {
   };
   // half-width and depth of the trunk at height y
   const slice = (y, dy = 0.02, legs = false) => {
-    let rx = 0, z0 = Infinity, z1 = -Infinity;
+    let rx = 0;
+    let z0 = Infinity;
+    let z1 = -Infinity;
     for (const v of verts) {
       if (Math.abs(v.y - y) >= dy || !(v.bone.includes('_C_') || (legs && v.bone.includes('UpperLeg')))) continue;
-      rx = Math.max(rx, Math.abs(v.x)); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z);
+      rx = Math.max(rx, Math.abs(v.x));
+      z0 = Math.min(z0, v.z);
+      z1 = Math.max(z1, v.z);
     }
     return { rx, z0, z1 };
   };

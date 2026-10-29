@@ -33,7 +33,9 @@ let data = load();
 const save = () => store.set('collection', data);
 
 let announce = () => {};           // set by main.js: shows the "achievement unlocked" toast
-export function onUnlock(show) { announce = show; }
+export function onUnlock(show) {
+  announce = show;
+}
 
 function earn(id) {
   if (data.earned[id]) return;
@@ -43,7 +45,9 @@ function earn(id) {
 }
 
 export const collection = () => data;
-export const reloadCollection = () => { data = load(); };   // after a transfer code was applied
+export const reloadCollection = () => {
+  data = load();
+};   // after a transfer code was applied
 export function progressOf(achievement) {
   if (achievement.id === 'hundred' || achievement.id === 'thousand') return data.banished;
   if (achievement.id === 'bestiary') return Object.keys(data.seen).length;
@@ -75,7 +79,9 @@ on('score', ({ score }) => {
   if (score >= 10000) earn('score10k');
   if (score >= 30000) earn('score30k');
 });
-on('promote', ({ rank }) => { for (let r = 1; r <= rank; r++) earn(`rank${r}`); });
+on('promote', ({ rank }) => {
+  for (let r = 1; r <= rank; r++) earn(`rank${r}`);
+});
 on('runEnd', ({ distance }) => {
   data.runs++;
   save();

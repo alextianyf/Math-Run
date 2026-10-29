@@ -16,7 +16,12 @@ export function buildNopperabo(body, seed) {
   const torso = new THREE.Group();
   body.add(torso);
   // a merchant's kimono, a dark haori open at the front, white tabi on zōri
-  const haoriGeo = new THREE.LatheGeometry([[0.3, -0.36], [0.29, -0.05], [0.28, 0.18], [0.21, 0.35], [0.12, 0.42]].map(([r, y]) => new THREE.Vector2(r, y)), 18, 0.45, Math.PI * 2 - 0.9);
+  const haoriGeo = new THREE.LatheGeometry(
+    [[0.3, -0.36], [0.29, -0.05], [0.28, 0.18], [0.21, 0.35], [0.12, 0.42]].map(([r, y]) => new THREE.Vector2(r, y)),
+    18,
+    0.45,
+    Math.PI * 2 - 0.9
+  );
   torso.add(bake([
     { geo: lathe([[0.3, -0.74], [0.27, -0.4], [0.25, -0.05], [0.26, 0.18], [0.2, 0.34], [0.1, 0.4]], 18), mat: robe },
     { geo: haoriGeo, mat: haori },
@@ -30,7 +35,13 @@ export function buildNopperabo(body, seed) {
     ]),
     // left arm forward, holding the pole the lantern hangs from
     { geo: new THREE.CapsuleGeometry(0.075, 0.24, 4, 8), mat: haori, p: [-0.27, 0.16, 0.08], r: [-0.5, 0, -0.15] },
-    { geo: new THREE.CapsuleGeometry(0.1, 0.12, 4, 8), mat: haori, p: [-0.3, 0.0, 0.2], s: [0.7, 1, 1], r: [-1.1, 0, 0] },
+    {
+      geo: new THREE.CapsuleGeometry(0.1, 0.12, 4, 8),
+      mat: haori,
+      p: [-0.3, 0.0, 0.2],
+      s: [0.7, 1, 1],
+      r: [-1.1, 0, 0],
+    },
     { geo: new THREE.SphereGeometry(0.055, 10, 8), mat: face, p: [-0.31, 0.04, 0.34] },
     { geo: new THREE.CylinderGeometry(0.014, 0.014, 0.62, 5), mat: once('bamboo', () => toon(0xb59a52)), p: [-0.38, 0.17, 0.5], r: [1.1, 0, 0.35] },
   ], { outline: 0.014 }));
@@ -51,7 +62,11 @@ export function buildNopperabo(body, seed) {
   const head = joint(torso, 0, 0.68, 0.0);
   head.add(bake([
     { geo: new THREE.SphereGeometry(0.2, 24, 18), mat: face, s: [0.88, 1.1, 0.95] },
-    { geo: new THREE.SphereGeometry(0.205, 20, 12, Math.PI - 0.5, Math.PI + 1.0, 0.62, 1.5), mat: hair, s: [0.9, 1.1, 0.98] },
+    {
+      geo: new THREE.SphereGeometry(0.205, 20, 12, Math.PI - 0.5, Math.PI + 1.0, 0.62, 1.5),
+      mat: hair,
+      s: [0.9, 1.1, 0.98],
+    },
     { geo: new THREE.CapsuleGeometry(0.03, 0.15, 4, 8), mat: hair, p: [0, 0.23, -0.02], r: [Math.PI / 2 - 0.25, 0, 0] },
     { geo: new THREE.SphereGeometry(0.04, 8, 6), mat: hair, p: [0, 0.2, -0.1] },
     { geo: new THREE.SphereGeometry(0.04, 8, 6), mat: face, p: [-0.175, 0.0, 0.0], s: [0.45, 0.85, 0.6] },

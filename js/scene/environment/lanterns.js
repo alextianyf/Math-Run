@@ -4,7 +4,9 @@ import { toon, glow, place, lathe } from '../toon.js';
 import { NEAR, GAP, SPAN, merge, instanced, Scroller, canvasTexture } from './shared.js';
 
 export function buildLanternStrings(scene) {
-  const SAG = 0.55, TOP = 3.9, PER = 4;
+  const SAG = 0.55;
+  const TOP = 3.9;
+  const PER = 4;
   const ropeY = (t) => TOP - SAG * 4 * t * (1 - t);
 
   const post = merge([
@@ -13,11 +15,17 @@ export function buildLanternStrings(scene) {
   ]);
   const ropePts = [];
   for (let i = 0; i <= 8; i++) ropePts.push([0, ropeY(i / 8), -GAP * (i / 8)]);
-  const rope = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ropePts.map((p) => new THREE.Vector3(...p))), 24, 0.014, 5);
+  const rope = new THREE.TubeGeometry(
+    new THREE.CatmullRomCurve3(ropePts.map((p) => new THREE.Vector3(...p))),
+    24,
+    0.014,
+    5
+  );
 
   // paper lantern with ribs, as a single unlit glowing body + dark caps
   const ribs = canvasTexture(64, 64, (g, w, h) => {
-    g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, w, h);
     g.fillStyle = 'rgba(80,20,10,0.35)';
     for (let y = 6; y < h; y += 10) g.fillRect(0, y, w, 2);
   });
@@ -31,12 +39,18 @@ export function buildLanternStrings(scene) {
   const spans = SPAN / GAP;
   const postMesh = instanced(post, toon(0x2a1d1a), spans * 2);
   const ropeMesh = instanced(rope, toon(0x2a1d1a), spans * 2);
-  const bodyMesh = instanced(body, new THREE.MeshBasicMaterial({ map: ribs, color: glow(0xffffff, 1.6) }), spans * 2 * PER);
+  const bodyMesh = instanced(
+    body,
+    new THREE.MeshBasicMaterial({ map: ribs, color: glow(0xffffff, 1.6) }),
+    spans * 2 * PER
+  );
   const capMesh = instanced(caps, toon(0x17121a), spans * 2 * PER);
   scene.add(postMesh, ropeMesh, bodyMesh, capMesh);
 
-  const red = new THREE.Color(0xff4a22), warm = new THREE.Color(0xffd9a0);
-  const spanItems = [], lanternItems = [];
+  const red = new THREE.Color(0xff4a22);
+  const warm = new THREE.Color(0xffd9a0);
+  const spanItems = [];
+  const lanternItems = [];
   for (let i = 0; i < spans; i++) {
     for (const sx of [-1, 1]) {
       const z0 = NEAR - i * GAP;
@@ -55,7 +69,9 @@ export function buildLanternStrings(scene) {
     step(dz, t) {
       spanScroll.step(dz);
       // a gentle swing: rotate each lantern a little around y (cheap, reads as motion)
-      lanternItems.forEach((it, i) => { it.ry = Math.sin(t * 1.3 + i) * 0.4; });
+      lanternItems.forEach((it, i) => {
+        it.ry = Math.sin(t * 1.3 + i) * 0.4;
+      });
       lanternScroll.step(dz);
     },
   };
@@ -74,6 +90,9 @@ export function buildStoneLanterns(scene) {
   const stoneMesh = instanced(stone, toon(0x8a8398), count);
   const fireMesh = instanced(fire, new THREE.MeshBasicMaterial({ color: glow(0xffb45a, 2.2) }), count);
   scene.add(stoneMesh, fireMesh);
-  const items = Array.from({ length: count }, (_, i) => ({ x: (i % 2 ? 1 : -1) * 4.4, z: NEAR - 3 - i * GAP, ry: Math.PI / 6 }));
+  const items = Array.from(
+    { length: count },
+    (_, i) => ({ x: (i % 2 ? 1 : -1) * 4.4, z: NEAR - 3 - i * GAP, ry: Math.PI / 6 })
+  );
   return new Scroller([stoneMesh, fireMesh], items);
 }

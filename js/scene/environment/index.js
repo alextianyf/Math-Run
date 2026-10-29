@@ -19,8 +19,19 @@ export function createEnvironment(scene) {
   const sky = buildSky(scene);
   const torii = buildTorii(scene);
   const mist = buildMist(scene);
-  const banks = buildFogBanks(scene), foxfire = buildFoxfire(scene), ground = buildGround(scene);
-  const parts = [ground, torii, buildLanternStrings(scene), buildStoneLanterns(scene), buildTrees(scene), mist, banks, foxfire];
+  const banks = buildFogBanks(scene);
+  const foxfire = buildFoxfire(scene);
+  const ground = buildGround(scene);
+  const parts = [
+    ground,
+    torii,
+    buildLanternStrings(scene),
+    buildStoneLanterns(scene),
+    buildTrees(scene),
+    mist,
+    banks,
+    foxfire,
+  ];
   const particles = [
     buildParticles(scene, {
       count: 140, size: 0.3, color: glow(0xd9ff8f, 1.6), additive: true, drift: 0.4,
@@ -28,7 +39,11 @@ export function createEnvironment(scene) {
     }),
     buildParticles(scene, {
       count: 300, size: 0.28, color: 0xff2a3a, additive: false,
-      area: (i) => [(i % 2 ? 1 : -1) * (Math.random() < 0.7 ? rand(4.4, 5.0) : rand(5.2, 8)), rand(0.12, 0.3), NEAR - Math.random() * SPAN],
+      area: (i) => [
+        (i % 2 ? 1 : -1) * (Math.random() < 0.7 ? rand(4.4, 5.0) : rand(5.2, 8)),
+        rand(0.12, 0.3),
+        NEAR - Math.random() * SPAN,
+      ],
     }),
     buildParticles(scene, {
       count: 260, size: 0.16, color: 0xffd0e2, additive: false, map: petalTex(), fall: 0.45, drift: 0.5,

@@ -28,7 +28,13 @@ const BANDS = [
   { upTo: Infinity, ops: ALL, steps: [3, 5], cap: 150, deep: true },
 ];
 const EXOTIC = new Set(['sq', 'sqrt', 'cube', 'cbrt', 'pow']);
-const POWERS = { 1: [[2, 0], [3, 0], [5, 0], [7, 0], [9, 0]], 16: [[2, 4]], 32: [[2, 5]], 64: [[2, 6], [4, 3]], 81: [[3, 4]] };
+const POWERS = {
+  1: [[2, 0], [3, 0], [5, 0], [7, 0], [9, 0]],
+  16: [[2, 4]],
+  32: [[2, 5]],
+  64: [[2, 6], [4, 3]],
+  81: [[3, 4]],
+};
 const CUBES = { 8: 2, 27: 3, 64: 4, 125: 5 };
 const isSquare = (v) => v >= 4 && Number.isInteger(Math.sqrt(v));
 
@@ -71,12 +77,19 @@ function split(steps) {
   return [left, steps - left];
 }
 
+// how often an operation goes in the draw: exotic ones ×3, × and ÷ ×2, + and − once
+function weightOf(op) {
+  if (EXOTIC.has(op)) return 3;
+  if (op === '×' || op === '÷') return 2;
+  return 1;
+}
+
 function build(v, steps, cfg) {
   if (steps <= 0) return num(v);
   const ops = feasible(v, cfg);
   if (!ops.length) return num(v);
   // exotic operations are rarer to be feasible, so favour them when they are
-  const weighted = ops.flatMap((op) => (EXOTIC.has(op) ? [op, op, op] : op === '×' || op === '÷' ? [op, op] : [op]));
+  const weighted = ops.flatMap((op) => Array(weightOf(op)).fill(op));
   const op = pick(weighted);
   const rest = steps - 1;
   const exoticOn = cfg.ops.some((o) => EXOTIC.has(o));
@@ -149,6 +162,8 @@ function render(n, stats) {
 
 /* ===================== difficulty (rating scale) ===================== */
 const W = { '+': 70, '−': 90, '×': 170, '÷': 200 };
+// squares, cubes and other powers: [kind, difficulty]
+const EXPONENT_COST = { 2: ['sq', 320], 3: ['cube', 400] };
 
 function score(n, acc) {
   if (n.t === 'n') return;
@@ -156,17 +171,20 @@ function score(n, acc) {
     acc.kinds.add(n.op);
     acc.ops++;
     let w = W[n.op];
-    const a = n.a.v, b = n.b.v;
+    const a = n.a.v;
+    const b = n.b.v;
     if (n.op === '+' && Math.max(a, b) >= 10 && (a % 10) + (b % 10) >= 10) w += 40;   // carrying
     if (n.op === '−' && a >= 10 && a % 10 < b % 10) w += 40;                          // borrowing
     if (n.op === '×' && n.v >= 20) w += 40;
     if (n.op === '÷' && a >= 30) w += 40;
     acc.sum += w;
-    score(n.a, acc); score(n.b, acc);
+    score(n.a, acc);
+    score(n.b, acc);
   } else if (n.t === 'p') {
-    acc.kinds.add(n.e === 2 ? 'sq' : n.e === 3 ? 'cube' : 'pow');
+    const [kind, cost] = EXPONENT_COST[n.e] ?? ['pow', 380];
+    acc.kinds.add(kind);
     acc.ops++;
-    acc.sum += (n.e === 2 ? 320 : n.e === 3 ? 400 : 380) + (n.base.t === 'n' ? 0 : 80);
+    acc.sum += cost + (n.base.t === 'n' ? 0 : 80);
     score(n.base, acc);
   } else {
     acc.kinds.add(n.k === 2 ? 'sqrt' : 'cbrt');
@@ -176,15 +194,26 @@ function score(n, acc) {
   }
 }
 
-const rate = (acc, parens) => 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
+const rate = (
+  acc,
+  parens
+) => 450 + acc.sum + parens * 60 + Math.max(0, acc.kinds.size - 1) * 40 + (acc.ops >= 4 ? 60 : 0);
+
+const APPLY = {
+  '+': (a, b) => a + b,
+  '−': (a, b) => a - b,
+  '×': (a, b) => a * b,
+  '÷': (a, b) => a / b,
+};
 
 // independent check: evaluate the tree exactly
 export function evaluate(n) {
   if (n.t === 'n') return n.v;
   if (n.t === 'p') return evaluate(n.base) ** n.e;
   if (n.t === 'r') return Math.round(evaluate(n.a) ** (1 / n.k));
-  const a = evaluate(n.a), b = evaluate(n.b);
-  return n.op === '+' ? a + b : n.op === '−' ? a - b : n.op === '×' ? a * b : a / b;
+  const a = evaluate(n.a);
+  const b = evaluate(n.b);
+  return APPLY[n.op](a, b);
 }
 
 // kinds: the operations used ('+', '×', 'sqrt', 'pow', …) plus '()' for brackets
@@ -218,7 +247,8 @@ function restrict(band, allow, feature) {
 //   feature: kinds to show off (a fresh unlock); candidates without one rank far behind
 export function makeProblem(target, { answer = ri(0, 9), avoid = new Set(), allow = null, feature = null } = {}) {
   const i = bandIndex(target);
-  let best = null, bestGap = Infinity;
+  let best = null;
+  let bestGap = Infinity;
   for (let k = 0; k < 32; k++) {
     const band = BANDS[Math.max(0, Math.min(BANDS.length - 1, i + (Math.random() < 0.3 ? pick([-1, 1]) : 0)))];
     const p = generate(answer, restrict(band, allow, feature));
@@ -226,7 +256,10 @@ export function makeProblem(target, { answer = ri(0, 9), avoid = new Set(), allo
     if (allow && !allow.brackets && p.kinds.has('()')) continue;
     let gap = Math.abs(p.difficulty - target) + Math.random() * 30;   // a little noise keeps the mix varied
     if (feature && !feature.some((f) => p.kinds.has(f))) gap += 250;
-    if (gap < bestGap) { best = p; bestGap = gap; }
+    if (gap < bestGap) {
+      best = p;
+      bestGap = gap;
+    }
   }
   return best ?? { text: `${answer} + 0`, answer, difficulty: 520, kinds: new Set(['+']) };
 }

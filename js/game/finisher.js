@@ -49,8 +49,28 @@ export function finisher(oni, then) {
   fx.pillar(p, { color: 0xff7a2a, radius: 1.3, height: 18, dur: 1.4 });
   later(0.35, () => fx.seal(p, '滅', 2));
   groundRings(ground);
-  fx.emit(p, { count: 120, color: 0xffc85a, color2: 0xff4a2a, bright: 1.7, speed: 12, life: 1.4, size: 0.35, gravity: -3 });
-  fx.emit(p, { count: 60, color: 0x8fe8ff, color2: 0xb47dff, bright: 1.6, speed: 3, life: 2, size: 0.28, gravity: 2.5, up: 0.6, dragK: 2 });
+  fx.emit(p, {
+    count: 120,
+    color: 0xffc85a,
+    color2: 0xff4a2a,
+    bright: 1.7,
+    speed: 12,
+    life: 1.4,
+    size: 0.35,
+    gravity: -3,
+  });
+  fx.emit(p, {
+    count: 60,
+    color: 0x8fe8ff,
+    color2: 0xb47dff,
+    bright: 1.6,
+    speed: 3,
+    life: 2,
+    size: 0.28,
+    gravity: 2.5,
+    up: 0.6,
+    dragK: 2,
+  });
   lightningRing(p);
   // the shockwave sweeps the rest of the path (combat.js banishes each one)
   for (const enemy of targets()) {

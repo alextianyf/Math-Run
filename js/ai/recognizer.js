@@ -44,8 +44,13 @@ export async function initRecognizer() {
   model = await tf.loadGraphModel(new URL(modelSpec.url, import.meta.url).href);
   // one full reading (preprocessing + model) of a made-up stroke, so the first
   // real one is as quick as all the others
-  const size = 280, stroke = new Uint8ClampedArray(size * size * 4);
-  for (let y = 60; y < 220; y++) for (let x = 130; x < 150; x++) stroke.fill(255, (y * size + x) * 4, (y * size + x) * 4 + 4);
+  const size = 280;
+  const stroke = new Uint8ClampedArray(size * size * 4);
+  for (let y = 60; y < 220; y++) for (let x = 130; x < 150; x++) stroke.fill(
+    255,
+    (y * size + x) * 4,
+    (y * size + x) * 4 + 4
+  );
   await classify(stroke, size);
   aiInfo.ready = true;
 }

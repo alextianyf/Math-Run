@@ -13,15 +13,33 @@ import { easeOut } from '../core/math.js';
 
 const CAPTOR_SCALE = 1.45;
 // timeline: seconds (real time) since the last heart was lost
-const CAPTURE = { kneel: 0.3, camera: 0.45, portal: 1.0, risen: 2.3, reach: 3.2, grab: 3.9, attach: 4.05, lift: 4.35, laugh: 5.1, over: 5.6 };
+const CAPTURE = {
+  kneel: 0.3,
+  camera: 0.45,
+  portal: 1.0,
+  risen: 2.3,
+  reach: 3.2,
+  grab: 3.9,
+  attach: 4.05,
+  lift: 4.35,
+  laugh: 5.1,
+  over: 5.6,
+};
 const ORDER = Object.keys(CAPTURE);
 
 const captor = { oni: null, step: 0, holding: false };
 const portalPos = new THREE.Vector3(0, 0.06, -3);
 const tmp = new THREE.Vector3();
 // the hero in the fist: where the grip puts him, and where he was snatched from
-const hold = { t: 1, pos: new THREE.Vector3(), quat: new THREE.Quaternion(), fromPos: new THREE.Vector3(), fromQuat: new THREE.Quaternion() };
-const twist = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0);
+const hold = {
+  t: 1,
+  pos: new THREE.Vector3(),
+  quat: new THREE.Quaternion(),
+  fromPos: new THREE.Vector3(),
+  fromQuat: new THREE.Quaternion(),
+};
+const twist = new THREE.Quaternion();
+const UP = new THREE.Vector3(0, 1, 0);
 
 export function beginCapture() {
   S.mode = 'caught';
@@ -37,7 +55,16 @@ export function beginCapture() {
   // and a few more yokai materialise so the circle is always full
   for (const e of [...S.enemies]) {
     if (e.boss || e.dying) {
-      fx.emit(e.yokai.center(tmp), { count: 40, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: 3, life: 1, size: 0.8, gravity: 0.5 });
+      fx.emit(e.yokai.center(tmp), {
+        count: 40,
+        color: 0x7a3dff,
+        color2: 0x1a0c33,
+        bright: 1,
+        speed: 3,
+        life: 1,
+        size: 0.8,
+        gravity: 0.5,
+      });
       removeEnemy(e);
       continue;
     }
@@ -53,7 +80,9 @@ export function beginCapture() {
     world.scene.add(yokai.root);
     S.enemies.push({ yokai, swarm: true, locked: true, dying: 0, age: 0, z: 0, tag: null });
   }
-  S.enemies.forEach((e, i) => { e.swarmA = (i / S.enemies.length) * Math.PI * 2; });
+  S.enemies.forEach((e, i) => {
+    e.swarmA = (i / S.enemies.length) * Math.PI * 2;
+  });
 }
 
 function spawnCaptor() {
@@ -88,8 +117,14 @@ export function updateCapture(dt) {
   const T = S.caughtT += dt;
   const at = (key) => captor.step < ORDER.indexOf(key) + 1 && T >= CAPTURE[key];
   let over = false;
-  if (at('kneel')) { captor.step++; hero.setMode('kneel'); }
-  if (at('camera')) { captor.step++; world.setCameraMode('caught'); }
+  if (at('kneel')) {
+    captor.step++;
+    hero.setMode('kneel');
+  }
+  if (at('camera')) {
+    captor.step++;
+    world.setCameraMode('caught');
+  }
   if (at('portal')) {
     captor.step++;
     spawnCaptor();
@@ -98,19 +133,57 @@ export function updateCapture(dt) {
     world.shake(0.35);
     sfx.portal();
   }
-  if (at('risen')) { captor.step++; captor.oni.roar(); world.shake(0.7); sfx.roar(); }
-  if (at('reach')) { captor.step++; captor.oni.setMode('reach'); }
-  if (at('grab')) { captor.step++; captor.oni.setMode('grab'); }
-  if (at('attach')) { captor.step++; grabHero(); world.shake(0.3); sfx.grab(); }
-  if (at('lift')) { captor.step++; captor.oni.setMode('lift'); world.setCameraMode('held'); }
-  if (at('laugh')) { captor.step++; captor.oni.setMode('laugh'); sfx.laugh(); }
-  if (at('over')) { captor.step++; over = true; }
+  if (at('risen')) {
+    captor.step++;
+    captor.oni.roar();
+    world.shake(0.7);
+    sfx.roar();
+  }
+  if (at('reach')) {
+    captor.step++;
+    captor.oni.setMode('reach');
+  }
+  if (at('grab')) {
+    captor.step++;
+    captor.oni.setMode('grab');
+  }
+  if (at('attach')) {
+    captor.step++;
+    grabHero();
+    world.shake(0.3);
+    sfx.grab();
+  }
+  if (at('lift')) {
+    captor.step++;
+    captor.oni.setMode('lift');
+    world.setCameraMode('held');
+  }
+  if (at('laugh')) {
+    captor.step++;
+    captor.oni.setMode('laugh');
+    sfx.laugh();
+  }
+  if (at('over')) {
+    captor.step++;
+    over = true;
+  }
 
   // the oni rising out of the portal in a column of smoke
   if (captor.oni) {
     const k = easeOut((T - CAPTURE.portal) / (CAPTURE.risen - CAPTURE.portal));
     captor.oni.root.position.y = -7 * (1 - k);
-    if (k < 1) fx.emit(portalPos, { count: 4, color: 0x8a4dff, color2: 0x200c40, bright: 1.2, speed: 1.6, life: 1.2, size: 0.9, gravity: 1.6, up: 0.6, spread: 12 });
+    if (k < 1) fx.emit(portalPos, {
+      count: 4,
+      color: 0x8a4dff,
+      color2: 0x200c40,
+      bright: 1.2,
+      speed: 1.6,
+      life: 1.2,
+      size: 0.9,
+      gravity: 1.6,
+      up: 0.6,
+      spread: 12,
+    });
   }
   return over;
 }

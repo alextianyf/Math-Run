@@ -22,7 +22,10 @@ export function addScore(n) {
 // HUD rank: seal and title, the bar toward the next trial, and what it's doing
 export function showRank() {
   const trial = S.pendingBoss || S.enemies.some((e) => e.boss && !e.dying);
-  const state = director.rank >= RANKS.length - 1 ? 'top' : trial ? 'trial' : director.progress >= 0.8 ? 'near' : '';
+  let state = '';
+  if (director.rank >= RANKS.length - 1) state = 'top';
+  else if (trial) state = 'trial';
+  else if (director.progress >= 0.8) state = 'near';
   setRank(director.rank, director.progress, state);
 }
 

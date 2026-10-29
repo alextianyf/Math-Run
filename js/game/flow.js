@@ -119,7 +119,9 @@ export function toTitle() {
   S.mode = 'title';
 }
 
-export function retryRun() { startGame(true); }
+export function retryRun() {
+  startGame(true);
+}
 
 export function showGameOver() {
   S.mode = 'over';
@@ -141,14 +143,22 @@ export function showGameOver() {
   const progress = director.progress;
   renderLadder($('over-ladder'), { reached: run.rank, progress, known: Math.max(S.bestRank, run.rank) + 1 });
   const next = t(`rank${run.rank + 1}`);
-  $('over-next').textContent = run.rank >= RANKS.length - 1 ? t('topReached')
-    : progress >= 1 ? t('oneTrial', { r: next })
-    : progress >= 0.6 ? t('nearNext', { r: next })
-    : t('nextRank', { r: next });
+  let line = t('nextRank', { r: next });
+  if (run.rank >= RANKS.length - 1) line = t('topReached');
+  else if (progress >= 1) line = t('oneTrial', { r: next });
+  else if (progress >= 0.6) line = t('nearNext', { r: next });
+  $('over-next').textContent = line;
 
   $('st-ai').textContent = t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
   emit('runEnd', { score: S.score, distance: Math.floor(S.distance) });
-  lastRun = { score: S.score, best: newBest, banished: S.banished, combo: S.maxCombo, distance: Math.floor(S.distance), rank: run.rank };
+  lastRun = {
+    score: S.score,
+    best: newBest,
+    banished: S.banished,
+    combo: S.maxCombo,
+    distance: Math.floor(S.distance),
+    rank: run.rank,
+  };
   showOverlay('ov-over');
   sfx.over();
   $('btn-retry').focus();

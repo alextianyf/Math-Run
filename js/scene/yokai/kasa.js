@@ -23,7 +23,14 @@ export function buildKasa(body) {
   const tongueJ = joint(top, 0, -0.2, 0.6);
   tongueJ.add(bake([
     { geo: new THREE.SphereGeometry(0.11, 12, 8), mat: maw(), s: [1.2, 0.5, 0.4], r: [-0.86, 0, 0] },
-    { geo: taperedTube([[0, 0, 0.02], [0.04, -0.14, 0.17], [0.0, -0.36, 0.2], [-0.05, -0.56, 0.1]], 0.065, { tip: 0.5 }), mat: tongue() },
+    {
+      geo: taperedTube(
+        [[0, 0, 0.02], [0.04, -0.14, 0.17], [0.0, -0.36, 0.2], [-0.05, -0.56, 0.1]],
+        0.065,
+        { tip: 0.5 }
+      ),
+      mat: tongue(),
+    },
   ], { outline: 0.01 }));
   const legJ = joint(body, 0, -0.36, 0);
   legJ.add(bake([

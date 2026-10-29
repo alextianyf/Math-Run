@@ -25,7 +25,21 @@ export function buildHitotsume(body) {
   const eye = joint(hop, 0, 0.12, 0.24);
   eye.add(bake(eyeParts(0, 0, 0, 0.13, once('irisBrown', () => toon(0x4a2a12)), 1.15), { outline: 0.01 }));
   const tongueJ = joint(hop, 0, -0.08, 0.3);
-  tongueJ.add(bake([{ geo: taperedTube([[0, 0, 0], [0.01, -0.1, 0.08], [0.03, -0.24, 0.06], [0.0, -0.36, 0.0]], 0.045, { tip: 0.5 }), mat: tongue() }], { outline: 0.01 }));
+  tongueJ.add(
+    bake(
+      [
+        {
+          geo: taperedTube(
+            [[0, 0, 0], [0.01, -0.1, 0.08], [0.03, -0.24, 0.06], [0.0, -0.36, 0.0]],
+            0.045,
+            { tip: 0.5 }
+          ),
+          mat: tongue(),
+        },
+      ],
+      { outline: 0.01 }
+    )
+  );
   body.add(bake([
     { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: skin(), p: [-0.13, -0.74, 0.05], s: [1, 0.5, 1.3] },
     { geo: new THREE.SphereGeometry(0.09, 10, 8), mat: skin(), p: [0.13, -0.74, 0.05], s: [1, 0.5, 1.3] },

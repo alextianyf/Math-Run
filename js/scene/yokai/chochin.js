@@ -7,12 +7,22 @@ import { once, white, ink, tongue, darkWood, maw, glowSprite } from './shared.js
 export function buildChochin(body) {
   const paperTex = lanternPaperTex();
   const paper = once('lanternMat', () => toon(0xffffff, {
-    map: paperTex, emissive: new THREE.Color(0xff7a2a), emissiveMap: paperTex, emissiveIntensity: 0.85, side: THREE.DoubleSide,
+    map: paperTex,
+    emissive: new THREE.Color(0xff7a2a),
+    emissiveMap: paperTex,
+    emissiveIntensity: 0.85,
+    side: THREE.DoubleSide,
   }));
   const lantern = new THREE.Group();
   body.add(lantern);
   lantern.add(bake([
-    { geo: lathe([[0.17, -0.5], [0.33, -0.42], [0.42, -0.2], [0.445, 0.02], [0.415, 0.24], [0.32, 0.42], [0.17, 0.5]], 24), mat: paper },
+    {
+      geo: lathe(
+        [[0.17, -0.5], [0.33, -0.42], [0.42, -0.2], [0.445, 0.02], [0.415, 0.24], [0.32, 0.42], [0.17, 0.5]],
+        24
+      ),
+      mat: paper,
+    },
   ], { outline: 0.016 }));
   lantern.add(bake([
     { geo: lathe([[0.2, 0.47], [0.225, 0.51], [0.2, 0.56], [0.06, 0.58]], 18), mat: darkWood() },
@@ -28,7 +38,21 @@ export function buildChochin(body) {
     { geo: new THREE.ConeGeometry(0.03, 0.08, 6), mat: white(), p: [0.12, -0.14, 0.44], r: [Math.PI, 0, 0] },
   ], { outline: 0.012 }));
   const tongueJ = joint(lantern, 0.05, -0.19, 0.44);
-  tongueJ.add(bake([{ geo: taperedTube([[0, 0, 0], [0.02, -0.12, 0.1], [0.06, -0.3, 0.09], [0.03, -0.48, -0.02]], 0.06, { tip: 0.5 }), mat: tongue() }], { outline: 0.01 }));
+  tongueJ.add(
+    bake(
+      [
+        {
+          geo: taperedTube(
+            [[0, 0, 0], [0.02, -0.12, 0.1], [0.06, -0.3, 0.09], [0.03, -0.48, -0.02]],
+            0.06,
+            { tip: 0.5 }
+          ),
+          mat: tongue(),
+        },
+      ],
+      { outline: 0.01 }
+    )
+  );
   body.add(glowSprite(0xff8a3a, 2.2, 0.4));
   return (t, seed) => {
     lantern.rotation.z = Math.sin(t * 1.8 + seed) * 0.16;

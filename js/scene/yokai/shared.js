@@ -35,7 +35,9 @@ export function flameMaterial(seed) {
   return new THREE.ShaderMaterial({
     uniforms: {
       time: { value: 0 }, seed: { value: seed },
-      cCore: { value: glow(0xd8f6ff, 1.5) }, cMid: { value: glow(0x3fb2ff, 1.05) }, cEdge: { value: glow(0x2443ff, 0.7) },
+      cCore: { value: glow(0xd8f6ff, 1.5) },
+      cMid: { value: glow(0x3fb2ff, 1.05) },
+      cEdge: { value: glow(0x2443ff, 0.7) },
     },
     vertexShader: /* glsl */`
       varying vec2 vUv;
@@ -73,4 +75,7 @@ export function flameMaterial(seed) {
 }
 
 // a flat shape given a little thickness, centred on z = 0
-export const extrude = (shape, depth) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 5 }).translate(0, 0, -depth / 2);
+export const extrude = (
+  shape,
+  depth
+) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 5 }).translate(0, 0, -depth / 2);

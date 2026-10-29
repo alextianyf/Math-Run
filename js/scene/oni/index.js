@@ -58,9 +58,16 @@ const BONES = {
   thL: 'L_UpperLeg', shL: 'L_LowerLeg', ftL: 'L_Foot', thR: 'R_UpperLeg', shR: 'R_LowerLeg', ftR: 'R_Foot',
 };
 const Zax = new THREE.Vector3(0, 0, 1);
-const ARM_BASE = { L: new THREE.Quaternion().setFromAxisAngle(Zax, 1.3), R: new THREE.Quaternion().setFromAxisAngle(Zax, -1.3) };
+const ARM_BASE = {
+  L: new THREE.Quaternion().setFromAxisAngle(Zax, 1.3),
+  R: new THREE.Quaternion().setFromAxisAngle(Zax, -1.3),
+};
 const ARM_BASE_INV = { L: ARM_BASE.L.clone().invert(), R: ARM_BASE.R.clone().invert() };
-const blankPose = () => { const p = { hipsY: 0, jaw: 0.06, curlR: 0.4 }; for (const k of KEYS) p[k] = [0, 0, 0]; return p; };
+const blankPose = () => {
+  const p = { hipsY: 0, jaw: 0.06, curlR: 0.4 };
+  for (const k of KEYS) p[k] = [0, 0, 0];
+  return p;
+};
 
 // How the grabbing hand holds the hero. Frame: handR (oni units; -y runs down the fingers,
 // +x is the palm's normal, z runs across the knuckles). The hero is upright along the
@@ -111,9 +118,17 @@ function createOni() {
   rig.add(handR);
 
   /* ---------- the body ---------- */
-  let B = null, hipsRest = 0, k = 1, chestNode = rig;
-  const curlBones = { L: [], R: [] }, thumbs = { L: [], R: [] }, thumbAxes = [];
-  const _tq = new THREE.Quaternion(), _tq2 = new THREE.Quaternion(), X_AXIS = new THREE.Vector3(1, 0, 0), PALM = new THREE.Vector3(0, -1, 0);
+  let B = null;
+  let hipsRest = 0;
+  let k = 1;
+  let chestNode = rig;
+  const curlBones = { L: [], R: [] };
+  const thumbs = { L: [], R: [] };
+  const thumbAxes = [];
+  const _tq = new THREE.Quaternion();
+  const _tq2 = new THREE.Quaternion();
+  const X_AXIS = new THREE.Vector3(1, 0, 0);
+  const PALM = new THREE.Vector3(0, -1, 0);
   // a child of `bone` whose axes are y = up, z = the oni's forward (model -z) — or, for a
   // limb, -y running down the limb — and whose unit is one oni unit
   const mount = (bone, obj, { down = null, at = null } = {}) => {
@@ -137,7 +152,9 @@ function createOni() {
     body.scale.setScalar(k);
     body.position.y = -t.minY * k;
     const skins = [];
-    body.traverse((o) => { if (o.isSkinnedMesh) skins.push(o); });
+    body.traverse((o) => {
+      if (o.isSkinnedMesh) skins.push(o);
+    });
     for (const o of skins) {
       o.material = M.skin;
       o.frustumCulled = false;
@@ -166,10 +183,21 @@ function createOni() {
     // the pelt, lofted through the measured hips (oni units, around the hips bone)
     const hz = t.P.J_Bip_C_Hips.z;
     // (a skirt hangs from the widest point down: keep a running envelope of the slices)
-    let ex = 0, e0 = Infinity, e1 = -Infinity;
+    let ex = 0;
+    let e0 = Infinity;
+    let e1 = -Infinity;
     const rows = t.pelt.map((c, i) => {
-      if (c.rx > 0) { ex = Math.max(ex, c.rx); e0 = Math.min(e0, c.z0); e1 = Math.max(e1, c.z1); }
-      return { y: c.dy * k, rx: ex * k + 0.035 + 0.02 * i, rz: ((e1 - e0) / 2) * k + 0.035 + 0.02 * i, cz: -((e0 + e1) / 2 - hz) * k };
+      if (c.rx > 0) {
+        ex = Math.max(ex, c.rx);
+        e0 = Math.min(e0, c.z0);
+        e1 = Math.max(e1, c.z1);
+      }
+      return {
+        y: c.dy * k,
+        rx: ex * k + 0.035 + 0.02 * i,
+        rz: ((e1 - e0) / 2) * k + 0.035 + 0.02 * i,
+        cz: -((e0 + e1) / 2 - hz) * k,
+      };
     });
     mount(B.hips, buildPelt(M, rows));
     for (const side of ['L', 'R']) {
@@ -183,7 +211,10 @@ function createOni() {
     handR.position.set(0, 0, 0);
     mount(B.hdR, handR, { down: dir('R_Hand', 'R_Middle1') });
     // the new meshes join the mist-proof draw order (see below)
-    rig.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
+    rig.traverse((o) => {
+      if (o.isMesh) o.renderOrder = 2;
+      else if (o.isSprite) o.renderOrder = 3;
+    });
     rig.visible = true;
     // lay the club over the shoulder: in the idle pose its shaft runs from the fist up and
     // back past the head (directions in the oni's own frame)
@@ -192,7 +223,10 @@ function createOni() {
     api.snap(0);
     const rq = root.getWorldQuaternion(new THREE.Quaternion()).invert();
     const parentQ = rq.multiply(club.parent.getWorldQuaternion(new THREE.Quaternion()));
-    const want = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0.25, 0.55, -0.8).normalize());
+    const want = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(0.25, 0.55, -0.8).normalize()
+    );
     club.quaternion.copy(parentQ.invert().multiply(want));
     mode = was;
     api.snap(lastT);
@@ -203,11 +237,19 @@ function createOni() {
   // the transparent pass after it (still fully opaque, still writing depth) keeps the
   // skin one red from head to toe.
   for (const m of Object.values(M)) m.transparent = true;
-  rig.traverse((o) => { if (o.isMesh) o.renderOrder = 2; else if (o.isSprite) o.renderOrder = 3; });
+  rig.traverse((o) => {
+    if (o.isMesh) o.renderOrder = 2;
+    else if (o.isSprite) o.renderOrder = 3;
+  });
 
   /* ===================== animation ===================== */
   const pose = blankPose();
-  let mode = 'idle', staggerT = 0, flashT = 0, roarT = 0, walkPhase = 0, lastT = 0;
+  let mode = 'idle';
+  let staggerT = 0;
+  let flashT = 0;
+  let roarT = 0;
+  let walkPhase = 0;
+  let lastT = 0;
 
   function target(t) {
     const p = blankPose();
@@ -215,23 +257,41 @@ function createOni() {
     // idle: a hunched brute, weight low, the club resting on its left shoulder
     p.hipsY = 0.02 * br;
     p.hips = [0, 0, 0];
-    p.spine = [-0.1, 0, 0]; p.chest = [-0.06 + 0.02 * br, 0, 0]; p.upper = [-0.04, 0, 0];
-    p.neck = [0.12, 0, 0]; p.head = [0.12, 0, 0];
-    p.thL = [0.02, 0.1, -0.1]; p.shL = [-0.08, 0, 0]; p.ftL = [0.06, -0.1, 0.08];
-    p.thR = [0.02, -0.1, 0.1]; p.shR = [-0.08, 0, 0]; p.ftR = [0.06, 0.1, -0.08];
-    p.uaR = [0.1, 0, 0.32]; p.faR = [0.3, 0, 0]; p.hdR = [0, 0, 0];
-    p.uaL = [0.55, 0.3, -0.55]; p.faL = [2.15, 0.2, 0]; p.hdL = [0.2, 0, 0];
-    p.jaw = 0.08; p.curlR = 0.45;
+    p.spine = [-0.1, 0, 0];
+    p.chest = [-0.06 + 0.02 * br, 0, 0];
+    p.upper = [-0.04, 0, 0];
+    p.neck = [0.12, 0, 0];
+    p.head = [0.12, 0, 0];
+    p.thL = [0.02, 0.1, -0.1];
+    p.shL = [-0.08, 0, 0];
+    p.ftL = [0.06, -0.1, 0.08];
+    p.thR = [0.02, -0.1, 0.1];
+    p.shR = [-0.08, 0, 0];
+    p.ftR = [0.06, 0.1, -0.08];
+    p.uaR = [0.1, 0, 0.32];
+    p.faR = [0.3, 0, 0];
+    p.hdR = [0, 0, 0];
+    p.uaL = [0.55, 0.3, -0.55];
+    p.faL = [2.15, 0.2, 0];
+    p.hdL = [0.2, 0, 0];
+    p.jaw = 0.08;
+    p.curlR = 0.45;
     if (mode === 'walk') {
-      const s = Math.sin(walkPhase), c = Math.cos(walkPhase);
+      const s = Math.sin(walkPhase);
+      const c = Math.cos(walkPhase);
       p.hipsY = -0.04 - 0.08 * Math.abs(s);
       p.hips = [0, 0.06 * s, 0.05 * s];
-      p.spine = [-0.16, -0.1 * s, 0]; p.chest = [-0.05, -0.06 * s, -0.03 * s];
+      p.spine = [-0.16, -0.1 * s, 0];
+      p.chest = [-0.05, -0.06 * s, -0.03 * s];
       p.head = [0.2, 0.1 * s, 0];
-      p.thL = [0.5 * s, 0, -0.15]; p.thR = [-0.5 * s, 0, 0.15];   // a wide, heavy stance
-      p.shL = [-0.12 - 0.9 * Math.max(0, c), 0, 0]; p.shR = [-0.12 - 0.9 * Math.max(0, -c), 0, 0];
-      p.ftL = [0.25 * Math.max(0, c) - 0.1 * s, 0, 0]; p.ftR = [0.25 * Math.max(0, -c) + 0.1 * s, 0, 0];
-      p.uaR = [0.4 * s, 0, 0.3]; p.faR = [0.35 + 0.2 * Math.max(0, s), 0, 0];
+      p.thL = [0.5 * s, 0, -0.15];
+      p.thR = [-0.5 * s, 0, 0.15];   // a wide, heavy stance
+      p.shL = [-0.12 - 0.9 * Math.max(0, c), 0, 0];
+      p.shR = [-0.12 - 0.9 * Math.max(0, -c), 0, 0];
+      p.ftL = [0.25 * Math.max(0, c) - 0.1 * s, 0, 0];
+      p.ftR = [0.25 * Math.max(0, -c) + 0.1 * s, 0, 0];
+      p.uaR = [0.4 * s, 0, 0.3];
+      p.faR = [0.35 + 0.2 * Math.max(0, s), 0, 0];
     } else if (mode === 'roar') {
       Object.assign(p, { spine: [0.18, 0, 0], chest: [0.12, 0, 0], head: [0.45, 0, 0], jaw: 0.65,
         uaR: [0.5, 0, 1.45], faR: [0.7, 0, 0], uaL: [0.5, 0, -1.3], faL: [1.3, 0, 0] });
@@ -255,7 +315,8 @@ function createOni() {
     }
     if (roarT > 0) {
       const w = Math.sin(Math.min(1, roarT) * Math.PI);
-      p.head = [p.head[0] + 0.45 * w, p.head[1], p.head[2]]; p.jaw += 0.55 * w;
+      p.head = [p.head[0] + 0.45 * w, p.head[1], p.head[2]];
+      p.jaw += 0.55 * w;
       p.spine = [p.spine[0] + 0.15 * w, p.spine[1], p.spine[2]];
       p.uaR = [p.uaR[0], p.uaR[1], p.uaR[2] + 0.5 * w];
     }
@@ -266,9 +327,12 @@ function createOni() {
     return p;
   }
 
-  const e = new THREE.Euler(), q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const q = new THREE.Quaternion();
   function blend(tg, kk) {
-    pose.hipsY = lerp(pose.hipsY, tg.hipsY, kk); pose.jaw = lerp(pose.jaw, tg.jaw, kk); pose.curlR = lerp(pose.curlR, tg.curlR, kk);
+    pose.hipsY = lerp(pose.hipsY, tg.hipsY, kk);
+    pose.jaw = lerp(pose.jaw, tg.jaw, kk);
+    pose.curlR = lerp(pose.curlR, tg.curlR, kk);
     for (const key of KEYS) for (let i = 0; i < 3; i++) pose[key][i] = lerp(pose[key][i], tg[key][i], kk);
   }
   function apply() {
@@ -303,13 +367,17 @@ function createOni() {
     get mode() { return mode; },
     setMode(m) { mode = m; },
     roar() { roarT = 1; },
-    flash() { flashT = 1; staggerT = 1; },
+    flash() {
+      flashT = 1;
+      staggerT = 1;
+    },
     // where a held hero goes: its feet position and orientation (world), so that its waist
     // sits in the palm and the fingers close round it (see GRIP)
     holdTransform(pos, quat) {
       handR.updateWorldMatrix(true, false);
       const m = handR.matrixWorld.elements;
-      const ax = _hx.set(m[0], m[1], m[2]).normalize(), az = _hz.set(m[8], m[9], m[10]).normalize();
+      const ax = _hx.set(m[0], m[1], m[2]).normalize();
+      const az = _hz.set(m[8], m[9], m[10]).normalize();
       // palm on his right side (or left, if the hand is upside down); he faces down the fingers
       const flip = az.y < 0;
       const up = flip ? az.negate() : az;
@@ -320,10 +388,15 @@ function createOni() {
       return pos;
     },
     // jump every joint straight to the current mode's pose (for skipping cinematics)
-    snap(t = 0) { blend(target(t), 1); apply(); root.updateMatrixWorld(true); },
+    snap(t = 0) {
+      blend(target(t), 1);
+      apply();
+      root.updateMatrixWorld(true);
+    },
     // back to a calm idle, as if new
     reset() {
-      mode = 'idle'; staggerT = flashT = roarT = walkPhase = 0;
+      mode = 'idle';
+      staggerT = flashT = roarT = walkPhase = 0;
       M.skin.emissive.setRGB(0.17, 0.016, 0.016);
       this.snap();
     },

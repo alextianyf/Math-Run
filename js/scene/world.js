@@ -46,7 +46,11 @@ export function createWorld(canvas) {
   const hero = createHero();
   scene.add(hero.root, hero.dynamic);
   let heroReady = false;
-  hero.ready.then(() => setTimeout(() => { heroReady = true; }, 1500)).catch(() => { heroReady = true; });
+  hero.ready.then(() => setTimeout(() => {
+    heroReady = true;
+  }, 1500)).catch(() => {
+    heroReady = true;
+  });
 
   /* ---------- post-processing ---------- */
   const composer = new EffectComposer(renderer);
@@ -69,7 +73,8 @@ export function createWorld(canvas) {
     shake: 0, zoom: 1,
   };
   function computePresets(aspect) {
-    const portrait = aspect < 1, wide = aspect >= 1.45;
+    const portrait = aspect < 1;
+    const wide = aspect >= 1.45;
     const debug = presets?.debug;
     presets = {
       debug,
@@ -99,18 +104,25 @@ export function createWorld(canvas) {
       },
     };
   }
+  // torii beyond this z are hidden, and how long the camera takes to move, per mode
+  const HIDE_TORII = { play: 1.0, caught: -7.5, held: -7.5 };
+  const BLEND_S = { caught: 1.6, held: 1.1 };
   function setCameraMode(mode, instant = false) {
     // arches right behind the play camera would fill the screen; in the capture
     // scene, arches near the action would block it (far ones stay as a backdrop)
-    env.hideToriiBeyond = mode === 'play' ? 1.0 : mode === 'caught' || mode === 'held' ? -7.5 : Infinity;
+    env.hideToriiBeyond = HIDE_TORII[mode] ?? Infinity;
     rig.fromPos.copy(rig.pos);
     rig.fromLook.copy(rig.look);
     rig.mode = mode;
-    rig.dur = mode === 'caught' ? 1.6 : mode === 'held' ? 1.1 : 1.4;
+    rig.dur = BLEND_S[mode] ?? 1.4;
     rig.k = instant ? 1 : 0;
-    if (instant) { rig.pos.copy(presets[mode].pos); rig.look.copy(presets[mode].look); }
+    if (instant) {
+      rig.pos.copy(presets[mode].pos);
+      rig.look.copy(presets[mode].look);
+    }
   }
-  const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+  const camPos = new THREE.Vector3();
+  const camLook = new THREE.Vector3();
   function updateCamera(dt, t) {
     const target = presets[rig.mode];
     rig.k = Math.min(1, rig.k + dt / rig.dur);
@@ -119,9 +131,11 @@ export function createWorld(canvas) {
     camLook.lerpVectors(rig.fromLook, target.look, e);
     if (rig.k < 1) {
       if (rig.mode === 'play' || rig.mode === 'title') camPos.y += Math.sin(Math.PI * e) * 1.1;    // swoop over the hero
-      rig.pos.copy(camPos); rig.look.copy(camLook);
+      rig.pos.copy(camPos);
+      rig.look.copy(camLook);
     } else {
-      rig.pos.copy(target.pos); rig.look.copy(target.look);
+      rig.pos.copy(target.pos);
+      rig.look.copy(target.look);
     }
     camPos.x += Math.sin(t * 0.6) * 0.05;
     camPos.y += Math.sin(t * 0.9) * 0.035;
@@ -143,7 +157,8 @@ export function createWorld(canvas) {
   }
 
   /* ---------- public API ---------- */
-  let width = 1, height = 1;
+  let width = 1;
+  let height = 1;
   const tmp = new THREE.Vector3();
 
   function applySize() {
@@ -159,23 +174,38 @@ export function createWorld(canvas) {
   }
 
   // auto quality: if frames are slow for a few seconds, step down
-  let sampleT = 0, sampleN = 0;
+  let sampleT = 0;
+  let sampleN = 0;
 
   return {
     scene, camera, renderer, hero,
-    get pxScale() { return (height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2))) * renderer.getPixelRatio(); },
+    // screen pixels per world unit at distance 1
+    get pxScale() {
+      const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+      return focal * renderer.getPixelRatio();
+    },
     get quality() { return quality; },
-    setQuality(q) { quality = Math.max(0, Math.min(2, q)); applySize(); },
+    setQuality(q) {
+      quality = Math.max(0, Math.min(2, q));
+      applySize();
+    },
     sampleFrame(dt) {
       if (!heroReady) return;                 // loading the character stalls frames; don't count those
-      sampleT += dt; sampleN++;
+      sampleT += dt;
+      sampleN++;
       if (sampleT < 3) return;
       const avg = sampleT / sampleN;
-      sampleT = 0; sampleN = 0;
-      if (avg > 1 / 42 && quality > 0) { quality--; applySize(); console.info('[math-run] quality →', quality); }
+      sampleT = 0;
+      sampleN = 0;
+      if (avg > 1 / 42 && quality > 0) {
+        quality--;
+        applySize();
+        console.info('[math-run] quality →', quality);
+      }
     },
     resize(w, h) {
-      width = Math.max(1, w); height = Math.max(1, h);
+      width = Math.max(1, w);
+      height = Math.max(1, h);
       applySize();
       const aspect = width / height;
       camera.aspect = aspect;

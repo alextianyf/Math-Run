@@ -26,8 +26,12 @@ function renderAchievements() {
   $('achievement-list').innerHTML = ACHIEVEMENTS.map((a) => {
     const when = earned[a.id];
     const progress = !when && a.goal ? Math.min(progressOf(a) ?? 0, a.goal) : null;
-    const extra = when ? `<small>${day(when)}</small>`
-      : progress != null ? `<small class="progress"><i style="width:${(progress / a.goal) * 100}%"></i></small><small>${progress}/${a.goal}</small>` : '';
+    let extra = '';
+    if (when) extra = `<small>${day(when)}</small>`;
+    else if (progress != null) {
+      const bar = `<small class="progress"><i style="width:${(progress / a.goal) * 100}%"></i></small>`;
+      extra = `${bar}<small>${progress}/${a.goal}</small>`;
+    }
     return `<li class="${when ? 'earned' : 'locked'}"><span class="stamp"><b>${a.icon}</b></span>
       <div><b>${t(`a_${a.id}`)}</b><p>${t(`ad_${a.id}`)}</p>${extra}</div></li>`;
   }).join('');
@@ -110,12 +114,28 @@ export function initCollection() {
   });
   $('btn-achievements').addEventListener('click', () => openCollection('achievements'));
   $('btn-bestiary').addEventListener('click', () => openCollection('bestiary'));
-  $('btn-collection-close').addEventListener('click', () => { hideYokai(); showOverlay('ov-collection', false); });
-  const pick = (e) => { const li = e.target.closest('li[data-type]'); if (li) view(li.dataset.type); };
+  $('btn-collection-close').addEventListener('click', () => {
+    hideYokai();
+    showOverlay('ov-collection', false);
+  });
+  const pick = (e) => {
+    const li = e.target.closest('li[data-type]');
+    if (li) view(li.dataset.type);
+  };
   $('bestiary-list').addEventListener('click', pick);
-  $('bestiary-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });
+  $('bestiary-list').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      pick(e);
+    }
+  });
   $('btn-transfer-copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('transfer-out').value); $('transfer-msg').textContent = t('shared'); } catch { $('transfer-out').select(); }
+    try {
+      await navigator.clipboard.writeText($('transfer-out').value);
+      $('transfer-msg').textContent = t('shared');
+    } catch {
+      $('transfer-out').select();
+    }
   });
   $('btn-transfer-apply').addEventListener('click', () => importCode($('transfer-in').value));
 }

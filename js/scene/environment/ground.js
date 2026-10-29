@@ -6,12 +6,15 @@ import { rand } from '../../core/math.js';
 
 export function buildGround(scene) {
   const stone = canvasTexture(256, 256, (g, w, h) => {
-    g.fillStyle = '#1d1925'; g.fillRect(0, 0, w, h);
-    const rows = 4, rh = h / rows;
+    g.fillStyle = '#1d1925';
+    g.fillRect(0, 0, w, h);
+    const rows = 4;
+    const rh = h / rows;
     for (let r = 0; r < rows; r++) {
       let x = r % 2 ? -60 : 0;
       while (x < w) {
-        const sw = rand(90, 150), l = rand(30, 42);
+        const sw = rand(90, 150);
+        const l = rand(30, 42);
         g.fillStyle = `hsl(${rand(245, 262)}, 10%, ${l}%)`;
         g.fillRect(x + 3, r * rh + 3, sw - 6, rh - 6);
         g.fillStyle = `hsla(250, 20%, ${l + 12}%, 0.5)`;          // worn top edge
@@ -26,15 +29,19 @@ export function buildGround(scene) {
   }, [1, 320 / PATH_W]);
 
   const gravel = canvasTexture(128, 128, (g, w, h) => {
-    g.fillStyle = '#5d5872'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#5d5872';
+    g.fillRect(0, 0, w, h);
     for (let i = 0; i < 1400; i++) {
       g.fillStyle = `hsl(${rand(240, 265)}, 10%, ${rand(30, 62)}%)`;
-      g.beginPath(); g.arc(Math.random() * w, Math.random() * h, rand(0.6, 1.8), 0, Math.PI * 2); g.fill();
+      g.beginPath();
+      g.arc(Math.random() * w, Math.random() * h, rand(0.6, 1.8), 0, Math.PI * 2);
+      g.fill();
     }
   }, [1, 320 / 1.5]);
 
   const moss = canvasTexture(256, 256, (g, w, h) => {
-    g.fillStyle = '#16231f'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#16231f';
+    g.fillRect(0, 0, w, h);
     for (let i = 0; i < 900; i++) {
       g.fillStyle = `hsla(${rand(120, 175)}, 30%, ${rand(8, 22)}%, 0.6)`;
       g.fillRect(Math.random() * w, Math.random() * h, rand(1, 4), rand(2, 6));
@@ -47,7 +54,8 @@ export function buildGround(scene) {
     m.position.set(x, y, -110);
     scene.add(m);
   };
-  const mossMat = toon(0xffffff, { map: moss }), stoneMat = toon(0xffffff, { map: stone });
+  const mossMat = toon(0xffffff, { map: moss });
+  const stoneMat = toon(0xffffff, { map: stone });
   flat(240, mossMat, 0, 0);
   flat(PATH_W, stoneMat, 0, 0.02);
   const gravelMat = toon(0xffffff, { map: gravel });

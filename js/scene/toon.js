@@ -68,7 +68,10 @@ export function addOutline(mesh, thickness = 0.018) {
   const o = mesh.isSkinnedMesh
     ? new THREE.SkinnedMesh(mesh.geometry, outlineMaterial(thickness))
     : new THREE.Mesh(mesh.geometry, outlineMaterial(thickness));
-  if (mesh.isSkinnedMesh) { o.bind(mesh.skeleton, mesh.bindMatrix); o.frustumCulled = false; }
+  if (mesh.isSkinnedMesh) {
+    o.bind(mesh.skeleton, mesh.bindMatrix);
+    o.frustumCulled = false;
+  }
   if (mesh.frustumCulled === false) o.frustumCulled = false;
   o.raycast = () => {};
   mesh.add(o);
@@ -76,15 +79,19 @@ export function addOutline(mesh, thickness = 0.018) {
 }
 
 /* ---------- geometry helpers ---------- */
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
-const _p = new THREE.Vector3(), _s = new THREE.Vector3();
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+const _p = new THREE.Vector3();
+const _s = new THREE.Vector3();
 
 // Apply position / rotation / scale to a geometry in place
 export function place(geo, p = [0, 0, 0], r = [0, 0, 0], s = 1) {
   _e.set(r[0], r[1], r[2]);
   _q.setFromEuler(_e);
   _p.set(p[0], p[1], p[2]);
-  if (Array.isArray(s)) _s.set(s[0], s[1], s[2]); else _s.setScalar(s);
+  if (Array.isArray(s)) _s.set(s[0], s[1], s[2]);
+  else _s.setScalar(s);
   geo.applyMatrix4(_m.compose(_p, _q, _s));
   return geo;
 }
@@ -92,12 +99,16 @@ export function place(geo, p = [0, 0, 0], r = [0, 0, 0], s = 1) {
 // Merge transformed primitives into ONE mesh (one material group per material).
 // parts: [{ geo, mat, p, r, s }]
 export function bake(parts, { outline = 0.018 } = {}) {
-  const mats = [], byMat = new Map();
+  const mats = [];
+  const byMat = new Map();
   for (const pt of parts) {
     let g = place(pt.geo, pt.p, pt.r, pt.s ?? 1);
     if (g.index) g = g.toNonIndexed();
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    if (!byMat.has(pt.mat)) { byMat.set(pt.mat, []); mats.push(pt.mat); }
+    if (!byMat.has(pt.mat)) {
+      byMat.set(pt.mat, []);
+      mats.push(pt.mat);
+    }
     byMat.get(pt.mat).push(g);
   }
   const merged = mergeGeometries(mats.map((m) => mergeGeometries(byMat.get(m))), true);
@@ -111,7 +122,8 @@ export function taperedTube(points, radius, { segments = 14, radial = 8, tip = 0
   const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
   const g = new THREE.TubeGeometry(curve, segments, radius, radial, false);
   const pos = g.attributes.position;
-  const v = new THREE.Vector3(), c = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  const c = new THREE.Vector3();
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     curve.getPointAt(t, c);
@@ -142,10 +154,28 @@ export const lathe = (pts, segs = 20) => {
 //         weights(x,y,z) → [[boneName,w]] + boneIndex for a skinned surface
 const TAU = Math.PI * 2;
 const sgnPow = (c, k) => Math.sign(c) * Math.pow(Math.abs(c), k);
-export function loft(rows, { segs = 24, a0 = 0, a1 = TAU, seam = 0, uRep = 1, front = -1, uv = null, groups = null, weights = null, boneIndex = null } = {}) {
+export function loft(
+  rows,
+  {
+    segs = 24,
+    a0 = 0,
+    a1 = TAU,
+    seam = 0,
+    uRep = 1,
+    front = -1,
+    uv = null,
+    groups = null,
+    weights = null,
+    boneIndex = null,
+  } = {}
+) {
   const closed = a1 - a0 >= TAU - 1e-6;
   const cols = segs + 1;
-  const pos = [], uvs = [], skI = [], skW = [], colMat = [];
+  const pos = [];
+  const uvs = [];
+  const skI = [];
+  const skW = [];
+  const colMat = [];
   for (let i = 0; i < cols; i++) {
     const a = a0 + (a1 - a0) * (i / segs) + seam;
     colMat.push(groups ? groups(a) : 0);
@@ -153,24 +183,33 @@ export function loft(rows, { segs = 24, a0 = 0, a1 = TAU, seam = 0, uRep = 1, fr
   rows.forEach((r, j) => {
     for (let i = 0; i < cols; i++) {
       const a = a0 + (a1 - a0) * (i / segs) + seam;
-      const sa = Math.sin(a), ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const ca = Math.cos(a);
       const isFront = ca * front > 0;
       const e = (isFront && r.ef) || r.e || 2;
       const k = 2 / e;
-      const x = (r.cx || 0) + sgnPow(sa, k) * r.rx, z = (r.cz || 0) + sgnPow(ca, k) * r.rz;
+      const x = (r.cx || 0) + sgnPow(sa, k) * r.rx;
+      const z = (r.cz || 0) + sgnPow(ca, k) * r.rz;
       pos.push(x, r.y, z);
-      if (uv) uvs.push(...uv(x, r.y, z)); else uvs.push((i / segs) * uRep, 1 - j / (rows.length - 1));
+      if (uv) uvs.push(...uv(x, r.y, z));
+      else uvs.push((i / segs) * uRep, 1 - j / (rows.length - 1));
       if (weights) {
         const w = weights(x, r.y, z).sort((p, q) => q[1] - p[1]).slice(0, 4);
         const sum = w.reduce((s, [, v]) => s + v, 0) || 1;
-        for (let q = 0; q < 4; q++) { skI.push(w[q] ? boneIndex.get(w[q][0]) : 0); skW.push(w[q] ? w[q][1] / sum : 0); }
+        for (let q = 0; q < 4; q++) {
+          skI.push(w[q] ? boneIndex.get(w[q][0]) : 0);
+          skW.push(w[q] ? w[q][1] / sum : 0);
+        }
       }
     }
   });
   const byMat = new Map();
   for (let j = 0; j < rows.length - 1; j++) {
     for (let i = 0; i < segs; i++) {
-      const a = j * cols + i, b = a + 1, c = a + cols, d = c + 1;
+      const a = j * cols + i;
+      const b = a + 1;
+      const c = a + cols;
+      const d = c + 1;
       const m = colMat[i];
       if (!byMat.has(m)) byMat.set(m, []);
       byMat.get(m).push(a, c, b, b, c, d);
@@ -194,11 +233,15 @@ export function loft(rows, { segs = 24, a0 = 0, a1 = TAU, seam = 0, uRep = 1, fr
   g.setIndex(idx);
   g.computeVertexNormals();
   if (closed) {                                   // weld normals across the seam
-    const n = g.attributes.normal, v = new THREE.Vector3(), u = new THREE.Vector3();
+    const n = g.attributes.normal;
+    const v = new THREE.Vector3();
+    const u = new THREE.Vector3();
     for (let j = 0; j < rows.length; j++) {
-      const a = j * cols, b = a + segs;
+      const a = j * cols;
+      const b = a + segs;
       v.fromBufferAttribute(n, a).add(u.fromBufferAttribute(n, b)).normalize();
-      n.setXYZ(a, v.x, v.y, v.z); n.setXYZ(b, v.x, v.y, v.z);
+      n.setXYZ(a, v.x, v.y, v.z);
+      n.setXYZ(b, v.x, v.y, v.z);
     }
   }
   return g;

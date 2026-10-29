@@ -25,7 +25,10 @@ export const coach = createCoach();
 
 /* ---------- what the spotlight frames ---------- */
 const padded = (r, p) => ({ x: r.left - p, y: r.top - p, w: r.width + p * 2, h: r.height + p * 2 });
-const tutA = new THREE.Vector3(), tutB = new THREE.Vector3(), scrA = { x: 0, y: 0 }, scrB = { x: 0, y: 0 };
+const tutA = new THREE.Vector3();
+const tutB = new THREE.Vector3();
+const scrA = { x: 0, y: 0 };
+const scrB = { x: 0, y: 0 };
 
 function yokaiSpot() {
   const e = S.tut?.e;
@@ -110,7 +113,10 @@ export function updateTutorial(dt) {
     T.timer = pad.hasInk() && !pad.writing ? T.timer + dt : 0;
     if (T.timer > 0.45) tutStep('send');
   }
-  if (T.step === 'flying' && T.e.dying) { T.step = 'banished'; T.timer = 0.9; }   // let the seal and sparks play first
+  if (T.step === 'flying' && T.e.dying) {
+    T.step = 'banished';
+    T.timer = 0.9;
+  }   // let the seal and sparks play first
   if (T.step === 'banished' && (T.timer -= dt) <= 0) tutStep('nice');
   coach.update(dt);
 }
@@ -177,7 +183,15 @@ export async function finishTutorial() {
   if (S.tut !== T) return;                  // the run was left meanwhile
   S.tut = null;
   coach.show(false);
-  Object.assign(S, { score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, spawnTimer: 0.4, ai: { reads: 0, fixed: 0, unclear: 0 } });
+  Object.assign(S, {
+    score: 0,
+    distance: 0,
+    banished: 0,
+    combo: 0,
+    maxCombo: 0,
+    spawnTimer: 0.4,
+    ai: { reads: 0, fixed: 0, unclear: 0 },
+  });
   setScore(0);
   setDistance(0);
   setCombo(0);

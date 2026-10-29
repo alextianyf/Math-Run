@@ -94,7 +94,10 @@ export function createYokai(type) {
       center(out) { return out.set(root.position.x, info.centerY, root.position.z); },
       labelAnchor(out) { return out.set(root.position.x, info.labelY, root.position.z); },
       flash() { oni.flash(); },
-      dispose() { releaseOni(oni); shadow.material.dispose(); },
+      dispose() {
+        releaseOni(oni);
+        shadow.material.dispose();
+      },
     };
   }
 

@@ -26,7 +26,9 @@ export function yokaiHint(type, trait) {
   el.hidden = false;
   restartAnimation(el, 'show');
   clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => { el.hidden = true; }, HINT_MS);
+  hintTimer = setTimeout(() => {
+    el.hidden = true;
+  }, HINT_MS);
 }
 
 export function resetHints() {

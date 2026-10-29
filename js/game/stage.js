@@ -28,7 +28,12 @@ export function prewarm() {
   world.scene.add(warm);
 
   const culled = [];                     // draw every object, wherever the camera looks
-  world.scene.traverse((o) => { if (o.frustumCulled) { culled.push(o); o.frustumCulled = false; } });
+  world.scene.traverse((o) => {
+    if (o.frustumCulled) {
+      culled.push(o);
+      o.frustumCulled = false;
+    }
+  });
   world.render();
   for (const o of culled) o.frustumCulled = true;
 

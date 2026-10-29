@@ -22,7 +22,15 @@ const fromB64 = (code) => decodeURIComponent(escape(atob(code.replace(/-/g, '+')
 
 // run: { score, banished?, combo?, distance?, rank?, name?, day? } → the code in the link
 export function encodeRun(run) {
-  const data = JSON.stringify({ s: run.score, b: run.banished, c: run.combo, d: run.distance, r: run.rank, n: run.name || undefined, t: run.day });
+  const data = JSON.stringify({
+    s: run.score,
+    b: run.banished,
+    c: run.combo,
+    d: run.distance,
+    r: run.rank,
+    n: run.name || undefined,
+    t: run.day,
+  });
   return `${toB64(data)}.${check(data)}`;
 }
 export function decodeRun(code) {
@@ -76,10 +84,15 @@ export function openShare(run) {
 async function shareLink() {
   const url = runLink(current);                      // just the link: the card says the rest
   try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: t('cardTitleOwn'), url }); return; }
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      await navigator.share({ title: t('cardTitleOwn'), url });
+      return;
+    }
     await navigator.clipboard.writeText(url);
     $('btn-card-copy').textContent = t('cardCopied');
-    setTimeout(() => { $('btn-card-copy').textContent = t('cardCopy'); }, 2000);
+    setTimeout(() => {
+      $('btn-card-copy').textContent = t('cardCopy');
+    }, 2000);
   } catch { /* the player closed the share sheet */ }
 }
 

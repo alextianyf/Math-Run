@@ -4,8 +4,16 @@
 import * as THREE from 'three';
 import { createYokai } from '../scene/yokai/index.js';
 
-let renderer = null, scene, camera, current = null, raf = 0, last = 0, t = 0;
-const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
+let renderer = null;
+let scene;
+let camera;
+let current = null;
+let raf = 0;
+let last = 0;
+let t = 0;
+const box = new THREE.Box3();
+const size = new THREE.Vector3();
+const mid = new THREE.Vector3();
 const shadowless = new THREE.MeshBasicMaterial({ color: 0x07040f });
 
 function setup(canvas) {
@@ -34,7 +42,8 @@ function frame(now) {
   current.yokai.update(dt, t);
   current.yokai.root.rotation.y += dt * 0.6;
   const canvas = renderer.domElement;
-  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
   if (canvas.width !== Math.round(w * renderer.getPixelRatio())) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
@@ -53,7 +62,10 @@ export function showYokai(canvas, type, met) {
   if (!met) {
     yokai.root.traverse((o) => {
       if (o.isSprite || o.isPoints) o.visible = false;   // no glow on a silhouette
-      else if (o.isMesh && o !== yokai.root.children[0]) { o.userData.material = o.material; o.material = shadowless; }
+      else if (o.isMesh && o !== yokai.root.children[0]) {
+        o.userData.material = o.material;
+        o.material = shadowless;
+      }
     });
   }
   scene.add(yokai.root);
@@ -61,19 +73,28 @@ export function showYokai(canvas, type, met) {
   // frame it: fit the bounding box, looking slightly down
   box.makeEmpty();                                     // meshes only: glow sprites are much bigger than the body
   yokai.root.updateMatrixWorld(true);
-  yokai.root.traverse((o) => { if (o.isMesh && o.visible && o !== yokai.root.children[0]) box.expandByObject(o); });
-  box.getSize(size); box.getCenter(mid);
+  yokai.root.traverse((o) => {
+    if (o.isMesh && o.visible && o !== yokai.root.children[0]) box.expandByObject(o);
+  });
+  box.getSize(size);
+  box.getCenter(mid);
   const fit = Math.max(size.y, size.x * 0.9) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
   camera.position.set(mid.x, mid.y + size.y * 0.15, mid.z + fit * 1.35 + size.z / 2);
   camera.lookAt(mid);
-  if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  if (!raf) {
+    last = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
 }
 
 // stop drawing (and free the yokai); stop = false keeps the loop for the next one
 export function hideYokai(stop = true) {
   if (current) {
     current.yokai.root.traverse((o) => {
-      if (o.userData.material) { o.material = o.userData.material; delete o.userData.material; }
+      if (o.userData.material) {
+        o.material = o.userData.material;
+        delete o.userData.material;
+      }
       if (o.isSprite || o.isPoints) o.visible = true;
     });
     current.yokai.root.children[0].visible = true;
@@ -81,5 +102,8 @@ export function hideYokai(stop = true) {
     current.yokai.dispose();
     current = null;
   }
-  if (stop && raf) { cancelAnimationFrame(raf); raf = 0; }
+  if (stop && raf) {
+    cancelAnimationFrame(raf);
+    raf = 0;
+  }
 }

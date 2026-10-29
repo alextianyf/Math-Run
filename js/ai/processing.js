@@ -16,7 +16,9 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
   // 1) RGBA → Grayscale in [0,1]
   const gray = new Float32Array(srcW * srcH);
   for (let i = 0; i < srcW * srcH; i++) {
-    const r = rgba[i * 4 + 0], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2];
+    const r = rgba[i * 4 + 0];
+    const g = rgba[i * 4 + 1];
+    const b = rgba[i * 4 + 2];
     gray[i] = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   }
 
@@ -27,14 +29,15 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
   const bin = new Uint8Array(srcW * srcH);
   for (let i = 0; i < bin.length; i++) {
     const isFg = gray[i] >= th;
-    bin[i] = invert ? (isFg ? 0 : 1) : (isFg ? 1 : 0); // 1 = foreground (stroke), 0 = background
+    bin[i] = isFg !== invert ? 1 : 0; // 1 = foreground (stroke), 0 = background
   }
 
   // 3) Largest Connected Component (LCC) or all-foreground box → Region of Interest (ROI)
   const found = roiMode === 'all' ? foregroundBBox(bin, srcW, srcH) : largestCC(bin, srcW, srcH);
   const roi = found ?? { x0: 0, y0: 0, x1: srcW - 1, y1: srcH - 1 };
   const { x0, y0, x1, y1 } = roi;
-  const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1);
+  const w = Math.max(1, x1 - x0 + 1);
+  const h = Math.max(1, y1 - y0 + 1);
 
   // 4) Keep aspect ratio; scale so the longer side = 20 px
   const target = 20;
@@ -75,12 +78,14 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
   if (center) {
     const { cx, cy, mass } = computeCentroid(canvas28, 28, 28);
     if (mass > 0) {
-      const dx = Math.round(14 - cx), dy = Math.round(14 - cy);
+      const dx = Math.round(14 - cx);
+      const dy = Math.round(14 - cy);
       if (dx !== 0 || dy !== 0) {
         const shifted = new Float32Array(28 * 28);
         for (let y = 0; y < 28; y++) {
           for (let x = 0; x < 28; x++) {
-            const nx = x + dx, ny = y + dy;
+            const nx = x + dx;
+            const ny = y + dy;
             if (nx >= 0 && nx < 28 && ny >= 0 && ny < 28) {
               shifted[ny * 28 + nx] = canvas28[y * 28 + x];
             }
@@ -98,8 +103,12 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
   }
 
   // 8) Normalize to [0,1]
-  let min = Infinity, max = -Infinity;
-  for (const v of canvas28) { if (v < min) min = v; if (v > max) max = v; }
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of canvas28) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
   const range = Math.max(1e-6, max - min);
   for (let i = 0; i < canvas28.length; i++) canvas28[i] = (canvas28[i] - min) / range;
 
@@ -112,9 +121,12 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
 // Box-filter resize, separable: weights are the overlap of each source pixel with the
 // target pixel's footprint [x·w/newW, (x+1)·w/newW)
 function areaWeights(n, m) {
-  const out = [], f = n / m;
+  const out = [];
+  const f = n / m;
   for (let t = 0; t < m; t++) {
-    const a = t * f, b = (t + 1) * f, taps = [];
+    const a = t * f;
+    const b = (t + 1) * f;
+    const taps = [];
     for (let s = Math.floor(a); s < Math.min(n, Math.ceil(b)); s++) {
       const wgt = Math.min(b, s + 1) - Math.max(a, s);
       if (wgt > 0) taps.push([s, wgt / f]);
@@ -124,7 +136,8 @@ function areaWeights(n, m) {
   return out;
 }
 function areaResize(src, w, h, newW, newH) {
-  const wx = areaWeights(w, newW), wy = areaWeights(h, newH);
+  const wx = areaWeights(w, newW);
+  const wy = areaWeights(h, newH);
   const tmp = new Float32Array(newW * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < newW; x++) {

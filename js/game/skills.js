@@ -46,7 +46,9 @@ export function charge(amount) {
 export const chargeKill = (n = 1) => charge(CHARGE_PER_KILL * n);
 
 // the fox's blessing starts with a little charge
-on('nightBegins', ({ id }) => { if (id === 'fox') charge(0.3); });
+on('nightBegins', ({ id }) => {
+  if (id === 'fox') charge(0.3);
+});
 
 function thunder() {
   world.shake(0.5);
@@ -105,7 +107,16 @@ export function blockHit(p) {
 
 function luckySparkle() {
   const p = new THREE.Vector3(rand(-0.5, 0.5), rand(0.2, 1.8), rand(-0.3, 0.4));
-  fx.emit(p, { count: 1, color: 0xffd36b, color2: 0xffffff, bright: 2, speed: 0.4, life: 0.8, size: 0.16, gravity: 1.5 });
+  fx.emit(p, {
+    count: 1,
+    color: 0xffd36b,
+    color2: 0xffffff,
+    bright: 2,
+    speed: 0.4,
+    life: 0.8,
+    size: 0.16,
+    gravity: 1.5,
+  });
 }
 
 // per frame, outside the tutorial: running skills wear off, time charges the seal

@@ -16,10 +16,16 @@ import { dressHero } from './heroRobe.js';
 
 const TAU = Math.PI * 2;
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
-const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const smooth = (a, b, x) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
 const lerp = (a, b, k) => a + (b - a) * k;
 // gaussian bump on a periodic phase
-const bump = (ph, c, w) => { const d = ((((ph - c) % TAU) + TAU + Math.PI) % TAU) - Math.PI; return Math.exp(-(d * d) / (w * w)); };
+const bump = (ph, c, w) => {
+  const d = ((((ph - c) % TAU) + TAU + Math.PI) % TAU) - Math.PI;
+  return Math.exp(-(d * d) / (w * w));
+};
 
 /* ===================== poses ===================== */
 // Euler angles per joint, authored for a character whose bones have identity rest
@@ -32,7 +38,11 @@ const BONE = {
   thL: 'leftUpperLeg', shL: 'leftLowerLeg', ftL: 'leftFoot', thR: 'rightUpperLeg', shR: 'rightLowerLeg', ftR: 'rightFoot',
 };
 const HIPS_REF = 0.86;                       // hipsY the poses were authored against
-const blankPose = () => { const p = { hipsY: HIPS_REF }; for (const k of KEYS) p[k] = [0, 0, 0]; return p; };
+const blankPose = () => {
+  const p = { hipsY: HIPS_REF };
+  for (const k of KEYS) p[k] = [0, 0, 0];
+  return p;
+};
 function mix(a, b, w) {
   if (w <= 0) return a;
   const out = { hipsY: lerp(a.hipsY, b.hipsY, w) };
@@ -42,24 +52,35 @@ function mix(a, b, w) {
 
 // Standing on the title screen: weight on the left leg, sword mudra raised before the face
 function poseIdle(t) {
-  const p = blankPose(), br = Math.sin(t * 1.7);
+  const p = blankPose();
+  const br = Math.sin(t * 1.7);
   p.hipsY = 0.855 + 0.004 * br;
   p.hips = [0, 0.12, 0.035];
-  p.thL = [0.02, 0, -0.07]; p.shL = [-0.04, 0, 0]; p.ftL = [0.02, -0.1, 0.07];
-  p.thR = [0.2, -0.12, 0.08]; p.shR = [-0.32, 0, 0]; p.ftR = [0.12, 0.15, -0.05];
+  p.thL = [0.02, 0, -0.07];
+  p.shL = [-0.04, 0, 0];
+  p.ftL = [0.02, -0.1, 0.07];
+  p.thR = [0.2, -0.12, 0.08];
+  p.shR = [-0.32, 0, 0];
+  p.ftR = [0.12, 0.15, -0.05];
   p.spine = [0.03, -0.08, -0.03];
   p.chest = [-0.02 + 0.015 * br, -0.1, 0];
   p.neck = [0, 0.04, 0];
   p.head = [0.05 + 0.012 * Math.sin(t * 0.9), 0.16 + 0.05 * Math.sin(t * 0.47), 0.07];
-  p.uaR = [0.38, 0.25, 0.42]; p.faR = [2.15, 0.2, 0]; p.hdR = [0.1, 0, 0];
-  p.uaL = [-0.1, 0, -0.18]; p.faL = [0.3, 0, 0]; p.hdL = [0.12, 0, 0];
+  p.uaR = [0.38, 0.25, 0.42];
+  p.faR = [2.15, 0.2, 0];
+  p.hdR = [0.1, 0, 0];
+  p.uaL = [-0.1, 0, -0.18];
+  p.faL = [0.3, 0, 0];
+  p.hdL = [0.12, 0, 0];
   return p;
 }
 
 // Run cycle at phase ph (0..2π), amplitude a (0..1): a driving sprint — forward lean,
 // little hip sway, elbows pumping at ~90° close to the body, steady head
 function poseRun(ph, a) {
-  const p = blankPose(), s = Math.sin(ph), c = Math.cos(ph);
+  const p = blankPose();
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
   p.hipsY = HIPS_REF - 0.012 * a - 0.03 * a * Math.cos(2 * ph);
   p.hips = [0, -0.07 * a * s, 0.02 * a * c];
   p.spine = [-(0.1 + 0.24 * a), 0.1 * a * s, -0.015 * a * c];
@@ -67,7 +88,8 @@ function poseRun(ph, a) {
   p.neck = [0.08 * a, -0.08 * a * s, 0];
   p.head = [0.14 * a + 0.015 * a * Math.cos(2 * ph), -0.08 * a * s, 0];
   for (const [side, off, sx] of [['L', 0, -1], ['R', Math.PI, 1]]) {
-    const q = ph + off, sq = Math.sin(q);
+    const q = ph + off;
+    const sq = Math.sin(q);
     p['th' + side] = [a * (0.15 + 0.85 * sq), 0, sx * 0.03];
     p['sh' + side] = [-a * (0.1 + 1.6 * bump(q, 0.2, 1.0) + 0.25 * bump(q, Math.PI + 0.35, 0.6)), 0, 0];
     p['ft' + side] = [a * (0.12 + 0.25 * bump(q, Math.PI / 2 + 0.3, 0.5) - 0.55 * bump(q, 1.5 * Math.PI + 0.45, 0.55)), 0, 0];
@@ -103,13 +125,22 @@ function applyCast(p, ct) {
 
 function poseKneel(t) {
   const p = blankPose();
-  p.hipsY = 0.47; p.hips = [0.1, 0, 0];
-  p.thL = [0.14, 0.06, -0.1]; p.shL = [-1.62, 0, 0]; p.ftL = [-0.5, 0, 0];
-  p.thR = [0.1, -0.06, 0.1]; p.shR = [-1.58, 0, 0]; p.ftR = [-0.5, 0, 0];
-  p.spine = [0.22, 0, 0]; p.chest = [0.12, 0, 0];
-  p.neck = [0.15, 0, 0]; p.head = [0.35 + 0.03 * Math.sin(t * 23), 0.1 * Math.sin(t * 2.1), 0];
-  p.uaL = [1.35, -0.3, -0.35]; p.faL = [1.5, 0, 0];
-  p.uaR = [1.25, 0.3, 0.35]; p.faR = [1.6, 0, 0];
+  p.hipsY = 0.47;
+  p.hips = [0.1, 0, 0];
+  p.thL = [0.14, 0.06, -0.1];
+  p.shL = [-1.62, 0, 0];
+  p.ftL = [-0.5, 0, 0];
+  p.thR = [0.1, -0.06, 0.1];
+  p.shR = [-1.58, 0, 0];
+  p.ftR = [-0.5, 0, 0];
+  p.spine = [0.22, 0, 0];
+  p.chest = [0.12, 0, 0];
+  p.neck = [0.15, 0, 0];
+  p.head = [0.35 + 0.03 * Math.sin(t * 23), 0.1 * Math.sin(t * 2.1), 0];
+  p.uaL = [1.35, -0.3, -0.35];
+  p.faL = [1.5, 0, 0];
+  p.uaR = [1.25, 0.3, 0.35];
+  p.faR = [1.6, 0, 0];
   return p;
 }
 
@@ -143,7 +174,10 @@ export function createHero() {
   dynamic.add(lookTarget);
 
   // contact shadow
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthWrite: false }));
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.1, 1.1),
+    new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthWrite: false })
+  );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.035;
   root.add(shadow);
@@ -156,7 +190,10 @@ export function createHero() {
   const materials = [];
   let chestNode = root;
   let robe = null;
-  const armBase = { L: new THREE.Quaternion().setFromAxisAngle(Z, 1.3), R: new THREE.Quaternion().setFromAxisAngle(Z, -1.3) };
+  const armBase = {
+    L: new THREE.Quaternion().setFromAxisAngle(Z, 1.3),
+    R: new THREE.Quaternion().setFromAxisAngle(Z, -1.3),
+  };
   const armBaseInv = { L: armBase.L.clone().invert(), R: armBase.R.clone().invert() };
 
   const loader = new GLTFLoader();
@@ -168,7 +205,10 @@ export function createHero() {
       VRMUtils.combineSkeletons(gltf.scene);
       VRMUtils.combineMorphs(vrm);
       vrm.scene.traverse((o) => {
-        if (o.isMesh) { o.frustumCulled = false; for (const m of [].concat(o.material)) if (!materials.includes(m)) materials.push(m); }
+        if (o.isMesh) {
+          o.frustumCulled = false;
+          for (const m of [].concat(o.material)) if (!materials.includes(m)) materials.push(m);
+        }
       });
       restyleHero(vrm, materials);
 
@@ -209,12 +249,23 @@ export function createHero() {
       vrm.humanoid.getRawBoneNode('head').add(makeFoxMask());
       if (vrm.lookAt) vrm.lookAt.target = lookTarget;
       resolve(vrm);
-    }, undefined, (err) => { console.error('[math-run] hero model failed to load', err); reject(err); });
+    }, undefined, (err) => {
+      console.error('[math-run] hero model failed to load', err);
+      reject(err);
+    });
   });
 
   /* ===================== per-frame ===================== */
-  const e = new THREE.Euler(), qPose = new THREE.Quaternion(), tmp = new THREE.Vector3();
-  let phase = 0, castT = 99, hurtT = 0, mode = 'run', modeT = 1, nextBlink = 2, blinkT = 0;
+  const e = new THREE.Euler();
+  const qPose = new THREE.Quaternion();
+  const tmp = new THREE.Vector3();
+  let phase = 0;
+  let castT = 99;
+  let hurtT = 0;
+  let mode = 'run';
+  let modeT = 1;
+  let nextBlink = 2;
+  let blinkT = 0;
 
   function applyPose(p) {
     for (const k of KEYS) {
@@ -229,21 +280,42 @@ export function createHero() {
     bones.hips.position.y = hipsRest + (p.hipsY - HIPS_REF) / modelScale;
   }
 
-  const expr = (name, v) => { if (vrm.expressionManager?.getExpression(name)) vrm.expressionManager.setValue(name, v); };
+  const expr = (name, v) => {
+    if (vrm.expressionManager?.getExpression(name)) vrm.expressionManager.setValue(name, v);
+  };
   let expression = 'normal';
   function setFace(dt, t) {
     const em = vrm.expressionManager;
     if (!em) return;
     const shocked = mode === 'kneel' || mode === 'grabbed';
-    if (!shocked && t > nextBlink) { blinkT = 0.14; nextBlink = t + 2.4 + Math.random() * 3; }
+    if (!shocked && t > nextBlink) {
+      blinkT = 0.14;
+      nextBlink = t + 2.4 + Math.random() * 3;
+    }
     blinkT -= dt;
     const casting = castT < 0.42;
-    const next = shocked ? 'shock' : casting ? 'cast' : hurtT > 0.3 ? 'hurt' : 'normal';
-    if (next !== expression) { em.resetValues(); expression = next; }
-    expr('blink', shocked ? 0 : blinkT > 0 ? 1 : 0);
-    if (shocked) { expr('Surprised', 1); expr('sad', 0.35); expr('oh', 0.5); }
-    else if (casting) { expr('angry', 0.7); expr('aa', 0.35); }   // shouting the spell
-    else if (hurtT > 0.3) { expr('angry', 0.4); expr('ih', 0.4); }
+    let next = 'normal';
+    if (shocked) next = 'shock';
+    else if (casting) next = 'cast';
+    else if (hurtT > 0.3) next = 'hurt';
+    if (next !== expression) {
+      em.resetValues();
+      expression = next;
+    }
+    expr('blink', !shocked && blinkT > 0 ? 1 : 0);
+    if (shocked) {
+      expr('Surprised', 1);
+      expr('sad', 0.35);
+      expr('oh', 0.5);
+    }
+    else if (casting) {
+      expr('angry', 0.7);
+      expr('aa', 0.35);
+    }   // shouting the spell
+    else if (hurtT > 0.3) {
+      expr('angry', 0.4);
+      expr('ih', 0.4);
+    }
   }
 
   function setWind(speed, t, amp) {
@@ -258,7 +330,12 @@ export function createHero() {
     }
   }
 
-  function setMode(m) { if (m !== mode) { mode = m; modeT = 0; } }
+  function setMode(m) {
+    if (m !== mode) {
+      mode = m;
+      modeT = 0;
+    }
+  }
 
   return {
     root, dynamic, ready,
@@ -270,8 +347,13 @@ export function createHero() {
     hurt() { hurtT = 1; },
     setMode,
     reset() {
-      mode = 'run'; modeT = 1; castT = 99; hurtT = 0;
-      root.position.set(0, 0, 0); root.rotation.set(0, 0, 0); root.scale.setScalar(1);
+      mode = 'run';
+      modeT = 1;
+      castT = 99;
+      hurtT = 0;
+      root.position.set(0, 0, 0);
+      root.rotation.set(0, 0, 0);
+      root.scale.setScalar(1);
       shadow.visible = true;
     },
     // camera: on the title screen he makes eye contact with the viewer
@@ -300,7 +382,10 @@ export function createHero() {
       // eye contact while standing still; otherwise look where he runs
       if (vrm.lookAt) {
         if (camera && amp < 0.05 && mode === 'run') lookTarget.position.copy(camera.position);
-        else { bones.head.getWorldPosition(tmp); lookTarget.position.set(tmp.x, tmp.y, tmp.z - 10); }
+        else {
+          bones.head.getWorldPosition(tmp);
+          lookTarget.position.set(tmp.x, tmp.y, tmp.z - 10);
+        }
         lookTarget.updateMatrixWorld(true);
       }
       vrm.update(dt);

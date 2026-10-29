@@ -19,7 +19,10 @@ export function onTalisman({ write, read }) {
 }
 
 export const pad = createPad($('pad'), {
-  onInput: () => { onWrite(); liveGuess(); },
+  onInput: () => {
+    onWrite();
+    liveGuess();
+  },
   onFinish: readTalisman,
   onArm: (ms) => armTalisman(ms),
   onDisarm: () => disarmTalisman(),
@@ -27,11 +30,15 @@ export const pad = createPad($('pad'), {
   holdAuto: () => !!S.tut,                     // the tutorial teaches the seal: it waits for it
 });
 // the seal at the talisman's foot, the big one beside it (touch) or Space sends it at once
-for (const id of ['pad-send', 'send-big']) $(id).addEventListener('click', (e) => { e.currentTarget.blur(); pad.send(); });
+for (const id of ['pad-send', 'send-big']) $(id).addEventListener('click', (e) => {
+  e.currentTarget.blur();
+  pad.send();
+});
 new ResizeObserver(() => pad.resize()).observe($('pad'));
 
 // while the player writes: what the model sees right now (at most ~7 times a second)
-let liveBusy = false, liveLast = 0;
+let liveBusy = false;
+let liveLast = 0;
 async function liveGuess() {
   if (!aiInfo.ready || liveBusy) return;
   const now = performance.now();
@@ -71,7 +78,11 @@ async function readTalisman() {
   disarmTalisman();
   if (!pad.hasInk() || pad.writing) return;
   const rgba = S.mode === 'playing' && aiInfo.ready ? pad.renderForModel() : null;
-  if (!rgba) { pad.clear(); setGuess(null); return; }
+  if (!rgba) {
+    pad.clear();
+    setGuess(null);
+    return;
+  }
 
   pad.setEnabled(false);
   const paper = pad.snapshot();              // the written talisman, to fly at the yokai

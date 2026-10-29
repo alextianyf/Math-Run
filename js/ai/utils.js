@@ -15,7 +15,10 @@ export function otsu(gray){
   for (let i = 0; i < 256; i++) sum += i * hist[i];
 
   // Iterate all possible thresholds; pick the one maximizing between-class variance
-  let sumB = 0, wB = 0, varMax = -1, th = 0;
+  let sumB = 0;
+  let wB = 0;
+  let varMax = -1;
+  let th = 0;
   for (let i = 0; i < 256; i++){
     wB += hist[i];               // weight of background
     if (!wB) continue;
@@ -28,7 +31,10 @@ export function otsu(gray){
 
     // Between-class variance
     const between = wB * wF * (mB - mF) * (mB - mF);
-    if (between > varMax){ varMax = between; th = i; }
+    if (between > varMax){
+      varMax = between;
+      th = i;
+    }
   }
 
   return th / 255;               // convert back to [0,1]
@@ -39,7 +45,8 @@ export function otsu(gray){
 // Output: bounding box {x0,y0,x1,y1} of the largest component, or null if none
 export function largestCC(bin, w, h){
   const visited = new Uint8Array(w * h);
-  let best = null, bestSize = 0;
+  let best = null;
+  let bestSize = 0;
 
   // Pre-allocate BFS queues (ring-buffer style via head/tail indices)
   const qx = new Int32Array(w * h);
@@ -51,30 +58,44 @@ export function largestCC(bin, w, h){
       if (bin[idx] === 0 || visited[idx]) continue;
 
       // BFS from this seed
-      let head = 0, tail = 0;
-      qx[tail] = x; qy[tail] = y; tail++;
+      let head = 0;
+      let tail = 0;
+      qx[tail] = x;
+      qy[tail] = y;
+      tail++;
       visited[idx] = 1;
 
       // Track bounding box and size
-      let minx = x, maxx = x, miny = y, maxy = y, size = 0;
+      let minx = x;
+      let maxx = x;
+      let miny = y;
+      let maxy = y;
+      let size = 0;
 
       while (head < tail){
-        const cx = qx[head], cy = qy[head]; head++;
+        const cx = qx[head];
+        const cy = qy[head];
+        head++;
         size++;
 
         // Update bounding box
-        if (cx < minx) minx = cx; if (cx > maxx) maxx = cx;
-        if (cy < miny) miny = cy; if (cy > maxy) maxy = cy;
+        if (cx < minx) minx = cx;
+        if (cx > maxx) maxx = cx;
+        if (cy < miny) miny = cy;
+        if (cy > maxy) maxy = cy;
 
         // 4-neighbors
         const nbs = [[1,0],[-1,0],[0,1],[0,-1]];
         for (const [dx, dy] of nbs){
-          const nx = cx + dx, ny = cy + dy;
+          const nx = cx + dx;
+          const ny = cy + dy;
           if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
           const nidx = ny * w + nx;
           if (!visited[nidx] && bin[nidx] === 1){
             visited[nidx] = 1;
-            qx[tail] = nx; qy[tail] = ny; tail++;
+            qx[tail] = nx;
+            qy[tail] = ny;
+            tail++;
           }
         }
       }
@@ -94,12 +115,17 @@ export function largestCC(bin, w, h){
 // Output: bounding box {x0,y0,x1,y1} of ALL foreground pixels, or null if none
 // (keeps every stroke of multi-stroke digits like 4 or 5 when the input is clean)
 export function foregroundBBox(bin, w, h){
-  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  let x0 = w;
+  let y0 = h;
+  let x1 = -1;
+  let y1 = -1;
   for (let y = 0; y < h; y++){
     for (let x = 0; x < w; x++){
       if (!bin[y * w + x]) continue;
-      if (x < x0) x0 = x; if (x > x1) x1 = x;
-      if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
     }
   }
   return x1 < 0 ? null : { x0, y0, x1, y1 };
@@ -109,11 +135,15 @@ export function foregroundBBox(bin, w, h){
 // Input: img (Float32Array), width w, height h
 // Output: { cx, cy, mass }, centroid in pixel coords (float), mass = sum of intensity
 export function computeCentroid(img, w, h){
-  let sum = 0, sx = 0, sy = 0;
+  let sum = 0;
+  let sx = 0;
+  let sy = 0;
   for (let y = 0; y < h; y++){
     for (let x = 0; x < w; x++){
       const v = img[y * w + x];
-      sum += v; sx += v * x; sy += v * y;
+      sum += v;
+      sx += v * x;
+      sy += v * y;
     }
   }
   if (sum <= 0) return { cx: w / 2, cy: h / 2, mass: 0 }; // fallback: center of image
@@ -132,7 +162,8 @@ export function gaussianBlur1D(img, w, h, sigma = 0.8, vertical = false){
   let s = 0;
   for (let i = -radius; i <= radius; i++){
     const val = Math.exp(-(i * i) / (2 * sigma * sigma));
-    k[i + radius] = val; s += val;
+    k[i + radius] = val;
+    s += val;
   }
   for (let i = 0; i < k.length; i++) k[i] /= s;
 

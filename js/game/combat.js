@@ -82,7 +82,7 @@ export function cast(digit, paper) {
   const n = victims.length;
   emit('cast', { victims: n });
   if (n >= 2) {
-    banner(t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
+    banner(t(`multi${Math.min(n, 4)}`), 'multi');      // 2, 3, or 4 and more
     sfx.multi(n);
   }
   const style = S.tut ? 'talisman' : STYLES[Math.floor(Math.random() * STYLES.length)];
@@ -108,7 +108,18 @@ const SPELLS = {
     for (let k = 0; k < 3; k++) {
       fx.talisman(null, from, (out) => e.yokai.center(out), {
         dur: 0.36 + i * 0.06 + k * 0.05, side: (k - 1) * 3.2, lift: 2.2 - k * 0.6, color: k === 1 ? 0xb47dff : 0x6fd8ff,
-        onHit: k === 2 ? () => impact(e, n) : (p) => fx.emit(p, { count: 12, color: 0x8fe8ff, color2: 0xb47dff, bright: 2, speed: 3, life: 0.4, size: 0.2 }),
+        onHit: k === 2 ? () => impact(
+          e,
+          n
+        ) : (p) => fx.emit(p, {
+          count: 12,
+          color: 0x8fe8ff,
+          color2: 0xb47dff,
+          bright: 2,
+          speed: 3,
+          life: 0.4,
+          size: 0.2,
+        }),
       });
     }
   },
@@ -145,7 +156,17 @@ export function fizzle(digit, paper, penalize) {
   fx.talisman(tex, from, (out) => out.set(0, 2.4, -9), {
     dur: 0.42, color: 0xff7a3a,
     onHit: (p) => {
-      fx.emit(p, { count: 30, color: 0xff8a2a, color2: 0x55505a, bright: 1.2, speed: 2.2, life: 1, size: 0.3, gravity: 1.5, up: 0.2 });
+      fx.emit(p, {
+        count: 30,
+        color: 0xff8a2a,
+        color2: 0x55505a,
+        bright: 1.2,
+        speed: 2.2,
+        life: 1,
+        size: 0.3,
+        gravity: 1.5,
+        up: 0.2,
+      });
     },
   });
   if (penalize) {
@@ -168,11 +189,32 @@ function impact(e, n) {
   if (!S.enemies.includes(e) || e.dying) return;
   const p = e.yokai.center(new THREE.Vector3());
   const color = e.yokai.info.color;
-  fx.emit(p, { count: e.boss ? 70 : 40, color: 0xffe28a, color2: color, bright: 2, speed: e.boss ? 8 : 6, life: 0.8, size: 0.3 });
+  fx.emit(p, {
+    count: e.boss ? 70 : 40,
+    color: 0xffe28a,
+    color2: color,
+    bright: 2,
+    speed: e.boss ? 8 : 6,
+    life: 0.8,
+    size: 0.3,
+  });
   fx.emit(p, { count: 14, color: 0xf6d670, color2: 0xd09a30, bright: 1, speed: 3, life: 1.3, size: 0.2, gravity: -5 });
-  fx.emit(p, { count: 16, color: 0x8fe8ff, color2: 0xb47dff, bright: 1.8, speed: 1.2, life: 1.4, size: 0.22, gravity: 2.2, up: 0.4, dragK: 2.5 });
+  fx.emit(p, {
+    count: 16,
+    color: 0x8fe8ff,
+    color2: 0xb47dff,
+    bright: 1.8,
+    speed: 1.2,
+    life: 1.4,
+    size: 0.22,
+    gravity: 2.2,
+    up: 0.4,
+    dragK: 2.5,
+  });
   fx.ring(p, { color: 0xffd36b, scale: e.boss ? 6.5 : 3.4 });
-  fx.flash(p, { scale: e.boss ? 8 : n >= 2 ? 6 : 4.5 });
+  let flash = n >= 2 ? 6 : 4.5;
+  if (e.boss) flash = 8;
+  fx.flash(p, { scale: flash });
   sfx.hit(S.combo);
   // a hit-stop and a little camera kick, except on the oni's last answer: its
   // finisher has a slow motion and a zoom of its own
@@ -189,7 +231,13 @@ function impact(e, n) {
     world.shake(e.boss ? 0.25 : 0.1);
     record(e, true);
     const prob = director.nextProblem({ avoid: new Set(targets().map((o) => o.text)), boss: e.boss });
-    Object.assign(e, { problem: prob, qStart: e.age, qTravel: director.travelTime(prob), answer: prob.answer, text: prob.text });
+    Object.assign(e, {
+      problem: prob,
+      qStart: e.age,
+      qTravel: director.travelTime(prob),
+      answer: prob.answer,
+      text: prob.text,
+    });
     setTagText(e.tag, prob.text);
     setTagHp(e.tag, e.hpDone, e.hpTotal);
     measureTag(e);
@@ -205,7 +253,11 @@ function impact(e, n) {
 
   // banished: more points the farther away it was (the rokurokubi: the nearer), and
   // for several at once
-  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.33 : 0.22); killFlash(); }
+  if (!e.boss) {
+    fx.seal(p);
+    world.shake(n >= 2 ? 0.33 : 0.22);
+    killFlash();
+  }
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
@@ -221,7 +273,10 @@ function impact(e, n) {
   if (e.boss) {
     // the trial is passed: the finisher first, then the promotion
     setTagHp(e.tag, e.hpTotal, e.hpTotal);
-    finisher(e, () => { promote(); showRank(); });
+    finisher(e, () => {
+      promote();
+      showRank();
+    });
   }
   removeTag(e.tag, 600);
   e.tag = null;
@@ -248,7 +303,11 @@ function banishFree(e) {
   emit('banish', { type: e.yokai.type, combo: S.combo, free: true });
   e.dying = 0.0001;
   e.locked = true;
-  if (e.tag) { setTagState(e.tag, 'hit'); removeTag(e.tag, 600); e.tag = null; }
+  if (e.tag) {
+    setTagState(e.tag, 'hit');
+    removeTag(e.tag, 600);
+    e.tag = null;
+  }
   advance(1);
 }
 // skills.js and finisher.js announce each yokai they sweep away
@@ -257,7 +316,16 @@ on('sweep', ({ enemy }) => banishFree(enemy));
 // a yokai got through to the hero: one heart (a failed rank trial too, never more)
 export function playerHit(e) {
   const p = e.yokai.center(new THREE.Vector3());
-  fx.emit(p, { count: 46, color: 0x9a5cff, color2: 0x2a1840, bright: 1.4, speed: 4, life: 0.9, size: 0.45, gravity: 0.5 });
+  fx.emit(p, {
+    count: 46,
+    color: 0x9a5cff,
+    color2: 0x2a1840,
+    bright: 1.4,
+    speed: 4,
+    life: 0.9,
+    size: 0.45,
+    gravity: 0.5,
+  });
   fx.ring(p, { color: 0x9a5cff, scale: 3 });
   record(e, false);
   if (!S.tut) director.hit();
@@ -279,17 +347,31 @@ export function playerHit(e) {
 
 // the hero's charge aura: a back-light that grows gold as the seal charges, sparks
 // rising off him, then crackling arcs near the end; a ready skill turns it its colour
-let aura = null, arcT = 0;
-const smooth01 = (x) => { const k = Math.min(1, Math.max(0, x)); return k * k * (3 - 2 * k); };
+let aura = null;
+let arcT = 0;
+const smooth01 = (x) => {
+  const k = Math.min(1, Math.max(0, x));
+  return k * k * (3 - 2 * k);
+};
 function updateAura(dt) {
   aura ??= fx.aura(new THREE.Vector3(0, 1.05, -0.35));
-  const k = S.tut ? 0 : S.skill ? 1 : S.charge;
+  let k = S.skill ? 1 : S.charge;
+  if (S.tut) k = 0;
   const color = S.skill ? SKILLS[S.skill].color : 0xffc84a;
   const pulse = S.skill ? 0.12 * Math.sin(S.t * 7) : 0;
   aura.set(smooth01((k - 0.1) / 0.9) * 0.6 + pulse, color, 2 + 1.6 * k + pulse * 2);
   if (k > 0.1 && Math.random() < k * 0.8) {
     fx.emit(tmp.set(rand(-0.4, 0.4), rand(0.2, 1.7), rand(-0.25, 0.35)), {
-      count: 1, color, color2: 0xffffff, bright: 1.8, speed: 0.5, life: 0.7, size: 0.13, gravity: 2.2, up: 0.4, dragK: 3,
+      count: 1,
+      color,
+      color2: 0xffffff,
+      bright: 1.8,
+      speed: 0.5,
+      life: 0.7,
+      size: 0.13,
+      gravity: 2.2,
+      up: 0.4,
+      dragK: 3,
     });
   }
   // arcs from 60% charge, faster as it fills

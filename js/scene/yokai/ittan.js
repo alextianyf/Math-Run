@@ -27,7 +27,8 @@ export function buildIttan(body) {
   const ripple = (z, t, seed) => Math.sin(z * 2.4 + t * 5 + seed) * 0.16 * (0.3 + (0.7 * (0.3 - z)) / 2.6);
   return (t, seed) => {
     for (let i = 0; i < pos.count; i++) {
-      const x = base[i * 3], z = base[i * 3 + 2];
+      const x = base[i * 3];
+      const z = base[i * 3 + 2];
       pos.setXYZ(i, x + Math.sin(z * 1.3 - t * 3 + seed) * 0.05, curl(z) + ripple(z, t, seed), z);
     }
     pos.needsUpdate = true;

@@ -40,14 +40,18 @@ export const RANKS = [
 const START = 700;                                   // a brand-new player
 const TARGET_SUCCESS = 0.85;
 const AIM = 400 * Math.log10(1 / TARGET_SUCCESS - 1);   // ≈ −300: aim below the rating
-const STRETCH = 60, EASE = 150;                      // a little up / a notch down on the rating scale
+const STRETCH = 60;
+const EASE = 150;                      // a little up / a notch down on the rating scale
 const TRIAL = 130;                                   // a rank trial sits this far above normal
-const STRETCH_EVERY = 3, EASE_AFTER = 2;             // right in a row → stretch; wrong in a row → ease
-const RAMP_UP = 25, RAMP_DOWN = 60;                  // how far the problem level may move per problem
+const STRETCH_EVERY = 3;
+const EASE_AFTER = 2;             // right in a row → stretch; wrong in a row → ease
+const RAMP_UP = 25;
+const RAMP_DOWN = 60;                  // how far the problem level may move per problem
 const SHOW_OFF = 3;                                  // problems after a promotion that feature the unlock
 const SPREAD = 50;                                   // random spread around the aimed difficulty
 const WRITE_TIME = 3.5;                              // s to write a digit and let it be read (a first guess)
-const PACE_EASY = 1.6, PACE_HARD = 1.0;              // multiplier on travel time
+const PACE_EASY = 1.6;
+const PACE_HARD = 1.0;              // multiplier on travel time
 const PACE_STEP = 0.02;                              // tightening per right answer
 const BREATH = 2.0;                                  // s of slack between yokai on top of one written answer
 
@@ -55,11 +59,17 @@ const rankOf = (r) => RANKS.reduce((best, rk, i) => (r >= rk.min ? i : best), 0)
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 
 export function createDirector() {
-  let rating = START, pace = 1.45, rank = 0, answered = 0, peak = START;
+  let rating = START;
+  let pace = 1.45;
+  let rank = 0;
+  let answered = 0;
+  let peak = START;
   let served = START;                                // the level problems are pitched at: trails the rating
   let fresh = 0;                                     // problems left that should feature the newest unlock
   let writeTime = WRITE_TIME;                        // measured s per written answer; a habit, kept across runs
-  let streak = 0, fails = 0, sinceStretch = 0;         // right in a row, wrong in a row, right since the last stretch
+  let streak = 0;
+  let fails = 0;
+  let sinceStretch = 0;         // right in a row, wrong in a row, right since the last stretch
   let history = [];
   const recent = [];                                 // recently used texts, never repeated
 
@@ -97,11 +107,19 @@ export function createDirector() {
       const stretch = !boss && sinceStretch >= STRETCH_EVERY;
       const eased = !boss && !stretch && fails >= EASE_AFTER;
       if (stretch) sinceStretch = 0;
-      const offset = boss ? TRIAL : stretch ? STRETCH : eased ? -EASE : 0;
+      let offset = 0;
+      if (boss) offset = TRIAL;
+      else if (stretch) offset = STRETCH;
+      else if (eased) offset = -EASE;
       const target = served + AIM + offset + (Math.random() - 0.5) * SPREAD;
       const feature = !boss && fresh > 0 ? RANKS[rank].unlock : null;
       if (feature) fresh--;
-      const p = makeProblem(target, { answer, avoid: new Set([...avoid, ...recent]), allow: RANKS[rank].allow, feature });
+      const p = makeProblem(target, {
+        answer,
+        avoid: new Set([...avoid, ...recent]),
+        allow: RANKS[rank].allow,
+        feature,
+      });
       remember(p.text);
       return Object.assign(p, { stretch, eased });
     },

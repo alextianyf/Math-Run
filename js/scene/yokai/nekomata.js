@@ -27,7 +27,13 @@ export function buildNekomata(body) {
     { geo: new THREE.ConeGeometry(0.045, 0.12, 8), mat: once('earPink', () => toon(0xe88a9a)), p: [-0.19, 0.3, 0.03], r: [0, 0, 0.5] },
     { geo: new THREE.ConeGeometry(0.045, 0.12, 8), mat: once('earPink', () => toon(0xe88a9a)), p: [0.19, 0.3, 0.03], r: [0, 0, -0.5] },
     // the tenugui cloth tied over its head, the way a dancing cat wears one
-    { geo: new THREE.SphereGeometry(0.3, 16, 12), mat: cloth, p: [0, 0.04, -0.02], s: [1.08, 0.8, 1.0], r: [0.2, 0, 0] },
+    {
+      geo: new THREE.SphereGeometry(0.3, 16, 12),
+      mat: cloth,
+      p: [0, 0.04, -0.02],
+      s: [1.08, 0.8, 1.0],
+      r: [0.2, 0, 0],
+    },
     { geo: new THREE.BoxGeometry(0.16, 0.05, 0.28), mat: cloth, p: [0.22, 0.14, 0.12], r: [0.3, -0.6, -0.4] },
     // slit eyes, nose, whiskers, a smiling mouth
     { geo: new THREE.SphereGeometry(0.075, 12, 8), mat: gold, p: [-0.11, 0.02, 0.25], s: [1, 1.1, 0.5] },
@@ -38,7 +44,16 @@ export function buildNekomata(body) {
     { geo: new THREE.SphereGeometry(0.06, 10, 8), mat: maw(), p: [0, -0.15, 0.27], s: [1.6, 0.35, 0.5] },
     { geo: new THREE.ConeGeometry(0.02, 0.06, 6), mat: white(), p: [-0.05, -0.15, 0.29], r: [Math.PI, 0, 0] },
     { geo: new THREE.ConeGeometry(0.02, 0.06, 6), mat: white(), p: [0.05, -0.15, 0.29], r: [Math.PI, 0, 0] },
-    ...[-1, 1].flatMap((sx) => [0.06, 0, -0.06].map((dy) => ({ geo: new THREE.CylinderGeometry(0.006, 0.006, 0.3, 4), mat: white(), p: [sx * 0.3, -0.08 + dy, 0.2], r: [0, 0, Math.PI / 2 + dy * 3] }))),
+    ...[-1, 1].flatMap(
+      (sx) => [0.06, 0, -0.06].map(
+        (dy) => ({
+          geo: new THREE.CylinderGeometry(0.006, 0.006, 0.3, 4),
+          mat: white(),
+          p: [sx * 0.3, -0.08 + dy, 0.2],
+          r: [0, 0, Math.PI / 2 + dy * 3],
+        })
+      )
+    ),
   ], { outline: 0.012 }));
   // forepaws raised, as in the dance
   const paws = [-1, 1].map((sx) => {
@@ -53,7 +68,14 @@ export function buildNekomata(body) {
   const tails = [-1, 1].map((sx) => {
     const tj = joint(torso, sx * 0.1, -0.4, -0.22);
     tj.add(bake([
-      { geo: taperedTube([[0, 0, 0], [sx * 0.15, 0.2, -0.25], [sx * 0.35, 0.55, -0.35], [sx * 0.3, 0.85, -0.25]], 0.06, { tip: 0.5 }), mat: fur },
+      {
+        geo: taperedTube(
+          [[0, 0, 0], [sx * 0.15, 0.2, -0.25], [sx * 0.35, 0.55, -0.35], [sx * 0.3, 0.85, -0.25]],
+          0.06,
+          { tip: 0.5 }
+        ),
+        mat: fur,
+      },
       { geo: new THREE.SphereGeometry(0.05, 8, 6), mat: fur2, p: [sx * 0.3, 0.85, -0.25] },
     ], { outline: 0.012 }));
     return tj;
@@ -65,7 +87,9 @@ export function buildNekomata(body) {
     torso.rotation.z = w * 0.12;
     head.rotation.z = -w * 0.15;
     head.rotation.y = Math.sin(t * 1.3 + seed) * 0.3;
-    paws[0].rotation.z = w * 0.35; paws[1].rotation.z = w * 0.35;
-    tails[0].rotation.y = Math.sin(t * 3 + seed) * 0.5; tails[1].rotation.y = -Math.sin(t * 3 + 1 + seed) * 0.5;
+    paws[0].rotation.z = w * 0.35;
+    paws[1].rotation.z = w * 0.35;
+    tails[0].rotation.y = Math.sin(t * 3 + seed) * 0.5;
+    tails[1].rotation.y = -Math.sin(t * 3 + 1 + seed) * 0.5;
   };
 }

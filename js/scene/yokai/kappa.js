@@ -36,7 +36,12 @@ export function buildKappa(body) {
   const arms = [-1, 1].map((sx) => {
     const a = joint(torso, sx * 0.3, -0.12, 0.08);
     a.add(bake([
-      { geo: new THREE.CapsuleGeometry(0.05, 0.22, 4, 8), mat: green, p: [sx * 0.08, -0.12, 0.04], r: [0, 0, -sx * 0.5] },
+      {
+        geo: new THREE.CapsuleGeometry(0.05, 0.22, 4, 8),
+        mat: green,
+        p: [sx * 0.08, -0.12, 0.04],
+        r: [0, 0, -sx * 0.5],
+      },
       { geo: new THREE.SphereGeometry(0.07, 8, 6), mat: green, p: [sx * 0.14, -0.26, 0.08], s: [1.2, 0.5, 1.2] },
     ], { outline: 0.012 }));
     return a;
@@ -48,6 +53,7 @@ export function buildKappa(body) {
     torso.rotation.z = w * 0.07;
     head.rotation.z = -w * 0.08;
     head.rotation.y = Math.sin(t * 1.1 + seed) * 0.3;
-    arms[0].rotation.x = w * 0.5; arms[1].rotation.x = -w * 0.5;
+    arms[0].rotation.x = w * 0.5;
+    arms[1].rotation.x = -w * 0.5;
   };
 }

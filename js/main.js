@@ -79,12 +79,18 @@ onTalisman({
 // the title never stutters. If the hero fails to load we still let the game start.
 const loading = new Set(['bootAI', 'bootHero']);       // what is still on its way
 // the next painted frame — or a moment later in a background tab, which paints nothing
-const nextFrame = () => new Promise((resolve) => { requestAnimationFrame(() => resolve()); setTimeout(resolve, 100); });
+const nextFrame = () => new Promise((resolve) => {
+  requestAnimationFrame(() => resolve());
+  setTimeout(resolve, 100);
+});
 function bootStatus(fraction) {
   $('loader-text').textContent = t(loading.size ? [...loading][0] : 'bootScene');
   $('loader-fill').style.width = `${Math.round(fraction * 100)}%`;
 }
-const loaded = (key) => () => { loading.delete(key); bootStatus((2 - loading.size) / 3); };
+const loaded = (key) => () => {
+  loading.delete(key);
+  bootStatus((2 - loading.size) / 3);
+};
 bootStatus(0.05);
 
 Promise.all([
@@ -121,7 +127,10 @@ Promise.all([
 
 /* ===================== frame loop ===================== */
 function updatePlaying(dt) {
-  if (S.tut) { updateTutorial(dt); return; }
+  if (S.tut) {
+    updateTutorial(dt);
+    return;
+  }
   S.distance += S.speed * dt * 0.6;
   setDistance(S.distance);
   updateCombat(dt);
@@ -167,7 +176,10 @@ function frame(now) {
       slow = Math.min(slow, 0.3 + 0.7 * smooth01(1 - S.slowmo / 0.5));
     }
     // a hit lands: the world holds still for a few frames (hit-stop)
-    if (S.hitstop > 0) { S.hitstop -= realDt; slow = Math.min(slow, 0.04); }
+    if (S.hitstop > 0) {
+      S.hitstop -= realDt;
+      slow = Math.min(slow, 0.04);
+    }
     const dt = realDt * slow;
     S.t += dt;
     step(dt, realDt);
@@ -177,13 +189,18 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 /* ===================== buttons & keys ===================== */
-const skip = () => { if (skipCapture()) showGameOver(); };
+const skip = () => {
+  if (skipCapture()) showGameOver();
+};
 
 $('btn-start').addEventListener('click', () => startGame(false));
 $('btn-share').addEventListener('click', shareRun);
 $('btn-share-best').addEventListener('click', shareBest);
 $('btn-retry').addEventListener('click', retryRun);
-$('skill').addEventListener('click', (e) => { e.currentTarget.blur(); useSkill(); });
+$('skill').addEventListener('click', (e) => {
+  e.currentTarget.blur();
+  useSkill();
+});
 $('btn-resume').addEventListener('click', resume);
 $('btn-quit').addEventListener('click', toTitle);
 $('btn-over-title').addEventListener('click', toTitle);
@@ -213,9 +230,13 @@ $('btn-lang').addEventListener('click', () => {
 stage.addEventListener('pointerdown', skip);
 
 document.addEventListener('keydown', (e) => {
-  if (S.mode === 'caught') { skip(); return; }
+  if (S.mode === 'caught') {
+    skip();
+    return;
+  }
   if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
-    if (S.mode === 'playing') pause(); else if (S.mode === 'paused') resume();
+    if (S.mode === 'playing') pause();
+    else if (S.mode === 'paused') resume();
   } else if (e.key === ' ' && S.mode === 'playing') {
     e.preventDefault();                          // never "clicks" a focused button
     if (!e.repeat) pad.send();
@@ -235,17 +256,41 @@ document.addEventListener('keydown', (e) => {
   }
 });
 // leaving the page pauses the run (the problems are replaced when it goes on, see resume())
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-window.addEventListener('pagehide', () => { if (S.mode === 'playing' || S.mode === 'paused') saveBest(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pause();
+});
+window.addEventListener('pagehide', () => {
+  if (S.mode === 'playing' || S.mode === 'paused') saveBest();
+});
 
 /* ===================== ?debug ===================== */
 // digit keys cast directly (skipping the model), and the game is reachable from the console
 function debugCast(d) {
   const c = document.createElement('canvas');
-  c.width = 128; c.height = 192;
+  c.width = 128;
+  c.height = 192;
   const g = c.getContext('2d');
-  g.fillStyle = '#f2cf63'; g.fillRect(0, 0, 128, 192);
-  g.fillStyle = '#b3170f'; g.font = 'bold 120px serif'; g.textAlign = 'center'; g.fillText(String(d), 64, 140);
-  if (targets().some((target) => target.answer === d)) cast(d, c); else fizzle(d, c, targets().length > 0);
+  g.fillStyle = '#f2cf63';
+  g.fillRect(0, 0, 128, 192);
+  g.fillStyle = '#b3170f';
+  g.font = 'bold 120px serif';
+  g.textAlign = 'center';
+  g.fillText(String(d), 64, 140);
+  if (targets().some((target) => target.answer === d)) cast(d, c);
+  else fizzle(d, c, targets().length > 0);
 }
-if (DEBUG) window.__mathrun = { S, world, fx, hero, spawn, decide, director, beginCapture, skipCapture, coach, charge, useSkill, later };
+if (DEBUG) window.__mathrun = {
+  S,
+  world,
+  fx,
+  hero,
+  spawn,
+  decide,
+  director,
+  beginCapture,
+  skipCapture,
+  coach,
+  charge,
+  useSkill,
+  later,
+};

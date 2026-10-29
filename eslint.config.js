@@ -6,13 +6,12 @@
 //   one statement per line, lines up to 120 characters
 //   no "let a = 1, b = 2"     → one declaration each
 //   no comma tricks (a(), b()) and no reusing a name from an outer scope
-// Those simplicity rules are warnings for now, while the code is brought in line
-// (docs/refactor.md); they become errors once it is.
+// They are errors, like the mistakes: npm run lint must come back clean.
 import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import globals from 'globals';
 
-const simple = 'warn';
+const simple = 'error';
 
 export default [
   { ignores: ['node_modules/', 'artifacts/', 'mlp_training/', 'digit_model/', 'mnist_tfjs_model/', 'models/'] },

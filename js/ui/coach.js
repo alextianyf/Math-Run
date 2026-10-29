@@ -8,39 +8,72 @@ import { $, restartAnimation } from '../core/dom.js';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function createCoach() {
-  const root = $('tut'), hole = $('tut-hole'), bubble = $('tut-bubble');
-  const titleEl = $('tut-title'), textEl = $('tut-text'), actions = $('tut-actions');
-  const demoSvg = $('tut-demo'), demoPath = $('tut-demo-path'), finger = $('tut-finger');
+  const root = $('tut');
+  const hole = $('tut-hole');
+  const bubble = $('tut-bubble');
+  const titleEl = $('tut-title');
+  const textEl = $('tut-text');
+  const actions = $('tut-actions');
+  const demoSvg = $('tut-demo');
+  const demoPath = $('tut-demo-path');
+  const finger = $('tut-finger');
   const countEl = $('countdown');
   const pathLen = demoPath.getTotalLength();
   demoPath.style.strokeDasharray = `${pathLen}`;
 
   let target = null;          // () => { x, y, w, h, round } in viewport px, or null
   let anchor = null;          // what the bubble sits beside, when not the target itself
-  let demoOn = false, demoT = 0, demoRect = null;
+  let demoOn = false;
+  let demoT = 0;
+  let demoRect = null;
   const pos = { x: 0, y: 0, ready: false };
 
   function rectOf() {
     const r = target?.();
     return r && r.w > 0 ? r : null;
   }
-  const anchorOf = () => { const r = anchor?.(); return r && r.w > 0 ? r : rectOf(); };
+  const anchorOf = () => {
+    const r = anchor?.();
+    return r && r.w > 0 ? r : rectOf();
+  };
 
   // Bubble beside the spotlight: below, above, left or right — whichever fits
   function placeBubble(r, snap) {
     if (bubble.hidden) return;
-    const vw = window.innerWidth, vh = window.innerHeight, m = 14, gap = 18;
-    const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
-    let x, y;
-    if (!r) { x = (vw - bw) / 2; y = vh * 0.4 - bh / 2; }
-    else if (vh - (r.y + r.h) >= bh + gap + m) { x = r.x + r.w / 2 - bw / 2; y = r.y + r.h + gap; }
-    else if (r.y >= bh + gap + m) { x = r.x + r.w / 2 - bw / 2; y = r.y - bh - gap; }
-    else if (r.x >= bw + gap + m) { x = r.x - bw - gap; y = r.y + r.h / 2 - bh / 2; }
-    else { x = r.x + r.w + gap; y = r.y + r.h / 2 - bh / 2; }
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const m = 14;
+    const gap = 18;
+    const bw = bubble.offsetWidth;
+    const bh = bubble.offsetHeight;
+    let x;
+    let y;
+    if (!r) {
+      x = (vw - bw) / 2;
+      y = vh * 0.4 - bh / 2;
+    }
+    else if (vh - (r.y + r.h) >= bh + gap + m) {
+      x = r.x + r.w / 2 - bw / 2;
+      y = r.y + r.h + gap;
+    }
+    else if (r.y >= bh + gap + m) {
+      x = r.x + r.w / 2 - bw / 2;
+      y = r.y - bh - gap;
+    }
+    else if (r.x >= bw + gap + m) {
+      x = r.x - bw - gap;
+      y = r.y + r.h / 2 - bh / 2;
+    }
+    else {
+      x = r.x + r.w + gap;
+      y = r.y + r.h / 2 - bh / 2;
+    }
     x = Math.min(Math.max(m, x), vw - bw - m);
     y = Math.min(Math.max(m, y), vh - bh - m);
     const k = snap || !pos.ready ? 1 : 0.25;            // glide after the yokai's bobbing
-    pos.x += (x - pos.x) * k; pos.y += (y - pos.y) * k; pos.ready = true;
+    pos.x += (x - pos.x) * k;
+    pos.y += (y - pos.y) * k;
+    pos.ready = true;
     bubble.style.transform = `translate(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px)`;
   }
 
@@ -76,7 +109,14 @@ export function createCoach() {
   return {
     show(on) {
       root.hidden = !on;
-      if (!on) { target = null; anchor = null; demoOn = false; demoSvg.toggleAttribute('hidden', true); bubble.hidden = true; pos.ready = false; }
+      if (!on) {
+        target = null;
+        anchor = null;
+        demoOn = false;
+        demoSvg.toggleAttribute('hidden', true);
+        bubble.hidden = true;
+        pos.ready = false;
+      }
     },
     // spotlight a target (function returning a rect) or nothing; dim the rest or not;
     // near: the bubble sits beside this instead (so it never covers what matters)

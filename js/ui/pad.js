@@ -31,8 +31,12 @@ function tracePath(c, pts, smooth = true) {
   c.beginPath();
   c.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length - 1; i++) {
-    if (!smooth) { c.lineTo(pts[i][0], pts[i][1]); continue; }
-    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+    if (!smooth) {
+      c.lineTo(pts[i][0], pts[i][1]);
+      continue;
+    }
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+    const my = (pts[i][1] + pts[i + 1][1]) / 2;
     c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
   }
   const last = pts[pts.length - 1];
@@ -43,10 +47,15 @@ function tracePath(c, pts, smooth = true) {
 // Draw strokes (pad coordinates) white on black into a MODEL_SIZE² context, centred,
 // longest side MODEL_BOX, pen MODEL_LINE — what the model is shown.
 function renderStrokes(mctx, list) {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
   for (const s of list) for (const [x, y] of s) {
-    if (x < x0) x0 = x; if (x > x1) x1 = x;
-    if (y < y0) y0 = y; if (y > y1) y1 = y;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
   }
   const scale = MODEL_BOX / Math.max(x1 - x0, y1 - y0, 1e-6);
   mctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -80,12 +89,15 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
 
   let strokes = [];
   let current = null;
-  let dpr = 1, w = 1, h = 1;
+  let dpr = 1;
+  let w = 1;
+  let h = 1;
   let idleTimer = 0;
   let pointerType = 'mouse';
   let enabled = true;
   let startedAt = 0;                 // performance.now() of the first stroke since the last clear
-  let endedAt = 0, endWait = 0;      // when the pen last lifted, and the wait it armed
+  let endedAt = 0;
+  let endWait = 0;      // when the pen last lifted, and the wait it armed
 
   const inkWidth = () => Math.max(7, Math.min(w, h) * 0.07);
 
@@ -94,10 +106,12 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     // keep strokes proportional when the pad changes size
     if (w > 1 && h > 1 && r.width > 0) {
-      const sx = r.width / w, sy = r.height / h;
+      const sx = r.width / w;
+      const sy = r.height / h;
       strokes = strokes.map((s) => s.map(([x, y]) => [x * sx, y * sy]));
     }
-    w = Math.max(1, r.width); h = Math.max(1, r.height);
+    w = Math.max(1, r.width);
+    h = Math.max(1, r.height);
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
     redraw();
@@ -118,10 +132,15 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
   canvas.addEventListener('pointerdown', (e) => {
     if (!enabled || current) return;
     e.preventDefault();
-    try { canvas.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch { /* capture is a nicety */ }
     disarm();
     pointerType = e.pointerType in WAITS ? e.pointerType : 'mouse';
-    if (!strokes.length) { startedAt = performance.now(); onInk?.(true); }
+    if (!strokes.length) {
+      startedAt = performance.now();
+      onInk?.(true);
+    }
     current = [pos(e)];
     strokes.push(current);
     redraw();
@@ -130,7 +149,8 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
   canvas.addEventListener('pointermove', (e) => {
     if (!current) return;
     e.preventDefault();
-    const p = pos(e), last = current[current.length - 1];
+    const p = pos(e);
+    const last = current[current.length - 1];
     if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 1.5) return;
     current.push(p);
     redraw();
@@ -138,13 +158,19 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
   });
   const end = (e) => {
     if (!current) return;
-    try { canvas.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch { /* not captured */ }
     current = null;
     const wait = WAITS[pointerType][strokes.length > 1 ? 1 : 0];
-    endedAt = performance.now(); endWait = wait;
+    endedAt = performance.now();
+    endWait = wait;
     if (holdAuto?.()) return;
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { idleTimer = 0; onFinish?.(); }, wait);
+    idleTimer = setTimeout(() => {
+      idleTimer = 0;
+      onFinish?.();
+    }, wait);
     onArm?.(wait);
   };
   function disarm() {
@@ -157,10 +183,15 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
   canvas.addEventListener('lostpointercapture', end);
 
   function bbox() {
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
     for (const s of strokes) for (const [x, y] of s) {
-      if (x < x0) x0 = x; if (x > x1) x1 = x;
-      if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
     }
     return { x0, y0, x1, y1, ext: Math.max(x1 - x0, y1 - y0) };
   }
@@ -173,13 +204,20 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
     // sent sooner, so sending early never makes the game think the player is faster
     get paceTime() { return (endedAt + endWait - startedAt) / 1000; },
     hasInk() { return strokes.length > 0; },
-    setEnabled(v) { enabled = v; if (!v) { current = null; disarm(); } },
+    setEnabled(v) {
+      enabled = v;
+      if (!v) {
+        current = null;
+        disarm();
+      }
+    },
     // a read that hit: the ink glows gold and lifts off the paper as it is cleared
     flare() {
       if (!strokes.length) return;
       const c = document.createElement('canvas');
       c.className = 'ink-flare';
-      c.width = canvas.width; c.height = canvas.height;
+      c.width = canvas.width;
+      c.height = canvas.height;
       Object.assign(c.style, { left: `${canvas.offsetLeft}px`, top: `${canvas.offsetTop}px`, width: `${w}px`, height: `${h}px` });
       const g = c.getContext('2d');
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -215,13 +253,16 @@ export function createPad(canvas, { onInput, onFinish, onArm, onDisarm, onInk, h
     // A small paper-talisman image of what was written (for the flying talisman)
     snapshot() {
       const c = document.createElement('canvas');
-      c.width = 128; c.height = 192;
+      c.width = 128;
+      c.height = 192;
       const g = c.getContext('2d');
       const grd = g.createLinearGradient(0, 0, 0, 192);
-      grd.addColorStop(0, '#f7dc7a'); grd.addColorStop(1, '#e8b94a');
+      grd.addColorStop(0, '#f7dc7a');
+      grd.addColorStop(1, '#e8b94a');
       g.fillStyle = grd;
       g.fillRect(0, 0, 128, 192);
-      g.strokeStyle = '#b3170f'; g.lineWidth = 4;
+      g.strokeStyle = '#b3170f';
+      g.lineWidth = 4;
       g.strokeRect(7, 7, 114, 178);
       g.lineWidth = 1.5;
       g.strokeRect(13, 13, 102, 166);
