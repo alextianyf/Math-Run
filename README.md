@@ -263,9 +263,10 @@ This section provides a detailed overview of the project directory structure to 
 │   ├── scene/                  # 3D graphics (Three.js)
 │   │   ├── world.js            # Renderer, bloom, lights, camera, auto quality
 │   │   ├── themes.js           # The nights: sky, fog, moon, ground, blended without recompiling
-│   │   ├── environment.js      # The shrine path, torii, lanterns, trees, sky
+│   │   ├── environment/        # The shrine path: sky, ground, torii, lanterns, trees, particles
 │   │   ├── hero.js, heroRobe.js, heroStyle.js   # The VRM onmyōji and his robes
-│   │   ├── yokai.js, oni.js    # The parade and the great oni
+│   │   ├── yokai/              # The parade: one file per yokai, shared parts, index.js
+│   │   ├── oni/                # The great oni: body, head, props, index.js (poses)
 │   │   ├── fx.js               # Spell effects: particles, talismans, magic circles, lightning
 │   │   └── toon.js, textures.js   # Toon materials, outlines, painted textures
 │   └── ui/                     # Screen, text and sound

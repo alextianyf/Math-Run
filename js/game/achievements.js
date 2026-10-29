@@ -3,7 +3,7 @@
 // device with a transfer code. It only listens to game events (events.js).
 import { store } from '../core/store.js';
 import { on } from '../core/events.js';
-import { YOKAI_TYPES } from '../scene/yokai.js';
+import { YOKAI_TYPES } from '../scene/yokai/index.js';
 
 export { YOKAI_TYPES };
 

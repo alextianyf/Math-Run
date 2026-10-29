@@ -60,7 +60,7 @@ function values(theme) {
   return v;
 }
 
-// targets: { scene, look (environment.js), hemi, moonLight, renderer, bloom }
+// targets: { scene, look (environment/index.js), hemi, moonLight, renderer, bloom }
 export function createThemer(t) {
   const mistBase = t.look.mist.map((m) => m.opacity);
   const curbBase = t.look.ground.curb.color.clone();

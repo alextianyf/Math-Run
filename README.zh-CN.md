@@ -261,9 +261,10 @@
 │   ├── scene/                  # 3D 画面（Three.js）
 │   │   ├── world.js            # 渲染器、泛光、灯光、镜头、自动画质
 │   │   ├── themes.js           # 各个夜晚：天空、雾、月亮、地面，切换时不重新编译着色器
-│   │   ├── environment.js      # 神社参道、鸟居、灯笼、树木、夜空
+│   │   ├── environment/        # 神社参道：夜空、地面、鸟居、灯笼、树木、粒子
 │   │   ├── hero.js, heroRobe.js, heroStyle.js   # VRM 少年阴阳师和他的狩衣
-│   │   ├── yokai.js, oni.js    # 百鬼夜行和大鬼
+│   │   ├── yokai/              # 百鬼夜行：每种妖怪一个文件、共用部件、index.js
+│   │   ├── oni/                # 大鬼：身体、头、道具、index.js（动作）
 │   │   ├── fx.js               # 法术特效：粒子、符纸、法阵、雷电
 │   │   └── toon.js, textures.js   # 卡通材质、描边、手绘贴图
 │   └── ui/                     # 界面、文字和声音

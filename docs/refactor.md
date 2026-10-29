@@ -16,7 +16,11 @@
    - 技能（雷神）和终结技要扫掉妖怪时，发 `sweep` 通知，由 `combat.js` 收听处理，不再反过来引用 `combat.js`
    - 狐狸之夜开始时，`nights.js` 发 `nightBegins`，`skills.js` 收听并充一点能
    - 现在 `js/` 里没有任何互相引用的模块
-4. **拆 3D 造型**：`scene/yokai/` 每种妖怪一个文件；`oni.js`、`environment.js` 按部件拆
+4. **拆 3D 造型** ✅
+   - `scene/yokai/`：每种妖怪一个文件，`shared.js` 放共用的材质和眼睛、光晕、火焰，`index.js` 放妖怪表和 `createYokai`
+   - `scene/oni/`：`body.js`（用 VRM 塑造身体）、`head.js`、`props.js`（虎皮、狼牙棒、铁护腕），`index.js` 组装并负责动作
+   - `scene/environment/`：`sky.js`、`ground.js`、`torii.js`、`lanterns.js`、`trees.js`、`particles.js`，`shared.js` 放滚动带的数值和工具
+   - 代码是用脚本整段搬过去的，搬完逐行核对过：除了 import 和文件开头的说明，没有一行丢失或改动
 5. **拆 CSS 和文字**：`css/` 按组件拆，手机端样式写在各自组件文件里；`strings.js` 拆成中英两个文件
 6. **语法简化**：按文件夹逐个清掉 lint 警告，然后把这些规则从警告改成错误
 

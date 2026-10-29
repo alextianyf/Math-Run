@@ -3,7 +3,7 @@
 // float above them.
 import * as THREE from 'three';
 import { LANES } from '../scene/world.js';
-import { createYokai } from '../scene/yokai.js';
+import { createYokai } from '../scene/yokai/index.js';
 import { sfx } from '../ui/audio.js';
 import { banner } from '../ui/popups.js';
 import { clearTags, createTag, placeTag, removeTag, setTagText } from '../ui/tags.js';

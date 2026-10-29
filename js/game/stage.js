@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { createWorld } from '../scene/world.js';
 import { createFx } from '../scene/fx.js';
-import { createYokai, YOKAI_TYPES } from '../scene/yokai.js';
-import { takeOni, releaseOni } from '../scene/oni.js';
+import { createYokai, YOKAI_TYPES } from '../scene/yokai/index.js';
+import { takeOni, releaseOni } from '../scene/oni/index.js';
 import { createDirector } from '../difficulty/adaptive.js';
 import { $ } from '../core/dom.js';
 

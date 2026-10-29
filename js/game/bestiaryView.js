@@ -2,7 +2,7 @@
 // small stage of its own. Yokai not met yet are shown as a dark silhouette only.
 // It has its own little renderer, and only draws while the bestiary is open.
 import * as THREE from 'three';
-import { createYokai } from '../scene/yokai.js';
+import { createYokai } from '../scene/yokai/index.js';
 
 let renderer = null, scene, camera, current = null, raf = 0, last = 0, t = 0;
 const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();

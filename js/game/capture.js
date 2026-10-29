@@ -1,8 +1,8 @@
 // capture.js — the cinematic when the last heart is lost: the parade circles the
 // hero, a portal opens and the great oni rises out of it, grabs him and laughs.
 import * as THREE from 'three';
-import { createYokai } from '../scene/yokai.js';
-import { takeOni, releaseOni } from '../scene/oni.js';
+import { createYokai } from '../scene/yokai/index.js';
+import { takeOni, releaseOni } from '../scene/oni/index.js';
 import { sfx, stopMusic } from '../ui/audio.js';
 import { clearTags } from '../ui/tags.js';
 import { S } from '../core/state.js';
@@ -120,7 +120,7 @@ export function animateCaptor(dt) {
   if (!captor.oni) return;
   captor.oni.update(dt, S.t);
   if (captor.holding) {
-    // waist in the palm, fingers round his front, thumb round his back (see oni.js GRIP)
+    // waist in the palm, fingers round his front, thumb round his back (see scene/oni/index.js GRIP)
     captor.oni.holdTransform(hold.pos, hold.quat);
     hold.quat.multiply(twist.setFromAxisAngle(UP, Math.sin(S.t * 3.1) * 0.1));   // squirming
     hold.t = Math.min(1, hold.t + dt / 0.25);
