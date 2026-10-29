@@ -25,10 +25,26 @@ body:has(#ov-over:not([hidden])) .skip-hint { opacity: 0; animation: none; }
 /* below 1.45:1 the capture close-up is centred, so the card sits at the bottom */
 @media (max-aspect-ratio: 29/20) {
   .overlay.over {
-    justify-items: center; align-items: end;
+    justify-items: center;
     padding: 20px 18px calc(20px + var(--safe-b));
     background: linear-gradient(0deg, rgba(10, 6, 26, 0.92) 0%, rgba(10, 6, 26, 0.6) 45%, rgba(10, 6, 26, 0) 70%);
   }
+  .overlay.over > .small-card { margin-block: auto 0; }      /* at the bottom */
   .overlay.over .small-card { padding: 18px 18px 16px; gap: 8px; }
   .overlay.over .big-score { font-size: 44px; }
+}
+
+/* short screens: a tighter card, with "share" and "title screen" side by side, so it
+   fits without scrolling (it still scrolls on the shortest, like a phone held sideways) */
+@media (max-height: 760px) {
+  .overlay.over .small-card { grid-template-columns: 1fr 1fr; gap: 8px; padding: 16px 18px 14px; }
+  .overlay.over .small-card > * { grid-column: 1 / -1; }
+  .overlay.over .small-card > #btn-share,
+  .overlay.over .small-card > #btn-over-title { grid-column: auto; }
+  .overlay.over h2 { font-size: 24px; }
+  .overlay.over .big-score { font-size: 44px; }
+  .overlay.over .stats { margin: 0; gap: 8px; }
+  .overlay.over .stats div { padding: 7px 8px; }
+  .overlay.over .stats .rank-stat { padding-bottom: 38px; }   /* room for the rating curve */
+  .overlay.over .btn { min-height: 44px; padding: 0 14px; font-size: 16px; }
 }

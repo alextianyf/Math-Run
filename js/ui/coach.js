@@ -32,9 +32,21 @@ export function createCoach() {
     const r = target?.();
     return r && r.w > 0 ? r : null;
   }
+  // the smallest box holding both rectangles
+  function union(a, b) {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const w = Math.max(a.x + a.w, b.x + b.w) - x;
+    const h = Math.max(a.y + a.h, b.y + b.h) - y;
+    return { x, y, w, h };
+  }
+  // what the bubble keeps clear of: the spotlight, and the "near" box when there is one
+  // (both, so a bubble beside the talisman never lands on the seal it points to)
   const anchorOf = () => {
+    const spot = rectOf();
     const r = anchor?.();
-    return r && r.w > 0 ? r : rectOf();
+    if (!r || r.w <= 0) return spot;
+    return spot ? union(r, spot) : r;
   };
 
   // Bubble beside the spotlight: below, above, left or right — whichever fits
@@ -119,7 +131,7 @@ export function createCoach() {
       }
     },
     // spotlight a target (function returning a rect) or nothing; dim the rest or not;
-    // near: the bubble sits beside this instead (so it never covers what matters)
+    // near: the bubble also keeps clear of this (so it never covers what matters)
     focus(fn, { dim = true, near = null } = {}) {
       target = fn;
       anchor = near;

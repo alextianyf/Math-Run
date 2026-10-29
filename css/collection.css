@@ -149,7 +149,10 @@ body.paused #labels { visibility: hidden; }
 #bestiary-list li { cursor: pointer; }
 #bestiary-list li.selected { box-shadow: inset 0 0 0 1.5px var(--gold); }
 .transfer { font-size: 13px; color: var(--dim); }
-.transfer summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.transfer summary { cursor: pointer; color: var(--ink); font-weight: 600; padding: 8px 0; }   /* tall enough to tap */
+/* open, it scrolls on its own rather than squeeze the list away or spill out of the
+   card (a phone held sideways has room for little else) */
+.transfer[open] { flex: none; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
 .transfer p { margin: 8px 0; line-height: 1.5; }
 .transfer textarea { width: 100%; box-sizing: border-box; margin: 4px 0 6px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); color: var(--ink); font: 11px/1.4 ui-monospace, Consolas, monospace; resize: vertical; }
 .transfer .btn { width: auto; margin-bottom: 6px; }

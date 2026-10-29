@@ -2,12 +2,17 @@
 
 .overlay {
   position: absolute; inset: 0; z-index: 20;
-  display: grid; place-items: center;
+  display: grid; justify-items: center; align-items: start;
+  overflow-y: auto; overscroll-behavior: contain;   /* a card taller than the screen scrolls */
   padding: calc(20px + var(--safe-t)) calc(20px + var(--safe-r)) calc(20px + var(--safe-b)) calc(20px + var(--safe-l));
   background: radial-gradient(ellipse at center, rgba(10, 6, 26, 0.35), rgba(10, 6, 26, 0.75));
   animation: fadeIn 0.35s ease-out;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* centred by its margins, not by alignment: when the card is taller than the screen
+   the margins drop to 0 and it starts at the top, so all of it can be scrolled to
+   (centring by alignment would push its top off screen, out of reach) */
+.overlay > .card { margin-block: auto; }
 .overlay.title {
   justify-items: start;
   padding-left: calc(6vw + var(--safe-l));
@@ -129,7 +134,11 @@
   border: 1px solid rgba(246, 201, 91, 0.32);
 }
 .tile-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: 100%; }
-.tile-text small { max-width: 100%; font: 600 11.5px/1.1 var(--font-ui); color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the line under a tile's name wraps onto a second line on narrow phones rather than lose its end */
+.tile-text small {
+  max-width: 100%; font: 600 11.5px/1.15 var(--font-ui); color: var(--gold); font-variant-numeric: tabular-nums;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
 .title-status { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 12px; color: var(--dim); }
 .status-rank { display: inline-flex; align-items: center; gap: 8px; }
 /* the AI status: a small lit pill under Start, its dot breathing once the model is ready */
@@ -182,11 +191,12 @@
 /* phones (portrait) */
 @media (max-aspect-ratio: 4/5) {
   .overlay.title {
-    justify-items: center; align-items: end;
+    justify-items: center;
     padding: 20px 22px calc(28px + var(--safe-b));
     background: linear-gradient(0deg, rgba(10, 6, 26, 0.94) 0%, rgba(10, 6, 26, 0.75) 48%, rgba(10, 6, 26, 0) 72%);
   }
   .title-card { text-align: center; }
+  .overlay.title > .title-card { margin-block: auto 0; }   /* at the bottom */
   .title-watermark { display: none; }
   .kicker, .logo-row { justify-content: center; }
   .kicker::after { display: none; }
