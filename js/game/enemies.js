@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { LANES } from '../scene/world.js';
 import { createYokai } from '../scene/yokai.js';
 import { sfx } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { banner } from '../ui/popups.js';
+import { clearTags, createTag, placeTag, removeTag, setTagText } from '../ui/tags.js';
 import { S, SPAWN_Z, HIT_Z, targets } from '../core/state.js';
 import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
@@ -78,7 +79,7 @@ export function spawn(boss = false, forced = null, pack = null) {
     speed: forced?.speed ?? (HIT_Z - SPAWN_Z * spawnDepth()) / (qTravel * TYPE_PACE[type] * travelMult()),
     problem: prob, qStart: 0, qTravel,
     answer: prob.answer, text: prob.text,
-    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && t(`tr_${trait}`) }),
+    tag: createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && t(`tr_${trait}`) }),
     hpDone: 0, hpTotal,
     locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0, phase: Math.random() * 6.3, blinked: false, dashing: false,
   };
@@ -93,7 +94,7 @@ export function spawn(boss = false, forced = null, pack = null) {
   fx.emit(yokai.center(tmp), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
-    ui.banner(t('trial'), 'boss', 2);
+    banner(t('trial'), 'boss', 2);
     sfx.boss();
     world.shake(0.25);
     showRank();
@@ -111,13 +112,13 @@ export function removeEnemy(e) {
   const i = S.enemies.indexOf(e);
   if (i >= 0) S.enemies.splice(i, 1);     // first, so a failure below can't wedge the loop
   world.scene.remove(e.yokai.root);
-  if (e.tag) ui.removeTag(e.tag);
+  if (e.tag) removeTag(e.tag);
   e.yokai.dispose();
 }
 
 export function clearEnemies() {
   for (const e of [...S.enemies]) removeEnemy(e);
-  ui.clearTags();
+  clearTags();
   fx.clear();
 }
 
@@ -241,7 +242,7 @@ function placeTags(shown, dt, moving) {
     const e = v.e;
     e.sx = v.x; e.sy = v.y + e.offY;
     const timeLeft = (HIT_Z - e.z) / e.speed;
-    ui.placeTag(e.tag, e.sx, e.sy, v.scale, v.visible ? Math.min(1, e.age / 0.6) * tagVisibility(v.near) : 0,
+    placeTag(e.tag, e.sx, e.sy, v.scale, v.visible ? Math.min(1, e.age / 0.6) * tagVisibility(v.near) : 0,
       moving && !e.locked && timeLeft < 2.3);
   }
 }
@@ -256,7 +257,7 @@ export function rerollProblems() {
     do answer = Math.floor(Math.random() * 10); while (answer === e.answer);
     const prob = director.nextProblem({ answer, avoid: new Set(S.enemies.map((o) => o.text)), boss: e.boss });
     Object.assign(e, { problem: prob, qStart: e.age, answer: prob.answer, text: prob.text });
-    ui.setTagText(e.tag, prob.text);
+    setTagText(e.tag, prob.text);
     measureTag(e);
   }
 }

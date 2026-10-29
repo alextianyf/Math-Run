@@ -1,7 +1,8 @@
 // rules.js — the "How to play" screen: hearts and how to win them back, the ranks
 // and their trials, scoring, skills and night events, and the fair-play rules. The numbers here are the
 // game's own (progress.js, combat.js, enemies.js); keep them in step.
-import * as ui from '../ui/ui.js';
+import { showOverlay } from '../ui/overlays.js';
+import { rankSeal } from '../ui/ranks.js';
 import { RANKS } from '../difficulty/adaptive.js';
 import { MAX_HEARTS } from '../core/state.js';
 import { SKILLS, NIGHTS } from './powers.js';
@@ -12,7 +13,7 @@ import { t } from '../core/i18n.js';
 const UNLOCKS = ['+ −', '× ÷', '( )', 'x² √', 'x³ ∛ 2ⁿ'];
 
 function render() {
-  const ranks = RANKS.map((r, i) => `<li><span class="stamp"><b>${ui.rankSeal(i)}</b></span>
+  const ranks = RANKS.map((r, i) => `<li><span class="stamp"><b>${rankSeal(i)}</b></span>
     <div><b>${t(`rank${i}`)}</b><small>${UNLOCKS[i]}</small></div></li>`).join('');
   // the four skills, each with its seal in the colour it glows when ready
   const skills = Object.entries(SKILLS).map(([id, s]) => `<li style="--sk:#${s.color.toString(16).padStart(6, '0')}"><span class="rules-skill">${s.ch}</span>
@@ -40,11 +41,11 @@ function render() {
 
 export function openRules() {
   render();
-  ui.show('ov-rules');
+  showOverlay('ov-rules');
   $('rules-body').scrollTop = 0;
 }
 
 export function initRules() {
   for (const id of ['btn-rules', 'btn-pause-rules']) $(id).addEventListener('click', openRules);
-  $('btn-rules-close').addEventListener('click', () => ui.show('ov-rules', false));
+  $('btn-rules-close').addEventListener('click', () => showOverlay('ov-rules', false));
 }

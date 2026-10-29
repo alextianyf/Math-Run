@@ -6,7 +6,9 @@
 import * as THREE from 'three';
 import { createCoach } from '../ui/coach.js';
 import { sfx } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { resetAI, showAI } from '../ui/aiPanel.js';
+import { setCombo, setDistance, setScore } from '../ui/hud.js';
+import { talismanState } from '../ui/talisman.js';
 import { S } from '../core/state.js';
 import { world } from './stage.js';
 import { showRank } from './progress.js';
@@ -124,7 +126,7 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
   if (T.step !== 'write' && T.step !== 'send') return;
   $('dock').classList.remove('teach');
   if (dec.kind === 'hit') {
-    ui.showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
+    showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     pad.setEnabled(false);
     coach.demo(false);
     coach.hush();
@@ -133,8 +135,8 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
     cast(dec.d, paper);
     return;
   }
-  ui.showAI(result.img28, result.probs, { text: t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
-  ui.talismanState('shake');
+  showAI(result.img28, result.probs, { text: t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
+  talismanState('shake');
   sfx.unclear();
   if (T.step === 'send') {                  // back to writing, with the coaching below
     T.step = 'write';
@@ -176,10 +178,10 @@ export async function finishTutorial() {
   S.tut = null;
   coach.show(false);
   Object.assign(S, { score: 0, distance: 0, banished: 0, combo: 0, maxCombo: 0, spawnTimer: 0.4, ai: { reads: 0, fixed: 0, unclear: 0 } });
-  ui.setScore(0);
-  ui.setDistance(0);
-  ui.setCombo(0);
+  setScore(0);
+  setDistance(0);
+  setCombo(0);
   showRank();
-  ui.resetAI();
+  resetAI();
   pad.setEnabled(true);
 }

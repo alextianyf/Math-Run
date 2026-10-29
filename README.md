@@ -264,7 +264,13 @@ This section provides a detailed overview of the project directory structure to 
 │   │   ├── fx.js               # Spell effects: particles, talismans, magic circles, lightning
 │   │   └── toon.js, textures.js   # Toon materials, outlines, painted textures
 │   └── ui/                     # Screen, text and sound
-│       ├── ui.js               # HUD, equation tags, banners, AI panel, settings
+│       ├── hud.js              # Hearts, combo, score, distance, best
+│       ├── ranks.js            # Rank seals: HUD chip, ladder, rating curve
+│       ├── tags.js             # The equation plaques over the yokai
+│       ├── popups.js           # Score pops, banners, achievement toast, screen flashes
+│       ├── talisman.js         # The talisman's feedback: guess, read timer, short messages
+│       ├── aiPanel.js          # The "AI view" panel
+│       ├── overlays.js         # Showing and hiding the full-screen cards
 │       ├── strings.js          # All texts, Chinese and English
 │       ├── pad.js              # The talisman you write on
 │       ├── coach.js            # The tutorial's spotlight and speech bubble

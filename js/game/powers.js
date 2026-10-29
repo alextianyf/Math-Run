@@ -6,7 +6,8 @@
 // None of it runs during the tutorial.
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { banner } from '../ui/popups.js';
+import { padToast } from '../ui/talisman.js';
 import { S, targets } from '../core/state.js';
 import { world, hero, fx } from './stage.js';
 import { banishFree } from './combat.js';
@@ -69,7 +70,7 @@ function stepNight(dt) {
       world.setTheme(id, SHIFT_S);
       document.body.dataset.night = id;
       later(0.6, () => {
-        ui.banner('', 'event', 1, { html: `<span class="ev-kicker">${t('nightEnter')}</span><span class="ev-title">${t(`ev_${id}`)}</span><span class="ev-sub">${t(`evd_${id}`)}</span>`, ms: 3400 });
+        banner('', 'event', 1, { html: `<span class="ev-kicker">${t('nightEnter')}</span><span class="ev-title">${t(`ev_${id}`)}</span><span class="ev-sub">${t(`evd_${id}`)}</span>`, ms: 3400 });
         sfx.event();
       });
       emit('night', { id });
@@ -121,7 +122,7 @@ export function useSkill() {
   const color = SKILLS[id].color;
   hero.cast();
   sfx.skill();
-  ui.banner('', 'skill', 1, { html: `<span class="sk-seal">${SKILLS[id].ch}</span><span class="sk-name">${t(`sk_${id}`)}</span>`, ms: 1400 });
+  banner('', 'skill', 1, { html: `<span class="sk-seal">${SKILLS[id].ch}</span><span class="sk-name">${t(`sk_${id}`)}</span>`, ms: 1400 });
   const at = world.handPosition(new THREE.Vector3());
   fx.magicCircle(new THREE.Vector3(0, 0.05, 0), { color, scale: 6, dur: 1.1, ground: true, spin: 2.5 });
   fx.emit(at, { count: 60, color, color2: 0xffffff, bright: 2, speed: 5, life: 0.8, size: 0.25 });
@@ -157,7 +158,7 @@ export function blockHit(p) {
   later(0.25, () => drop?.drop());
   fx.ring(p, { color: SKILLS.barrier.color, scale: 4 });
   fx.emit(p, { count: 50, color: SKILLS.barrier.color, color2: 0xffffff, bright: 2, speed: 5, life: 0.7, size: 0.3 });
-  ui.padToast(t('blocked'), 'ok');
+  padToast(t('blocked'), 'ok');
   sfx.pillar();
   world.shake(0.25);
   return true;
@@ -201,7 +202,7 @@ export function finisher(e, then) {
   sfx.finisher();
   const v = $('vignette');
   restartAnimation(v, 'flash');
-  ui.banner('', 'finisher', 2, { html: `<span class="fin-kanji">${t('finisher')}</span><span class="fin-sub">${t('finisherSub')}</span>`, ms: 1700 });
+  banner('', 'finisher', 2, { html: `<span class="fin-kanji">${t('finisher')}</span><span class="fin-sub">${t('finisherSub')}</span>`, ms: 1700 });
 
   S.spawnTimer = Math.max(S.spawnTimer, 2.5);      // nothing new walks in during the finisher
   fx.magicCircle(ground, { color: 0xff4a2a, scale: 11, dur: 2.2, ground: true, spin: 3, bright: 1.8 });

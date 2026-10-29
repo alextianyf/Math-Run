@@ -4,7 +4,8 @@
 // is plugged in by main.js through onTalisman().
 import { classify, aiInfo } from '../ai/recognizer.js';
 import { createPad, MODEL_SIZE } from '../ui/pad.js';
-import * as ui from '../ui/ui.js';
+import { setAIMeta, showAI } from '../ui/aiPanel.js';
+import { armTalisman, disarmTalisman, setGuess } from '../ui/talisman.js';
 import { S, targets } from '../core/state.js';
 import { director } from './stage.js';
 import { $ } from '../core/dom.js';
@@ -20,8 +21,8 @@ export function onTalisman({ write, read }) {
 export const pad = createPad($('pad'), {
   onInput: () => { onWrite(); liveGuess(); },
   onFinish: readTalisman,
-  onArm: (ms) => ui.armTalisman(ms),
-  onDisarm: () => ui.disarmTalisman(),
+  onArm: (ms) => armTalisman(ms),
+  onDisarm: () => disarmTalisman(),
   onInk: (has) => $('dock').classList.toggle('inked', has),
   holdAuto: () => !!S.tut,                     // the tutorial teaches the seal: it waits for it
 });
@@ -42,8 +43,8 @@ async function liveGuess() {
   try {
     const { probs, img28 } = await classify(rgba, MODEL_SIZE);
     const d = probs.indexOf(Math.max(...probs));
-    ui.setGuess(d, probs[d]);
-    ui.showAI(img28, probs);
+    setGuess(d, probs[d]);
+    showAI(img28, probs);
   } finally {
     liveBusy = false;
   }
@@ -67,10 +68,10 @@ export function decide(probs) {
 
 // the pen has rested long enough (or the player sent it): read the talisman once, for real
 async function readTalisman() {
-  ui.disarmTalisman();
+  disarmTalisman();
   if (!pad.hasInk() || pad.writing) return;
   const rgba = S.mode === 'playing' && aiInfo.ready ? pad.renderForModel() : null;
-  if (!rgba) { pad.clear(); ui.setGuess(null); return; }
+  if (!rgba) { pad.clear(); setGuess(null); return; }
 
   pad.setEnabled(false);
   const paper = pad.snapshot();              // the written talisman, to fly at the yokai
@@ -86,10 +87,10 @@ async function readTalisman() {
   const dec = result && S.mode === 'playing' ? decide(result.probs) : null;
   if (dec?.kind === 'hit') pad.flare();
   pad.clear();
-  ui.setGuess(null);
+  setGuess(null);
   if (S.mode === 'playing' && S.cooldown <= 0) pad.setEnabled(true);
   if (!dec) return;
 
   onRead({ dec, result, paper, pct: Math.round(dec.p * 100) });
-  ui.setAIMeta(`${aiInfo.backend} · ${aiInfo.latency.toFixed(1)} ms`, `${aiInfo.model} on ${aiInfo.backend}`);
+  setAIMeta(`${aiInfo.backend} · ${aiInfo.latency.toFixed(1)} ms`, `${aiInfo.model} on ${aiInfo.backend}`);
 }

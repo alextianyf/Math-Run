@@ -2,7 +2,9 @@
 // rank (via the director), and the saved records.
 import { RANKS } from '../difficulty/adaptive.js';
 import { sfx, setTempo } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { setBest, setHearts, setScore } from '../ui/hud.js';
+import { banner, promoBanner } from '../ui/popups.js';
+import { setBestRank, setRank } from '../ui/ranks.js';
 import { S, MAX_HEARTS } from '../core/state.js';
 import { director } from './stage.js';
 import { emit } from '../core/events.js';
@@ -13,7 +15,7 @@ const HEAL_STREAK = 8;        // this many right in a row wins a heart back
 
 export function addScore(n) {
   S.score += n;
-  ui.setScore(S.score);
+  setScore(S.score);
   if (!S.tut) emit('score', { score: S.score });
 }
 
@@ -21,7 +23,7 @@ export function addScore(n) {
 export function showRank() {
   const trial = S.pendingBoss || S.enemies.some((e) => e.boss && !e.dying);
   const state = director.rank >= RANKS.length - 1 ? 'top' : trial ? 'trial' : director.progress >= 0.8 ? 'near' : '';
-  ui.setRank(director.rank, director.progress, state);
+  setRank(director.rank, director.progress, state);
 }
 
 // One problem's outcome → the director (it moves the rating). A rank trial is
@@ -38,9 +40,9 @@ export function record(e, correct) {
 export function heal(announce) {
   if (S.hearts >= MAX_HEARTS) return;
   S.hearts++;
-  ui.setHearts(S.hearts, MAX_HEARTS);
+  setHearts(S.hearts, MAX_HEARTS);
   sfx.heal();
-  if (announce) ui.banner(t('heal'), 'heal', 1);
+  if (announce) banner(t('heal'), 'heal', 1);
 }
 
 export function advance(kills) {
@@ -52,14 +54,14 @@ export function promote() {
   director.promote();
   emit('promote', { rank: director.rank });
   setTempo(director.tempo());
-  ui.promoBanner(director.rank);
+  promoBanner(director.rank);
   sfx.wave();
   heal(false);
   S.trialHold = 2.6;                      // let the promotion sink in before any next trial
   if (director.rank > S.bestRank) {
     S.bestRank = director.rank;
     store.set('bestRank', S.bestRank);
-    ui.setBestRank(S.bestRank);
+    setBestRank(S.bestRank);
   }
 }
 
@@ -71,6 +73,6 @@ export function saveBest() {
   store.set('best', S.best);
   // the record run's details, for sharing it from the title screen
   store.set('bestRun', { score: S.score, banished: S.banished, combo: S.maxCombo, distance: Math.floor(S.distance), rank: director.rank });
-  ui.setBest(S.best);
+  setBest(S.best);
   return true;
 }

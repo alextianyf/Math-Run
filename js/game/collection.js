@@ -2,7 +2,8 @@
 // where it counts up, and a transfer code that moves everything saved in this browser
 // to another device — no server needed) and the yokai Bestiary. Each has its own tile
 // on the title; they share one overlay.
-import * as ui from '../ui/ui.js';
+import { showOverlay } from '../ui/overlays.js';
+import { achievementToast } from '../ui/popups.js';
 import { ACHIEVEMENTS, YOKAI_TYPES, collection, progressOf, onUnlock } from './achievements.js';
 import { showYokai, hideYokai } from './bestiaryView.js';
 import { YOKAI_LOOK, TRAITS } from './yokaiInfo.js';
@@ -97,19 +98,19 @@ export function openCollection(which) {
     $('transfer-in').placeholder = t('transferPaste');
     $('transfer-msg').textContent = '';
   }
-  ui.show('ov-collection');
+  showOverlay('ov-collection');
 }
 
 export function initCollection() {
   refreshCollectionChip();
   // earned mid-game: a toast, and the title's counter goes up
   onUnlock((a) => {
-    ui.achievementToast(a.icon, t('unlocked'), t(`a_${a.id}`));
+    achievementToast(a.icon, t('unlocked'), t(`a_${a.id}`));
     refreshCollectionChip();
   });
   $('btn-achievements').addEventListener('click', () => openCollection('achievements'));
   $('btn-bestiary').addEventListener('click', () => openCollection('bestiary'));
-  $('btn-collection-close').addEventListener('click', () => { hideYokai(); ui.show('ov-collection', false); });
+  $('btn-collection-close').addEventListener('click', () => { hideYokai(); showOverlay('ov-collection', false); });
   const pick = (e) => { const li = e.target.closest('li[data-type]'); if (li) view(li.dataset.type); };
   $('bestiary-list').addEventListener('click', pick);
   $('bestiary-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });

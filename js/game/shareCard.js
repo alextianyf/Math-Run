@@ -2,7 +2,8 @@
 // the link itself (…/#r=<code>), and whoever opens it sees that player's card first,
 // with a button to take up the challenge. The checksum only stops casual editing of
 // the link; a static site can't truly verify a score.
-import * as ui from '../ui/ui.js';
+import { showOverlay } from '../ui/overlays.js';
+import { rankSeal } from '../ui/ranks.js';
 import { $ } from '../core/dom.js';
 import { t } from '../core/i18n.js';
 import { store } from '../core/store.js';
@@ -50,7 +51,7 @@ function renderCard(run) {
   const stats = run.banished != null
     ? `<div class="sc-stats"><span><b>${run.banished}</b>${t('statBanished')}</span><span><b>${run.combo}</b>${t('statCombo')}</span><span><b>${run.distance} m</b>${t('statDist')}</span></div>` : '';
   const rank = run.rank != null
-    ? `<div class="sc-rank"><span class="stamp"><b>${ui.rankSeal(run.rank)}</b></span>${t(`rank${run.rank}`)}</div>` : '';
+    ? `<div class="sc-rank"><span class="stamp"><b>${rankSeal(run.rank)}</b></span>${t(`rank${run.rank}`)}</div>` : '';
   $('share-card').innerHTML = `
     <div class="sc-head"><span>百鬼夜行 · MATH RUN</span><span>${run.day ?? ''}</span></div>
     <div class="sc-name">${t('cardOf', { n: esc(name) })}</div>
@@ -69,7 +70,7 @@ export function openShare(run) {
   $('share-visit').hidden = true;
   $('share-title').textContent = t('cardTitleOwn');
   renderCard(current);
-  ui.show('ov-card');
+  showOverlay('ov-card');
 }
 
 async function shareLink() {
@@ -93,7 +94,7 @@ export function openSharedLink() {
   $('share-visit').hidden = false;
   $('share-title').textContent = t('cardTitleVisit');
   renderCard(run);
-  ui.show('ov-card');
+  showOverlay('ov-card');
 }
 
 export function initShareCard() {
@@ -104,7 +105,7 @@ export function initShareCard() {
     renderCard(current);
   });
   $('btn-card-copy').addEventListener('click', shareLink);
-  $('btn-card-close').addEventListener('click', () => ui.show('ov-card', false));
-  $('btn-card-play').addEventListener('click', () => ui.show('ov-card', false));
+  $('btn-card-close').addEventListener('click', () => showOverlay('ov-card', false));
+  $('btn-card-play').addEventListener('click', () => showOverlay('ov-card', false));
   openSharedLink();
 }

@@ -12,7 +12,9 @@
 //   js/ui/          screen, texts, the talisman pad, coach and sound
 import { initRecognizer, aiInfo } from './ai/recognizer.js';
 import { initAudio, setMuted } from './ui/audio.js';
-import * as ui from './ui/ui.js';
+import { resetAI, setAIMeta } from './ui/aiPanel.js';
+import { setBest, setCombo, setDistance, setHearts } from './ui/hud.js';
+import { setBestRank } from './ui/ranks.js';
 import { S, MAX_HEARTS, targets } from './core/state.js';
 import { world, hero, fx, director, prewarm } from './game/stage.js';
 import { showRank, saveBest } from './game/progress.js';
@@ -43,14 +45,14 @@ new ResizeObserver(onResize).observe(stage);
 onResize();
 
 applyI18n();
-ui.setHearts(MAX_HEARTS, MAX_HEARTS);
-ui.setBest(S.best);
-ui.setBestRank(S.bestRank);
+setHearts(MAX_HEARTS, MAX_HEARTS);
+setBest(S.best);
+setBestRank(S.bestRank);
 initCollection();
 initShareCard();      // a shared result link opens its card first
 initRules();
 showRank();
-ui.resetAI();
+resetAI();
 // Creating the audio engine can block for half a second on some PCs, so it's done
 // now, while the page loads; it stays suspended until Start (browsers require a tap).
 initAudio();
@@ -97,7 +99,7 @@ Promise.all([
     $('ai-status').dataset.i18n = '';
     $('ai-status').textContent = t('ready');
     $('ai-chip').classList.add('ready');
-    ui.setAIMeta(aiInfo.backend);
+    setAIMeta(aiInfo.backend);
     if (S.mode === 'loading') S.mode = 'title';
     bootStatus(1);
     await nextFrame();
@@ -119,7 +121,7 @@ Promise.all([
 function updatePlaying(dt) {
   if (S.tut) { updateTutorial(dt); return; }
   S.distance += S.speed * dt * 0.6;
-  ui.setDistance(S.distance);
+  setDistance(S.distance);
   updateCombat(dt);
   updateSpawner(dt);
 }
@@ -199,9 +201,9 @@ $('btn-ai').addEventListener('click', () => {
 $('btn-lang').addEventListener('click', () => {
   setLang(getLang() === 'zh' ? 'en' : 'zh');
   showRank();
-  ui.setBest(S.best);
-  ui.setBestRank(S.bestRank);
-  ui.setCombo(S.combo);
+  setBest(S.best);
+  setBestRank(S.bestRank);
+  setCombo(S.combo);
   refreshCollectionChip();
   refreshSkillText();
   if (aiInfo.ready) $('ai-status').textContent = t('ready');

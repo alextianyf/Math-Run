@@ -56,7 +56,7 @@ on('meet', ({ type }) => {
   if (data.seen[type]) return;
   data.seen[type] = Date.now();
   save();
-  if (YOKAI_TYPES.every((type) => data.seen[type])) earn('bestiary');
+  if (YOKAI_TYPES.every((kind) => data.seen[kind])) earn('bestiary');
 });
 on('banish', ({ combo }) => {
   data.banished++;

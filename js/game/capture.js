@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { createYokai } from '../scene/yokai.js';
 import { takeOni, releaseOni } from '../scene/oni.js';
 import { sfx, stopMusic } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { clearTags } from '../ui/tags.js';
 import { S } from '../core/state.js';
 import { world, hero, fx } from './stage.js';
 import { removeEnemy } from './enemies.js';
@@ -30,7 +30,7 @@ export function beginCapture() {
   stopMusic();
   pad.clear();
   pad.setEnabled(false);
-  ui.clearTags();
+  clearTags();
   document.body.classList.add('cinematic');
 
   // the parade gathers: survivors circle the hero, bosses vanish into smoke,

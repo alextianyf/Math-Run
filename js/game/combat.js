@@ -4,7 +4,11 @@
 // that reaches the hero costs a heart.
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
-import * as ui from '../ui/ui.js';
+import { showAI } from '../ui/aiPanel.js';
+import { setCombo, setHearts } from '../ui/hud.js';
+import { banner, damageFlash, killFlash, popup } from '../ui/popups.js';
+import { removeTag, setTagHp, setTagState, setTagText } from '../ui/tags.js';
+import { padToast, talismanState } from '../ui/talisman.js';
 import { S, SPAWN_Z, HIT_Z, MAX_HEARTS, targets } from '../core/state.js';
 import { world, hero, fx, director } from './stage.js';
 import { addScore, record, advance, promote, showRank } from './progress.js';
@@ -27,18 +31,18 @@ export function answer({ dec, result, paper, pct }) {
   S.ai.reads++;
   if (dec.kind === 'hit') {
     if (dec.corrected != null) S.ai.fixed++;
-    ui.showAI(result.img28, result.probs, dec.corrected != null
+    showAI(result.img28, result.probs, dec.corrected != null
       ? { text: t('aiFix', { a: dec.corrected, b: dec.d }), cls: 'fix' }
       : { text: t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     cast(dec.d, paper);
   } else if (dec.kind === 'unclear') {
     S.ai.unclear++;
-    ui.showAI(result.img28, result.probs, { text: t('aiUnsure', { d: dec.d, p: pct }), cls: 'warn' });
-    ui.padToast(t('unclear'), 'warn');
-    ui.talismanState('shake');
+    showAI(result.img28, result.probs, { text: t('aiUnsure', { d: dec.d, p: pct }), cls: 'warn' });
+    padToast(t('unclear'), 'warn');
+    talismanState('shake');
     sfx.unclear();
   } else {
-    ui.showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: dec.kind === 'miss' ? 'bad' : '' });
+    showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: dec.kind === 'miss' ? 'bad' : '' });
     fizzle(dec.d, paper, dec.kind === 'miss');
   }
 }
@@ -66,23 +70,23 @@ export function cast(digit, paper) {
 
   S.combo++;
   S.maxCombo = Math.max(S.maxCombo, S.combo);
-  ui.setCombo(S.combo);
+  setCombo(S.combo);
   const color = auraColor();
   const tex = paperTexture(paper);
   const from = castCircle(color);
-  ui.talismanState('cast');
+  talismanState('cast');
   sfx.cast();
 
   const n = victims.length;
   emit('cast', { victims: n });
   if (n >= 2) {
-    ui.banner(t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
+    banner(t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
     sfx.multi(n);
   }
   const style = S.tut ? 'talisman' : STYLES[Math.floor(Math.random() * STYLES.length)];
   victims.forEach((e, i) => {
     e.locked = true;
-    ui.setTagState(e.tag, 'locked');
+    setTagState(e.tag, 'locked');
     SPELLS[style](e, i, n, { tex, from, color });
   });
   if (style !== 'talisman' && tex) tex.dispose();      // only the paper talisman carries the writing
@@ -135,7 +139,7 @@ const SPELLS = {
 export function fizzle(digit, paper, penalize) {
   const tex = paperTexture(paper);
   const from = castCircle(0xff7a3a);
-  ui.talismanState('fizzle');
+  talismanState('fizzle');
   fx.talisman(tex, from, (out) => out.set(0, 2.4, -9), {
     dur: 0.42, color: 0xff7a3a,
     onHit: (p) => {
@@ -146,13 +150,13 @@ export function fizzle(digit, paper, penalize) {
     const nearest = targets().reduce((a, b) => (!a || b.z > a.z ? b : a), null);
     if (nearest) record(nearest, false);
     sfx.miss();
-    ui.padToast(t('miss', { d: digit }), 'bad');
+    padToast(t('miss', { d: digit }), 'bad');
     S.combo = 0;
-    ui.setCombo(0);
+    setCombo(0);
     S.cooldown = 0.7;
     pad.setEnabled(false);
   } else {
-    ui.padToast(t('idle'));
+    padToast(t('idle'));
   }
 }
 
@@ -184,8 +188,8 @@ function impact(e, n) {
     record(e, true);
     const prob = director.nextProblem({ avoid: new Set(targets().map((o) => o.text)), boss: e.boss });
     Object.assign(e, { problem: prob, qStart: e.age, qTravel: director.travelTime(prob), answer: prob.answer, text: prob.text });
-    ui.setTagText(e.tag, prob.text);
-    ui.setTagHp(e.tag, e.hpDone, e.hpTotal);
+    setTagText(e.tag, prob.text);
+    setTagHp(e.tag, e.hpDone, e.hpTotal);
     measureTag(e);
     e.tag.classList.remove('locked');
     e.z = Math.max(Math.min(e.z, SPAWN_Z * 0.8), e.z - (e.boss ? 7 : 4));   // knock back, never pull forward
@@ -193,31 +197,31 @@ function impact(e, n) {
     chargeKill(0.5);
     const pts = Math.round((e.boss ? 200 : 100) * comboMult() * scoreMult());
     addScore(pts);
-    ui.popup(`+${pts}`, e.sx, e.sy, 'gold');
+    popup(`+${pts}`, e.sx, e.sy, 'gold');
     return;
   }
 
   // banished: more points the farther away it was (the rokurokubi: the nearer), and
   // for several at once
-  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.33 : 0.22); ui.killFlash(); }
+  if (!e.boss) { fx.seal(p); world.shake(n >= 2 ? 0.33 : 0.22); killFlash(); }
   const far = (e.z - HIT_Z) / (SPAWN_Z - HIT_Z);            // 1 = just spawned, 0 = at the hero
   const timing = e.trait === 'late' ? 150 * (1 - far) : 60 * far;
   const multiBonus = n >= 2 ? 0.5 * (n - 1) : 0;
   const pts = Math.round(((e.boss ? 1000 : 100) + timing) * (1 + multiBonus) * comboMult() * scoreMult());
   addScore(pts);
-  ui.popup(`+${pts}`, e.sx, e.sy, n >= 2 || e.boss ? 'gold big' : 'gold');
+  popup(`+${pts}`, e.sx, e.sy, n >= 2 || e.boss ? 'gold big' : 'gold');
   record(e, true);
   chargeKill(1);
   emit('banish', { type: e.yokai.type, combo: S.combo });
   e.yokai.flash();
   e.dying = 0.0001;
-  ui.setTagState(e.tag, 'hit');
+  setTagState(e.tag, 'hit');
   if (e.boss) {
     // the trial is passed: the finisher first, then the promotion
-    ui.setTagHp(e.tag, e.hpTotal, e.hpTotal);
+    setTagHp(e.tag, e.hpTotal, e.hpTotal);
     finisher(e, () => { promote(); showRank(); });
   }
-  ui.removeTag(e.tag, 600);
+  removeTag(e.tag, 600);
   e.tag = null;
   advance(e.boss ? 3 : 1);
 }
@@ -238,11 +242,11 @@ export function banishFree(e) {
   fx.seal(p);
   const pts = Math.round(100 * comboMult() * scoreMult());
   addScore(pts);
-  ui.popup(`+${pts}`, e.sx, e.sy, 'gold');
+  popup(`+${pts}`, e.sx, e.sy, 'gold');
   emit('banish', { type: e.yokai.type, combo: S.combo, free: true });
   e.dying = 0.0001;
   e.locked = true;
-  if (e.tag) { ui.setTagState(e.tag, 'hit'); ui.removeTag(e.tag, 600); e.tag = null; }
+  if (e.tag) { setTagState(e.tag, 'hit'); removeTag(e.tag, 600); e.tag = null; }
   advance(1);
 }
 
@@ -260,9 +264,9 @@ export function playerHit(e) {
   S.hearts = Math.max(0, S.hearts - 1);
   S.invuln = 0.8;
   S.combo = 0;
-  ui.setCombo(0);
-  ui.setHearts(S.hearts, MAX_HEARTS);
-  ui.damageFlash();
+  setCombo(0);
+  setHearts(S.hearts, MAX_HEARTS);
+  damageFlash();
   world.shake(0.5);
   hero.hurt();
   sfx.hurt();
