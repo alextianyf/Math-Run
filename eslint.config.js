@@ -14,7 +14,7 @@ import globals from 'globals';
 const simple = 'error';
 
 export default [
-  { ignores: ['node_modules/', 'artifacts/', 'mlp_training/', 'digit_model/', 'mnist_tfjs_model/', 'models/'] },
+  { ignores: ['node_modules/', 'artifacts/', 'digit_model/', 'mnist_tfjs_model/', 'models/'] },
   js.configs.recommended,
   {
     files: ['js/**/*.js'],

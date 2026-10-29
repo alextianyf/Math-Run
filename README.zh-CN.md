@@ -40,7 +40,7 @@
 - [项目动机](#项目动机)
 - [文件结构](#文件结构)
 - [快速开始（本地运行）](#快速开始本地运行)
-- [训练环境配置（Python）](#训练环境配置python)
+- [训练与研究](#训练与研究)
 - [技术栈](#技术栈)
 - [模型流程](#模型流程)
 - [模型表现](#模型表现)
@@ -285,9 +285,7 @@
 │   └── demo/                   # 从真实游戏重新生成 README 素材的脚本
 ├── models/hero.vrm             # 主角的 3D 模型
 ├── mnist_tfjs_model/           # 部署用的 TensorFlow.js 模型（model.json + 权重）
-├── mlp_training/               # Python 训练笔记本、日志、SavedModel
-├── data/MNIST.zip              # 原始 MNIST 数据集（训练用）
-├── requirements.txt            # Python 依赖（训练用）
+├── digit_model/                # 上线用的 CNN（TensorFlow.js），在 FingerMath 里训练
 └── LICENSE
 ```
 
@@ -313,60 +311,9 @@ python -m http.server 8000
 
 ---
 
-## 训练环境配置（Python）
+## 训练与研究
 
-只有重新训练 `mlp_training/` 里的模型时才需要；游戏本身不需要 Python。
-
-仓库里**不**包含 `.venv` 文件夹（本地 Python 虚拟环境）。请按下面的步骤自己创建虚拟环境，并从 `requirements.txt` 安装依赖：
-
-> 注意：以下步骤以 macOS 为例，Windows 上可能略有不同。
-
-### 推荐配置
-
-- 操作系统：macOS（Windows 和 Linux 基本相同）
-- 推荐 Python 版本：3.12.4
-- 开发工具：Visual Studio Code（VS Code）
-- VS Code 扩展：Jupyter Notebook（可选）
-
-### 1. 创建虚拟环境
-
-在项目根目录打开终端，运行：
-
-```bash
-python3 -m venv .venv
-```
-
-> 通常把环境命名为 .venv，你也可以换成别的名字。在 VS Code 里打开终端的快捷键是 Ctrl + 反引号（`）。
-
-### 2. 激活虚拟环境（Windows 上的命令可能不同）
-
-```bash
-source .venv/bin/activate
-```
-
-### 3. 在 VS Code 里选择 Python 解释器
-
-第 1 步：按 **`Cmd + Shift + P`** 打开命令面板
-
-第 2 步：搜索 **`Python: Select Interpreter`**
-
-第 3 步：选择指向 `./.venv` 的那一个
-
-### 4. 安装 `ipykernel`（推荐版本 6.29.5）
-
-```bash
-pip install ipykernel==6.29.5
-```
-
-> 用 `pip show ipykernel` 查看已安装的版本。
-
-### 5. 安装项目依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-> 可以用 `pip freeze > requirements.txt` 导出自己的环境，用 `pip list` 列出所有已安装的包。
+游戏本身不需要 Python。模型训练、识别研究（notebook、报告、真实手写测试基准）以及导出 `digit_model/` 的工具都放在单独的仓库 [FingerMath](https://github.com/alextianyf/FingerMath) 里。本仓库只保留上线用的模型。
 
 ---
 
@@ -376,7 +323,7 @@ pip install -r requirements.txt
 |------|------|
 | **游戏** | HTML、CSS、JavaScript（ES 模块，无需构建）、Three.js、three-vrm、Web Audio API |
 | **浏览器端 AI** | TensorFlow.js（WASM 后端） |
-| **模型训练** | Python、TensorFlow/Keras、NumPy、Pandas |
+| **模型训练** | Python、TensorFlow/Keras、NumPy、Pandas（见 [FingerMath](https://github.com/alextianyf/FingerMath)） |
 | **可视化** | Matplotlib、Seaborn |
 | **测试** | Node.js（`npm test`） |
 | **部署** | GitHub Pages（仅静态文件） |

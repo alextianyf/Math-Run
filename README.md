@@ -40,7 +40,7 @@ Behind the scenes, a simple **MLP (Multi-Layer Perceptron)** that I trained on t
 - [Project Motivation](#project-motivation)
 - [File Structure](#file-structure)
 - [Quick Start (Local Run)](#quick-start-local-run)
-- [Training Environment Setup (Python)](#training-environment-setup-python)
+- [Training and Research](#training-and-research)
 - [Tech Stack](#tech-stack)
 - [Model Pipeline Workflow](#model-pipeline-workflow)
 - [Model Performance](#model-performance)
@@ -287,9 +287,7 @@ This section provides a detailed overview of the project directory structure to 
 │   └── demo/                   # Scripts that rebuild the README media from the real game
 ├── models/hero.vrm             # The hero's 3D model
 ├── mnist_tfjs_model/           # Deployed TensorFlow.js model (model.json + weights)
-├── mlp_training/               # Python training notebook, logs, SavedModel
-├── data/MNIST.zip              # Original MNIST dataset (for training)
-├── requirements.txt            # Python dependencies (training)
+├── digit_model/                # Shipped CNN (TensorFlow.js); trained in FingerMath
 └── LICENSE
 ```
 
@@ -315,84 +313,9 @@ For development:
 
 ---
 
-## Training Environment Setup (Python)
+## Training and Research
 
-This is only needed to retrain the model in `mlp_training/` — the game itself runs without Python.
-
-The `.venv` folder (local Python virtual environment) is **not** included in this repository.  
-
-To set up the environment, please create your own virtual environment and install the required dependencies from `requirements.txt` as follows:
-
-> Note: These instructions are for macOS. Setup may differ slightly on Windows.
-
----
-
-### Recommended Configuration
-
-- Operating System: MacOS(Windows and Linux environment are identical)
-
-- Recommended Python Version: 3.12.4
-
-- Integrated Development Environment: Visual Studio Code (VS Code)
-
-- VS Code Extension: Jupyter Notebook(it's optional)
-
----
-
-### 1. Creating Virtual Environment
-
-Open your terminal in the project root directory and run:
-
-```bash
-python3 -m venv .venv
-```
-
-> It’s common practice to name the environment .venv. Most certainly, you could rename it accordingly.
-
-To open a terminal in VS Code, use the shortcut: Ctrl + backtick (`)
-
----
-
-### 2. Active the Virtual Environment(On Windows, the activation command may differ)
-
-Run the following command in your terminal:
-
-```bash
-source .venv/bin/activate
-```
-
----
-
-### 3. Select the Python Interpreter in VS Code
-
-Step 1: Press **`Cmd + Shift + P`** to open the Command Palette  
-
-Step 2: Search for: **`Python: Select Interpreter`**  
-
-Step 3: Choose the one that points to `./.venv`
-
----
-
-### 4. Install `ipykernel` (Recommended Version: 6.29.5)
-
-```bash
-pip install ipykernel==6.29.5
-```
-
-> To verify or check your ipykernel installation version: `pip show ipykernel`
-
----
-
-### 5. Install Project Dependencies
-
-Install all required packages from the `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
-> You can modify or create your own environment by `pip freeze > requirements.txt`  
-> you can use command `pip list` to list all installed packages
+The game itself runs without Python. Training, the recognition research (notebooks, reports, real-handwriting benchmarks) and the tools that export `digit_model/` live in a separate repository, [FingerMath](https://github.com/alextianyf/FingerMath). This repository keeps only the shipped models.
 
 ---
 
@@ -402,7 +325,7 @@ pip install -r requirements.txt
 |---------------|--------------|
 | **Game**      | HTML, CSS, JavaScript (ES modules, no build step), Three.js, three-vrm, Web Audio API |
 | **In-browser AI** | TensorFlow.js (WASM backend) |
-| **ML Training** | Python, TensorFlow/Keras, NumPy, Pandas |
+| **ML Training** | Python, TensorFlow/Keras, NumPy, Pandas (in [FingerMath](https://github.com/alextianyf/FingerMath)) |
 | **Visualization** | Matplotlib, Seaborn |
 | **Testing**   | Node.js (`npm test`) |
 | **Deployment** | GitHub Pages (static files only) |
