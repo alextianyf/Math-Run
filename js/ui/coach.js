@@ -3,7 +3,8 @@
 // placed beside it, a finger that demonstrates writing on the talisman, and a
 // 3-2-1 countdown.
 
-const $ = (id) => document.getElementById(id);
+import { $, restartAnimation } from '../core/dom.js';
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function createCoach() {
@@ -96,14 +97,14 @@ export function createCoach() {
         el.addEventListener('click', b.onClick, { once: true });
         return el;
       }));
-      bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop');
+      restartAnimation(bubble, 'pop');
       placeBubble(anchorOf(), true);
       actions.querySelector('.primary')?.focus({ preventScroll: true });
     },
     // swap the bubble text with a little nudge (wrong answer, unreadable digit…)
     nudge(text) {
       textEl.textContent = text;
-      bubble.classList.remove('nudge'); void bubble.offsetWidth; bubble.classList.add('nudge');
+      restartAnimation(bubble, 'nudge');
     },
     hush() { bubble.hidden = true; },
     demo(on, rectFn) {

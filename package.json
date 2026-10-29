@@ -6,10 +6,15 @@
   "type": "module",
   "scripts": {
     "test": "node tests/problems.test.mjs && node tests/director.test.mjs",
+    "lint": "eslint js",
     "media:hero": "node docs/demo/hero.cjs",
     "media:demo": "node docs/demo/record.cjs && python docs/demo/encode.py"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.13.0",
+    "globals": "^16.5.0"
   }
 }

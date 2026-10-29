@@ -223,8 +223,14 @@
 ├── styles.css                  # 所有样式
 ├── js/
 │   ├── main.js                 # 入口：搭建场景、每帧循环、按钮和按键
-│   ├── game/                   # 游戏规则
+│   ├── core/                   # 其他模块共用的基础
 │   │   ├── state.js            # 共享的游戏状态（S）和核心数值
+│   │   ├── events.js           # 小型事件总线（游戏 → 成就）
+│   │   ├── store.js            # 存档和设置（localStorage）
+│   │   ├── i18n.js             # 语言切换，t('key')
+│   │   ├── dom.js              # $(id)、restartAnimation
+│   │   └── math.js             # 随机数、缓动曲线
+│   ├── game/                   # 游戏规则
 │   │   ├── stage.js            # 共享的 3D 世界、特效和难度控制器（含着色器预热）
 │   │   ├── enemies.js          # 妖怪：生成、移动、算式牌
 │   │   ├── handwriting.js      # 符纸手写 → AI 识别 → 判断
@@ -238,10 +244,8 @@
 │   │   ├── bestiaryView.js     # 图鉴里旋转的 3D 妖怪
 │   │   ├── yokaiInfo.js        # 每种妖怪的印、颜色和本事
 │   │   ├── shareCard.js        # 以链接分享的成绩卡（无需服务器）
-│   │   ├── events.js           # 小型事件总线（游戏 → 成就）
 │   │   ├── capture.js          # "被大鬼抓住"的过场动画
-│   │   ├── flow.js             # 开始 / 暂停 / 结算 / 回到首页
-│   │   └── helpers.js          # 共用的小工具函数
+│   │   └── flow.js             # 开始 / 暂停 / 结算 / 回到首页
 │   ├── difficulty/             # 自适应难度
 │   │   ├── adaptive.js         # 难度控制器：Elo 式实力分、节奏、阶位与解锁
 │   │   └── problems.js         # 程序出题器（答案永远是 0–9）

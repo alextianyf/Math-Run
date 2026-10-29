@@ -225,8 +225,14 @@ This section provides a detailed overview of the project directory structure to 
 ├── styles.css                  # All styling
 ├── js/
 │   ├── main.js                 # Entry point: sets the stage, frame loop, buttons & keys
-│   ├── game/                   # The rules of the game
+│   ├── core/                   # Shared by everything else
 │   │   ├── state.js            # Shared game state (S) and core numbers
+│   │   ├── events.js           # A tiny event bus (game → achievements)
+│   │   ├── store.js            # Saved settings and records (localStorage)
+│   │   ├── i18n.js             # The language switch, t('key')
+│   │   ├── dom.js              # $(id), restartAnimation
+│   │   └── math.js             # rand, easing curves
+│   ├── game/                   # The rules of the game
 │   │   ├── stage.js            # Shared 3D world, effects and difficulty director (+ shader prewarm)
 │   │   ├── enemies.js          # Yokai: spawning, moving, equation tags
 │   │   ├── handwriting.js      # Talisman pad → AI reading → decision
@@ -240,10 +246,8 @@ This section provides a detailed overview of the project directory structure to 
 │   │   ├── bestiaryView.js     # The bestiary's turning 3D yokai
 │   │   ├── yokaiInfo.js        # Each yokai's seal, colour and trick
 │   │   ├── shareCard.js        # Result cards shared as a link (no server)
-│   │   ├── events.js           # A tiny event bus (game → achievements)
 │   │   ├── capture.js          # The "caught by the oni" cinematic
-│   │   ├── flow.js             # Start / pause / game over / back to title
-│   │   └── helpers.js          # Small shared helpers
+│   │   └── flow.js             # Start / pause / game over / back to title
 │   ├── difficulty/             # Adaptive difficulty
 │   │   ├── adaptive.js         # The director: Elo-style rating, pacing, ranks & unlocks
 │   │   └── problems.js         # Procedural problem generator (answers are always 0–9)

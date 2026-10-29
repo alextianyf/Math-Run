@@ -3,7 +3,9 @@
 // with a button to take up the challenge. The checksum only stops casual editing of
 // the link; a static site can't truly verify a score.
 import * as ui from '../ui/ui.js';
-import { $ } from './helpers.js';
+import { $ } from '../core/dom.js';
+import { t } from '../core/i18n.js';
+import { store } from '../core/store.js';
 
 const SITE = 'https://alextianyf.github.io/Math-Run/';
 const NAME_MAX = 12;
@@ -44,14 +46,14 @@ const esc = (text) => text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;
 const today = () => new Date().toISOString().slice(0, 10);
 
 function renderCard(run) {
-  const name = run.name?.trim() || ui.t('cardAnon');
+  const name = run.name?.trim() || t('cardAnon');
   const stats = run.banished != null
-    ? `<div class="sc-stats"><span><b>${run.banished}</b>${ui.t('statBanished')}</span><span><b>${run.combo}</b>${ui.t('statCombo')}</span><span><b>${run.distance} m</b>${ui.t('statDist')}</span></div>` : '';
+    ? `<div class="sc-stats"><span><b>${run.banished}</b>${t('statBanished')}</span><span><b>${run.combo}</b>${t('statCombo')}</span><span><b>${run.distance} m</b>${t('statDist')}</span></div>` : '';
   const rank = run.rank != null
-    ? `<div class="sc-rank"><span class="stamp"><b>${ui.rankSeal(run.rank)}</b></span>${ui.t(`rank${run.rank}`)}</div>` : '';
+    ? `<div class="sc-rank"><span class="stamp"><b>${ui.rankSeal(run.rank)}</b></span>${t(`rank${run.rank}`)}</div>` : '';
   $('share-card').innerHTML = `
     <div class="sc-head"><span>百鬼夜行 · MATH RUN</span><span>${run.day ?? ''}</span></div>
-    <div class="sc-name">${ui.t('cardOf', { n: esc(name) })}</div>
+    <div class="sc-name">${t('cardOf', { n: esc(name) })}</div>
     <div class="sc-score">${run.score.toLocaleString('en')}</div>
     ${stats}${rank}`;
 }
@@ -60,12 +62,12 @@ let current = null;           // the run on the card while it's open as the play
 
 // the player's own card: a name to put on it, then copy or share the link
 export function openShare(run) {
-  current = { ...run, name: ui.store.get('nickname', ''), day: run.day ?? today() };
+  current = { ...run, name: store.get('nickname', ''), day: run.day ?? today() };
   $('share-name').value = current.name;
-  $('share-name').placeholder = ui.t('cardNameHint');
+  $('share-name').placeholder = t('cardNameHint');
   $('share-own').hidden = false;
   $('share-visit').hidden = true;
-  $('share-title').textContent = ui.t('cardTitleOwn');
+  $('share-title').textContent = t('cardTitleOwn');
   renderCard(current);
   ui.show('ov-card');
 }
@@ -73,10 +75,10 @@ export function openShare(run) {
 async function shareLink() {
   const url = runLink(current);                      // just the link: the card says the rest
   try {
-    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: ui.t('cardTitleOwn'), url }); return; }
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: t('cardTitleOwn'), url }); return; }
     await navigator.clipboard.writeText(url);
-    $('btn-card-copy').textContent = ui.t('cardCopied');
-    setTimeout(() => { $('btn-card-copy').textContent = ui.t('cardCopy'); }, 2000);
+    $('btn-card-copy').textContent = t('cardCopied');
+    setTimeout(() => { $('btn-card-copy').textContent = t('cardCopy'); }, 2000);
   } catch { /* the player closed the share sheet */ }
 }
 
@@ -89,7 +91,7 @@ export function openSharedLink() {
   if (!run) return;
   $('share-own').hidden = true;
   $('share-visit').hidden = false;
-  $('share-title').textContent = ui.t('cardTitleVisit');
+  $('share-title').textContent = t('cardTitleVisit');
   renderCard(run);
   ui.show('ov-card');
 }
@@ -98,7 +100,7 @@ export function initShareCard() {
   $('share-name').maxLength = NAME_MAX;
   $('share-name').addEventListener('input', () => {
     current.name = $('share-name').value.slice(0, NAME_MAX);
-    ui.store.set('nickname', current.name);
+    store.set('nickname', current.name);
     renderCard(current);
   });
   $('btn-card-copy').addEventListener('click', shareLink);

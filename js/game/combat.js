@@ -5,15 +5,16 @@
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S, SPAWN_Z, HIT_Z, MAX_HEARTS, targets } from './state.js';
+import { S, SPAWN_Z, HIT_Z, MAX_HEARTS, targets } from '../core/state.js';
 import { world, hero, fx, director } from './stage.js';
 import { addScore, record, advance, promote, showRank } from './progress.js';
 import { measureTag, removeEnemy } from './enemies.js';
 import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
-import { emit } from './events.js';
-import { rand } from './helpers.js';
+import { emit } from '../core/events.js';
 import { chargeKill, scoreMult, blockHit, finisher, later, SKILLS } from './powers.js';
+import { t } from '../core/i18n.js';
+import { rand } from '../core/math.js';
 
 // combo tiers: [min combo, colour] — the talismans and their sparks take this colour
 const AURA = [[20, 0xc77dff], [10, 0x6fd8ff], [5, 0xffc84a]];
@@ -27,17 +28,17 @@ export function answer({ dec, result, paper, pct }) {
   if (dec.kind === 'hit') {
     if (dec.corrected != null) S.ai.fixed++;
     ui.showAI(result.img28, result.probs, dec.corrected != null
-      ? { text: ui.t('aiFix', { a: dec.corrected, b: dec.d }), cls: 'fix' }
-      : { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
+      ? { text: t('aiFix', { a: dec.corrected, b: dec.d }), cls: 'fix' }
+      : { text: t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     cast(dec.d, paper);
   } else if (dec.kind === 'unclear') {
     S.ai.unclear++;
-    ui.showAI(result.img28, result.probs, { text: ui.t('aiUnsure', { d: dec.d, p: pct }), cls: 'warn' });
-    ui.padToast(ui.t('unclear'), 'warn');
+    ui.showAI(result.img28, result.probs, { text: t('aiUnsure', { d: dec.d, p: pct }), cls: 'warn' });
+    ui.padToast(t('unclear'), 'warn');
     ui.talismanState('shake');
     sfx.unclear();
   } else {
-    ui.showAI(result.img28, result.probs, { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: dec.kind === 'miss' ? 'bad' : '' });
+    ui.showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: dec.kind === 'miss' ? 'bad' : '' });
     fizzle(dec.d, paper, dec.kind === 'miss');
   }
 }
@@ -75,7 +76,7 @@ export function cast(digit, paper) {
   const n = victims.length;
   emit('cast', { victims: n });
   if (n >= 2) {
-    ui.banner(ui.t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
+    ui.banner(t(n === 2 ? 'multi2' : n === 3 ? 'multi3' : 'multi4'), 'multi');
     sfx.multi(n);
   }
   const style = S.tut ? 'talisman' : STYLES[Math.floor(Math.random() * STYLES.length)];
@@ -145,13 +146,13 @@ export function fizzle(digit, paper, penalize) {
     const nearest = targets().reduce((a, b) => (!a || b.z > a.z ? b : a), null);
     if (nearest) record(nearest, false);
     sfx.miss();
-    ui.padToast(ui.t('miss', { d: digit }), 'bad');
+    ui.padToast(t('miss', { d: digit }), 'bad');
     S.combo = 0;
     ui.setCombo(0);
     S.cooldown = 0.7;
     pad.setEnabled(false);
   } else {
-    ui.padToast(ui.t('idle'));
+    ui.padToast(t('idle'));
   }
 }
 

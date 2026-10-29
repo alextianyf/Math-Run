@@ -7,13 +7,14 @@ import * as THREE from 'three';
 import { createCoach } from '../ui/coach.js';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S } from './state.js';
+import { S } from '../core/state.js';
 import { world } from './stage.js';
 import { showRank } from './progress.js';
 import { spawn, removeEnemy } from './enemies.js';
 import { pad } from './handwriting.js';
 import { cast } from './combat.js';
-import { $ } from './helpers.js';
+import { $ } from '../core/dom.js';
+import { t } from '../core/i18n.js';
 
 const TUT_YOKAI = { type: 'onibi', lane: 1, text: '1 + 2', answer: 3, z: -25, speed: 10 };   // reaches the stop ~1.1 s after Start
 const TUT_FREEZE_Z = -14;            // where the parade halts for the coach
@@ -56,17 +57,17 @@ function tutStep(step) {
   sfx.coach();
   // "Skip tutorial" sits just left of each step's main button (none on the last step,
   // whose "Keep running" already ends it)
-  const skip = { label: ui.t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() };
-  const next = (to) => [skip, { label: ui.t('tutNext'), onClick: () => tutStep(to) }];
+  const skip = { label: t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() };
+  const next = (to) => [skip, { label: t('tutNext'), onClick: () => tutStep(to) }];
   if (step === 'yokai') {
     coach.focus(yokaiSpot);
-    coach.say({ title: ui.t('tutYokaiT'), text: ui.t('tutYokai'), buttons: next('equation') });
+    coach.say({ title: t('tutYokaiT'), text: t('tutYokai'), buttons: next('equation') });
   } else if (step === 'equation') {
     coach.focus(tagSpot);
-    coach.say({ title: ui.t('tutEqT'), text: ui.t('tutEq'), buttons: next('write') });
+    coach.say({ title: t('tutEqT'), text: t('tutEq'), buttons: next('write') });
   } else if (step === 'write') {
     coach.focus(elSpot('talisman', 12));
-    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite'), buttons: [skip] });
+    coach.say({ title: t('tutWriteT'), text: t('tutWrite'), buttons: [skip] });
     coach.demo(true, () => $('pad').getBoundingClientRect());
     pad.setEnabled(true);
   } else if (step === 'send') {
@@ -78,20 +79,20 @@ function tutStep(step) {
     if (matchMedia('(max-aspect-ratio: 4/5)').matches) coach.focus(elSpot(touch ? 'send-big' : 'talisman', touch ? 8 : 12), { dim: false });
     else coach.focus(elSpot(touch ? 'send-big' : 'pad-send', 8), { near: elSpot('talisman', 12) });
     $('dock').classList.add('teach');
-    coach.say({ title: ui.t('tutSendT'), text: ui.t(touch ? 'tutSendTouch' : 'tutSend'), buttons: [skip] });
+    coach.say({ title: t('tutSendT'), text: t(touch ? 'tutSendTouch' : 'tutSend'), buttons: [skip] });
   } else if (step === 'nice') {
     coach.focus(null, { dim: false });
-    coach.say({ title: ui.t('tutNiceT'), text: ui.t('tutNice'), buttons: next('danger') });
+    coach.say({ title: t('tutNiceT'), text: t('tutNice'), buttons: next('danger') });
   } else if (step === 'danger') {
     coach.focus(elSpot('hearts', 10));
-    coach.say({ title: ui.t('tutDangerT'), text: ui.t('tutDanger'), buttons: next('ready') });
+    coach.say({ title: t('tutDangerT'), text: t('tutDanger'), buttons: next('ready') });
   } else if (step === 'ready') {
     coach.focus(null);
     coach.say({
-      title: ui.t('tutReadyT'), text: ui.t('tutReady'),
+      title: t('tutReadyT'), text: t('tutReady'),
       buttons: [
-        { label: ui.t('tutReplay'), kind: 'ghost', onClick: replayTutorial },
-        { label: ui.t('tutGo'), onClick: () => finishTutorial() },
+        { label: t('tutReplay'), kind: 'ghost', onClick: replayTutorial },
+        { label: t('tutGo'), onClick: () => finishTutorial() },
       ],
     });
   }
@@ -123,7 +124,7 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
   if (T.step !== 'write' && T.step !== 'send') return;
   $('dock').classList.remove('teach');
   if (dec.kind === 'hit') {
-    ui.showAI(result.img28, result.probs, { text: ui.t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
+    ui.showAI(result.img28, result.probs, { text: t('aiRead', { d: dec.d, p: pct }), cls: 'ok' });
     pad.setEnabled(false);
     coach.demo(false);
     coach.hush();
@@ -132,19 +133,19 @@ export function tutorialAnswer({ dec, result, pct, paper }) {
     cast(dec.d, paper);
     return;
   }
-  ui.showAI(result.img28, result.probs, { text: ui.t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
+  ui.showAI(result.img28, result.probs, { text: t(dec.kind === 'unclear' ? 'aiUnsure' : 'aiRead', { d: dec.d, p: pct }), cls: 'warn' });
   ui.talismanState('shake');
   sfx.unclear();
   if (T.step === 'send') {                  // back to writing, with the coaching below
     T.step = 'write';
     T.timer = 0;
     coach.focus(elSpot('talisman', 12));
-    coach.say({ title: ui.t('tutWriteT'), text: ui.t('tutWrite'), buttons: [{ label: ui.t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() }] });
+    coach.say({ title: t('tutWriteT'), text: t('tutWrite'), buttons: [{ label: t('tutSkip'), kind: 'ghost', onClick: () => finishTutorial() }] });
   }
-  if (dec.kind === 'unclear') coach.nudge(ui.t('tutUnclear'));
+  if (dec.kind === 'unclear') coach.nudge(t('tutUnclear'));
   else {
     T.misses++;
-    coach.nudge(`${ui.t('tutWrong', { d: dec.d })}${T.misses >= 2 ? ' ' + ui.t('tutHint') : ''}`);
+    coach.nudge(`${t('tutWrong', { d: dec.d })}${T.misses >= 2 ? ' ' + t('tutHint') : ''}`);
   }
   coach.demo(true);
 }
@@ -170,7 +171,7 @@ export async function finishTutorial() {
   pad.setEnabled(false);
   pad.clear();
   for (const e of [...S.enemies]) removeEnemy(e);
-  await coach.countdown(['3', '2', '1', ui.t('go')], (i) => sfx.countdown(i, i === 3));
+  await coach.countdown(['3', '2', '1', t('go')], (i) => sfx.countdown(i, i === 3));
   if (S.tut !== T) return;                  // the run was left meanwhile
   S.tut = null;
   coach.show(false);

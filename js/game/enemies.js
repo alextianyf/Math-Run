@@ -6,13 +6,15 @@ import { LANES } from '../scene/world.js';
 import { createYokai } from '../scene/yokai.js';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S, SPAWN_Z, HIT_Z, targets } from './state.js';
+import { S, SPAWN_Z, HIT_Z, targets } from '../core/state.js';
 import { world, fx, director } from './stage.js';
 import { showRank } from './progress.js';
-import { emit } from './events.js';
-import { rand, easeOutBack, smooth01 } from './helpers.js';
+import { emit } from '../core/events.js';
 import { paceMult, spawnMult, aliveBonus, frozen, holdSpawns, tagVisibility, yokaiHint, spawnDepth, travelMult } from './powers.js';
 import { TRAITS } from './yokaiInfo.js';
+import { t } from '../core/i18n.js';
+import { easeOutBack, rand, smooth01 } from '../core/math.js';
+import { restartAnimation } from '../core/dom.js';
 
 // × travel time: the slower ones give a little more thinking time
 const TYPE_PACE = { onibi: 1, chochin: 1.08, hitotsume: 1.04, kappa: 1.12, kitsunebi: 0.92, kasa: 0.94, ittan: 0.9, hyakume: 1.15, nekomata: 1.0,
@@ -76,7 +78,7 @@ export function spawn(boss = false, forced = null, pack = null) {
     speed: forced?.speed ?? (HIT_Z - SPAWN_Z * spawnDepth()) / (qTravel * TYPE_PACE[type] * travelMult()),
     problem: prob, qStart: 0, qTravel,
     answer: prob.answer, text: prob.text,
-    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && ui.t(`tr_${trait}`) }),
+    tag: ui.createTag(prob.text, { boss, hp: hpTotal, stretch: prob.stretch, trait: trait && t(`tr_${trait}`) }),
     hpDone: 0, hpTotal,
     locked: false, dying: 0, age: 0, sx: 0, sy: 0, offY: 0, phase: Math.random() * 6.3, blinked: false, dashing: false,
   };
@@ -91,7 +93,7 @@ export function spawn(boss = false, forced = null, pack = null) {
   fx.emit(yokai.center(tmp), { count: boss ? 50 : 22, color: 0x7a3dff, color2: 0x1a0c33, bright: 1, speed: boss ? 4 : 2.5, life: 1, size: boss ? 0.9 : 0.5, gravity: 0.6, up: 0.3 });
 
   if (boss) {
-    ui.banner(ui.t('trial'), 'boss', 2);
+    ui.banner(t('trial'), 'boss', 2);
     sfx.boss();
     world.shake(0.25);
     showRank();
@@ -200,7 +202,7 @@ function traitStep(e, near) {
     e.yokai.root.position.x = e.x0;
     fx.emit(e.yokai.center(tmp), { count: 30, color: 0xa88aff, color2: 0xffffff, bright: 2, speed: 2.5, life: 0.6, size: 0.3, gravity: 0 });
     sfx.blink();
-    if (e.tag) { e.tag.classList.remove('swap'); void e.tag.offsetWidth; e.tag.classList.add('swap'); }
+    if (e.tag) { restartAnimation(e.tag, 'swap'); }
   } else if (e.trait === 'dash' && !e.dashing && near > 0.35 && near < 0.6) {
     e.dashing = true;
     fx.emit(e.yokai.center(tmp), { count: 24, color: 0x2a2a44, color2: 0x8a9cff, bright: 1, speed: 3, life: 0.8, size: 0.3, gravity: 1 });

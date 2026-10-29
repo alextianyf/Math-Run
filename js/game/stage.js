@@ -6,7 +6,7 @@ import { createFx } from '../scene/fx.js';
 import { createYokai, YOKAI_TYPES } from '../scene/yokai.js';
 import { takeOni, releaseOni } from '../scene/oni.js';
 import { createDirector } from '../difficulty/adaptive.js';
-import { $ } from './helpers.js';
+import { $ } from '../core/dom.js';
 
 export const world = createWorld($('scene'));
 export const hero = world.hero;

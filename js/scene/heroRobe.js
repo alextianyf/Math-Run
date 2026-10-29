@@ -313,7 +313,7 @@ export function dressHero(vrm, root, modelScale, dynamic) {
   const crest = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), M.crest);
   attach(B.upperChest, crest, V(0, 1.2, 0.097));
   // asagutsu (black lacquered shoes) over white tabi
-  for (const [s, sx] of [['L', -1], ['R', 1]]) {
+  for (const s of ['L', 'R']) {
     const foot = P[s === 'L' ? 'leftFoot' : 'rightFoot'];
     attach(B['ft' + s], bake([
       { geo: new THREE.SphereGeometry(0.06, 16, 12), mat: M.shoe, p: [0, -0.062, -0.07], s: [1.0, 0.75, 1.9] },

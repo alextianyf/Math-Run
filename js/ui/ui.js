@@ -1,39 +1,8 @@
 // ui.js — everything on screen that isn't 3D: the HUD, the equation tags that
 // follow the yokai, popups and banners, the "AI view" panel and the overlay
-// screens — plus saved settings and the language switch (texts are in strings.js).
-import { STRINGS } from './strings.js';
-
-const $ = (id) => document.getElementById(id);
-
-/* ===================== storage (never throws) ===================== */
-export const store = {
-  get(key, fallback) {
-    try { const v = localStorage.getItem('mathrun.' + key); return v === null ? fallback : JSON.parse(v); }
-    catch { return fallback; }
-  },
-  set(key, value) {
-    try { localStorage.setItem('mathrun.' + key, JSON.stringify(value)); } catch { /* private mode etc. */ }
-  },
-};
-
-/* ===================== language ===================== */
-let lang = store.get('lang', (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en');
-
-export function t(key, vars = {}) {
-  const s = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
-  return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
-}
-export function getLang() { return lang; }
-export function setLang(l) {
-  lang = l;
-  store.set('lang', l);
-  applyI18n();
-}
-export function applyI18n() {
-  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
-  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
-  document.querySelectorAll('[data-i18n-label]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nLabel)); });
-}
+// screens. Saved settings are in core/store.js, the language switch in core/i18n.js.
+import { t } from '../core/i18n.js';
+import { $, restartAnimation } from '../core/dom.js';
 
 /* ===================== HUD ===================== */
 export function setHearts(n, max) {
@@ -50,7 +19,7 @@ export function setHearts(n, max) {
   [...box.children].forEach((h, i) => {
     const was = !h.classList.contains('lost');
     h.classList.toggle('lost', i >= n);
-    if (was !== i < n) { h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); }   // lost or won back
+    if (was !== i < n) { restartAnimation(h, 'pop'); }   // lost or won back
   });
   box.setAttribute('aria-label', `${n}/${max}`);
 }
@@ -59,7 +28,7 @@ export function setScore(n) {
   const el = $('score');
   el.textContent = n.toLocaleString();
   // points coming in: the counter jumps and flashes gold
-  if (n > shownScore) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  if (n > shownScore) { restartAnimation(el, 'bump'); }
   shownScore = n;
 }
 export function setDistance(m) { $('dist').textContent = Math.floor(m).toLocaleString(); }
@@ -138,7 +107,7 @@ export function setCombo(n) {
   if (n < 2) { el.classList.remove('show'); return; }
   el.innerHTML = `<b>×${n}</b> ${t('combo')}`;
   el.classList.add('show');
-  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  restartAnimation(el, 'bump');
 }
 
 /* ===================== equation tags ===================== */
@@ -168,7 +137,7 @@ export function createTag(text, { boss = false, hp = 0, stretch = false, trait =
 }
 export function setTagText(el, text) {
   setEquation(el.querySelector('.eq'), text);
-  el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
+  restartAnimation(el, 'swap');
 }
 export function setTagHp(el, done, total) {
   const hp = el.querySelector('.hp');
@@ -211,8 +180,7 @@ export function banner(text, cls = '', level = 0, { html = null, ms = 1500 } = {
   el.className = 'banner ' + cls;
   if (html) el.innerHTML = html; else el.textContent = text;
   el.style.animationDuration = `${ms}ms`;
-  void el.offsetWidth;
-  el.classList.add('show');
+  restartAnimation(el, 'show');
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(() => {
     el.classList.remove('show');
@@ -243,8 +211,7 @@ export function padToast(text, cls = '') {
 export function talismanState(state) {
   const el = $('talisman');
   el.classList.remove('cast', 'fizzle', 'shake');
-  void el.offsetWidth;
-  if (state) el.classList.add(state);
+  if (state) restartAnimation(el, state);
 }
 export function setGuess(digit, p) {
   const el = $('guess');
@@ -258,18 +225,18 @@ export function setGuess(digit, p) {
 export function armTalisman(ms) {
   const el = $('pad-timer');
   el.style.setProperty('--wait', `${ms}ms`);
-  el.classList.remove('run'); void el.offsetWidth; el.classList.add('run');
+  restartAnimation(el, 'run');
 }
 export function disarmTalisman() { $('pad-timer').classList.remove('run'); }
 
 // a kill: a quick warm flash over the whole screen
 export function killFlash() {
   const v = $('vignette');
-  v.classList.remove('zap'); void v.offsetWidth; v.classList.add('zap');
+  restartAnimation(v, 'zap');
 }
 export function damageFlash() {
   const v = $('vignette');
-  v.classList.remove('hit'); void v.offsetWidth; v.classList.add('hit');
+  restartAnimation(v, 'hit');
 }
 
 /* ===================== AI panel ===================== */

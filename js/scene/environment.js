@@ -20,7 +20,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // Merge already-placed geometries into one (normalising index/uv so anything merges)
 function merge(geos) {
   return mergeGeometries(geos.map((g) => {
-    let out = g.index ? g.toNonIndexed() : g;
+    const out = g.index ? g.toNonIndexed() : g;
     if (!out.attributes.uv) out.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(out.attributes.position.count * 2), 2));
     return out;
   }));

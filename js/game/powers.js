@@ -7,12 +7,15 @@
 import * as THREE from 'three';
 import { sfx } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S, targets } from './state.js';
+import { S, targets } from '../core/state.js';
 import { world, hero, fx } from './stage.js';
 import { banishFree } from './combat.js';
-import { emit } from './events.js';
+import { emit } from '../core/events.js';
 import { YOKAI_LOOK } from './yokaiInfo.js';
-import { $, rand } from './helpers.js';
+import { $, restartAnimation } from '../core/dom.js';
+import { getLang, t } from '../core/i18n.js';
+import { rand } from '../core/math.js';
+import { store } from '../core/store.js';
 
 /* ===================== timing helpers ===================== */
 // things to do a moment later, on the game's own clock (so a pause holds them too)
@@ -66,7 +69,7 @@ function stepNight(dt) {
       world.setTheme(id, SHIFT_S);
       document.body.dataset.night = id;
       later(0.6, () => {
-        ui.banner('', 'event', 1, { html: `<span class="ev-kicker">${ui.t('nightEnter')}</span><span class="ev-title">${ui.t(`ev_${id}`)}</span><span class="ev-sub">${ui.t(`evd_${id}`)}</span>`, ms: 3400 });
+        ui.banner('', 'event', 1, { html: `<span class="ev-kicker">${t('nightEnter')}</span><span class="ev-title">${t(`ev_${id}`)}</span><span class="ev-sub">${t(`evd_${id}`)}</span>`, ms: 3400 });
         sfx.event();
       });
       emit('night', { id });
@@ -118,7 +121,7 @@ export function useSkill() {
   const color = SKILLS[id].color;
   hero.cast();
   sfx.skill();
-  ui.banner('', 'skill', 1, { html: `<span class="sk-seal">${SKILLS[id].ch}</span><span class="sk-name">${ui.t(`sk_${id}`)}</span>`, ms: 1400 });
+  ui.banner('', 'skill', 1, { html: `<span class="sk-seal">${SKILLS[id].ch}</span><span class="sk-name">${t(`sk_${id}`)}</span>`, ms: 1400 });
   const at = world.handPosition(new THREE.Vector3());
   fx.magicCircle(new THREE.Vector3(0, 0.05, 0), { color, scale: 6, dur: 1.1, ground: true, spin: 2.5 });
   fx.emit(at, { count: 60, color, color2: 0xffffff, bright: 2, speed: 5, life: 0.8, size: 0.25 });
@@ -154,7 +157,7 @@ export function blockHit(p) {
   later(0.25, () => drop?.drop());
   fx.ring(p, { color: SKILLS.barrier.color, scale: 4 });
   fx.emit(p, { count: 50, color: SKILLS.barrier.color, color2: 0xffffff, bright: 2, speed: 5, life: 0.7, size: 0.3 });
-  ui.padToast(ui.t('blocked'), 'ok');
+  ui.padToast(t('blocked'), 'ok');
   sfx.pillar();
   world.shake(0.25);
   return true;
@@ -168,19 +171,19 @@ const hinted = new Set();
 let hintTimer = 0;
 export function yokaiHint(type, trait) {
   if (hinted.has(trait)) return;
-  const seen = ui.store.get('hints', {});
+  const seen = store.get('hints', {});
   if ((seen[trait] ?? 0) >= HINT_RUNS || !$('hint').hidden) return;
   hinted.add(trait);
   seen[trait] = (seen[trait] ?? 0) + 1;
-  ui.store.set('hints', seen);
+  store.set('hints', seen);
   const [seal, color] = YOKAI_LOOK[type];
   $('hint-seal').textContent = seal;
   $('hint-seal').parentElement.style.background = color;
-  $('hint-title').textContent = ui.t('hintLook', { y: ui.t(`y_${type}`) });
-  $('hint-text').textContent = ui.t(`tip_${trait}`);
+  $('hint-title').textContent = t('hintLook', { y: t(`y_${type}`) });
+  $('hint-text').textContent = t(`tip_${trait}`);
   const el = $('hint');
   el.hidden = false;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  restartAnimation(el, 'show');
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => { el.hidden = true; }, HINT_MS);
 }
@@ -197,8 +200,8 @@ export function finisher(e, then) {
   hero.cast();
   sfx.finisher();
   const v = $('vignette');
-  v.classList.remove('flash'); void v.offsetWidth; v.classList.add('flash');
-  ui.banner('', 'finisher', 2, { html: `<span class="fin-kanji">${ui.t('finisher')}</span><span class="fin-sub">${ui.t('finisherSub')}</span>`, ms: 1700 });
+  restartAnimation(v, 'flash');
+  ui.banner('', 'finisher', 2, { html: `<span class="fin-kanji">${t('finisher')}</span><span class="fin-sub">${t('finisherSub')}</span>`, ms: 1700 });
 
   S.spawnTimer = Math.max(S.spawnTimer, 2.5);      // nothing new walks in during the finisher
   fx.magicCircle(ground, { color: 0xff4a2a, scale: 11, dur: 2.2, ground: true, spin: 3, bright: 1.8 });
@@ -276,13 +279,13 @@ function renderSkill() {
   el.disabled = !S.skill;
   $('skill-ch').textContent = S.skill ? SKILLS[S.skill].ch : '符';
   if (S.skill) {
-    $('skill-title').innerHTML = `${ui.t(`sk_${S.skill}`)} <small>${ui.t(matchMedia('(pointer: coarse)').matches ? 'skTap' : 'skKey')}</small>`;
-    $('skill-desc').textContent = ui.t(`skd_${S.skill}`);
-    el.setAttribute('aria-label', ui.t('skillUse', { s: ui.t(`sk_${S.skill}`) }));
+    $('skill-title').innerHTML = `${t(`sk_${S.skill}`)} <small>${t(matchMedia('(pointer: coarse)').matches ? 'skTap' : 'skKey')}</small>`;
+    $('skill-desc').textContent = t(`skd_${S.skill}`);
+    el.setAttribute('aria-label', t('skillUse', { s: t(`sk_${S.skill}`) }));
   } else {
-    $('skill-title').textContent = ui.t('skCharging', { p: pct });
-    $('skill-desc').textContent = ui.t('skChargingSub');
-    el.setAttribute('aria-label', ui.t('skCharging', { p: pct }));
+    $('skill-title').textContent = t('skCharging', { p: pct });
+    $('skill-desc').textContent = t('skChargingSub');
+    el.setAttribute('aria-label', t('skCharging', { p: pct }));
   }
 }
 export function refreshSkillText() { shownPct = -1; renderSkill(); }
@@ -292,11 +295,11 @@ let shown = '';
 function renderEffects() {
   const list = [];
   const n = S.night;
-  if (n && n.id !== 'night' && n.state === 'on') list.push(['ev', n.id, ui.t(`ev_${n.id}`), (S.nextNightAt - S.distance) / NIGHT_EVERY]);
-  if (S.freeze > 0) list.push(['sk', 'freeze', ui.t('sk_freeze'), S.freeze / FREEZE_S]);
-  if (S.lucky > 0) list.push(['sk', 'lucky', ui.t('sk_lucky'), S.lucky / LUCKY_S]);
-  if (S.barrier) list.push(['sk', 'barrier', ui.t('sk_barrier'), 1]);
-  const key = list.map((c) => c[1]).join() + ui.getLang();
+  if (n && n.id !== 'night' && n.state === 'on') list.push(['ev', n.id, t(`ev_${n.id}`), (S.nextNightAt - S.distance) / NIGHT_EVERY]);
+  if (S.freeze > 0) list.push(['sk', 'freeze', t('sk_freeze'), S.freeze / FREEZE_S]);
+  if (S.lucky > 0) list.push(['sk', 'lucky', t('sk_lucky'), S.lucky / LUCKY_S]);
+  if (S.barrier) list.push(['sk', 'barrier', t('sk_barrier'), 1]);
+  const key = list.map((c) => c[1]).join() + getLang();
   const box = $('effects');
   if (key !== shown) {
     shown = key;

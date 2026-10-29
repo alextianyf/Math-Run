@@ -53,7 +53,10 @@ const templateReady = new GLTFLoader().loadAsync('./models/hero.vrm')
 
 const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
 const ONE = new THREE.Vector3(1, 1, 1);
-const _hx = new THREE.Vector3(), _hy = new THREE.Vector3(), _hz = new THREE.Vector3(), _hw = new THREE.Vector3(), _hm = new THREE.Matrix4();
+const _hx = new THREE.Vector3();
+const _hy = new THREE.Vector3();
+const _hz = new THREE.Vector3();
+const _hm = new THREE.Matrix4();
 
 function buildTemplate(scene) {
   // keep the bare body, drop face, eyes, hair and clothes

@@ -5,9 +5,9 @@
 import { classify, aiInfo } from '../ai/recognizer.js';
 import { createPad, MODEL_SIZE } from '../ui/pad.js';
 import * as ui from '../ui/ui.js';
-import { S, targets } from './state.js';
+import { S, targets } from '../core/state.js';
 import { director } from './stage.js';
-import { $ } from './helpers.js';
+import { $ } from '../core/dom.js';
 
 let onWrite = () => {};
 let onRead = () => {};

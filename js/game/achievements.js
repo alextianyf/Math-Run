@@ -1,8 +1,8 @@
 // achievements.js — achievements and the yokai bestiary. Everything is saved in this
 // browser (a static site has no accounts); collection.js can move it to another
 // device with a transfer code. It only listens to game events (events.js).
-import { store } from '../ui/ui.js';
-import { on } from './events.js';
+import { store } from '../core/store.js';
+import { on } from '../core/events.js';
 import { YOKAI_TYPES } from '../scene/yokai.js';
 
 export { YOKAI_TYPES };
@@ -56,7 +56,7 @@ on('meet', ({ type }) => {
   if (data.seen[type]) return;
   data.seen[type] = Date.now();
   save();
-  if (YOKAI_TYPES.every((t) => data.seen[t])) earn('bestiary');
+  if (YOKAI_TYPES.every((type) => data.seen[type])) earn('bestiary');
 });
 on('banish', ({ combo }) => {
   data.banished++;

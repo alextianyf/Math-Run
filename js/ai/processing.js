@@ -33,7 +33,7 @@ export function preprocessToMNIST(rgba, { srcW, srcH, blur = false, center = tru
   // 3) Largest Connected Component (LCC) or all-foreground box → Region of Interest (ROI)
   const found = roiMode === 'all' ? foregroundBBox(bin, srcW, srcH) : largestCC(bin, srcW, srcH);
   const roi = found ?? { x0: 0, y0: 0, x1: srcW - 1, y1: srcH - 1 };
-  let { x0, y0, x1, y1 } = roi;
+  const { x0, y0, x1, y1 } = roi;
   const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1);
 
   // 4) Keep aspect ratio; scale so the longer side = 20 px

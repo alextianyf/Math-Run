@@ -149,7 +149,13 @@ export function createHero() {
   root.add(shadow);
 
   // ---- loaded state ----
-  let vrm = null, bones = null, hipsRest = 0, modelScale = 1, materials = [], chestNode = root, robe = null;
+  let vrm = null;
+  let bones = null;
+  let hipsRest = 0;
+  let modelScale = 1;
+  const materials = [];
+  let chestNode = root;
+  let robe = null;
   const armBase = { L: new THREE.Quaternion().setFromAxisAngle(Z, 1.3), R: new THREE.Quaternion().setFromAxisAngle(Z, -1.3) };
   const armBaseInv = { L: armBase.L.clone().invert(), R: armBase.R.clone().invert() };
 

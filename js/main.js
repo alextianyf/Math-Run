@@ -4,6 +4,7 @@
 // Yokai drift down the shrine path, each carrying an equation. The player
 // handwrites a digit on the talisman; the MNIST model reads it and a talisman
 // flies at EVERY yokai whose answer matches. Where things live:
+//   js/core/        shared by everything: game state, events, saved settings, language, small helpers
 //   js/game/        the rules: yokai, casting, skills and night events, scoring, tutorial, capture, run flow
 //   js/difficulty/  adaptive difficulty: the director and the problem generator
 //   js/ai/          handwritten-digit recognition (TensorFlow.js)
@@ -12,7 +13,7 @@
 import { initRecognizer, aiInfo } from './ai/recognizer.js';
 import { initAudio, setMuted } from './ui/audio.js';
 import * as ui from './ui/ui.js';
-import { S, MAX_HEARTS, targets } from './game/state.js';
+import { S, MAX_HEARTS, targets } from './core/state.js';
 import { world, hero, fx, director, prewarm } from './game/stage.js';
 import { showRank, saveBest } from './game/progress.js';
 import { spawn, updateSpawner, updateEnemies } from './game/enemies.js';
@@ -25,7 +26,10 @@ import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { initShareCard } from './game/shareCard.js';
 import { initRules } from './game/rules.js';
 import { updatePowers, useSkill, charge, later, refreshSkillText } from './game/powers.js';
-import { $, smooth01 } from './game/helpers.js';
+import { $ } from './core/dom.js';
+import { applyI18n, getLang, setLang, t } from './core/i18n.js';
+import { smooth01 } from './core/math.js';
+import { store } from './core/store.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
@@ -38,7 +42,7 @@ function onResize() {
 new ResizeObserver(onResize).observe(stage);
 onResize();
 
-ui.applyI18n();
+applyI18n();
 ui.setHearts(MAX_HEARTS, MAX_HEARTS);
 ui.setBest(S.best);
 ui.setBestRank(S.bestRank);
@@ -51,13 +55,13 @@ ui.resetAI();
 // now, while the page loads; it stays suspended until Start (browsers require a tap).
 initAudio();
 
-let muted = ui.store.get('muted', false);
+let muted = store.get('muted', false);
 setMuted(muted);
 document.body.classList.toggle('muted', muted);
 // the AI view starts open on a wide screen with a mouse, closed on phones, tablets and narrow windows
 // (each remembers its own choice, so a phone never inherits the desktop's)
 const aiKey = matchMedia('(pointer: fine)').matches && window.innerWidth >= 900 ? 'aiPanel' : 'aiPanelSmall';
-document.body.classList.toggle('ai-open', ui.store.get(aiKey, aiKey === 'aiPanel'));
+document.body.classList.toggle('ai-open', store.get(aiKey, aiKey === 'aiPanel'));
 
 // what a reading of the talisman does: the tutorial handles it while it runs
 onTalisman({
@@ -73,7 +77,7 @@ const loading = new Set(['bootAI', 'bootHero']);       // what is still on its w
 // the next painted frame — or a moment later in a background tab, which paints nothing
 const nextFrame = () => new Promise((resolve) => { requestAnimationFrame(() => resolve()); setTimeout(resolve, 100); });
 function bootStatus(fraction) {
-  $('loader-text').textContent = ui.t(loading.size ? [...loading][0] : 'bootScene');
+  $('loader-text').textContent = t(loading.size ? [...loading][0] : 'bootScene');
   $('loader-fill').style.width = `${Math.round(fraction * 100)}%`;
 }
 const loaded = (key) => () => { loading.delete(key); bootStatus((2 - loading.size) / 3); };
@@ -89,9 +93,9 @@ Promise.all([
     prewarm();
     $('btn-start').disabled = false;
     $('start-label').dataset.i18n = 'start';
-    $('start-label').textContent = ui.t('start');
+    $('start-label').textContent = t('start');
     $('ai-status').dataset.i18n = '';
-    $('ai-status').textContent = ui.t('ready');
+    $('ai-status').textContent = t('ready');
     $('ai-chip').classList.add('ready');
     ui.setAIMeta(aiInfo.backend);
     if (S.mode === 'loading') S.mode = 'title';
@@ -102,12 +106,12 @@ Promise.all([
   })
   .catch((err) => {
     console.error('[math-run] model load failed', err);
-    $('loader-text').textContent = ui.t('loadFail');
-    $('loader-retry').textContent = ui.t('retry');
+    $('loader-text').textContent = t('loadFail');
+    $('loader-retry').textContent = t('reload');
     $('loader-retry').hidden = false;
     $('loader-retry').addEventListener('click', () => location.reload());
     $('start-label').dataset.i18n = 'loadFail';
-    $('start-label').textContent = ui.t('loadFail');
+    $('start-label').textContent = t('loadFail');
     $('ai-chip').classList.add('fail');
   });
 
@@ -184,23 +188,23 @@ $('btn-mute').addEventListener('click', () => {
   muted = !muted;
   initAudio();
   setMuted(muted);
-  ui.store.set('muted', muted);
+  store.set('muted', muted);
   document.body.classList.toggle('muted', muted);
 });
 $('btn-ai').addEventListener('click', () => {
   const open = !document.body.classList.contains('ai-open');
   document.body.classList.toggle('ai-open', open);
-  ui.store.set(aiKey, open);
+  store.set(aiKey, open);
 });
 $('btn-lang').addEventListener('click', () => {
-  ui.setLang(ui.getLang() === 'zh' ? 'en' : 'zh');
+  setLang(getLang() === 'zh' ? 'en' : 'zh');
   showRank();
   ui.setBest(S.best);
   ui.setBestRank(S.bestRank);
   ui.setCombo(S.combo);
   refreshCollectionChip();
   refreshSkillText();
-  if (aiInfo.ready) $('ai-status').textContent = ui.t('ready');
+  if (aiInfo.ready) $('ai-status').textContent = t('ready');
 });
 stage.addEventListener('pointerdown', skip);
 
@@ -238,6 +242,6 @@ function debugCast(d) {
   const g = c.getContext('2d');
   g.fillStyle = '#f2cf63'; g.fillRect(0, 0, 128, 192);
   g.fillStyle = '#b3170f'; g.font = 'bold 120px serif'; g.textAlign = 'center'; g.fillText(String(d), 64, 140);
-  if (targets().some((t) => t.answer === d)) cast(d, c); else fizzle(d, c, targets().length > 0);
+  if (targets().some((target) => target.answer === d)) cast(d, c); else fizzle(d, c, targets().length > 0);
 }
 if (DEBUG) window.__mathrun = { S, world, fx, hero, spawn, decide, director, beginCapture, skipCapture, coach, charge, useSkill, later };

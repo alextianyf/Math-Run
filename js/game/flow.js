@@ -4,17 +4,19 @@ import { RANKS } from '../difficulty/adaptive.js';
 import { aiInfo } from '../ai/recognizer.js';
 import { initAudio, sfx, startMusic, stopMusic, setTempo } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S, MAX_HEARTS } from './state.js';
+import { S, MAX_HEARTS } from '../core/state.js';
 import { world, director } from './stage.js';
 import { showRank, saveBest } from './progress.js';
 import { clearEnemies, rerollProblems } from './enemies.js';
 import { endCapture } from './capture.js';
 import { pad } from './handwriting.js';
 import { coach, startTutorial } from './tutorial.js';
-import { emit } from './events.js';
+import { emit } from '../core/events.js';
 import { openShare } from './shareCard.js';
 import { resetPowers } from './powers.js';
-import { $ } from './helpers.js';
+import { $ } from '../core/dom.js';
+import { t } from '../core/i18n.js';
+import { store } from '../core/store.js';
 
 // a clean slate: no yokai, full hearts, zero score, a fresh director
 function resetRun() {
@@ -65,7 +67,7 @@ export const shareRun = () => lastRun && openShare(lastRun);
 // the title screen's Share: the record run (older records only know their score)
 export function shareBest() {
   if (!S.best) return;
-  const r = ui.store.get('bestRun', null);
+  const r = store.get('bestRun', null);
   openShare(r && r.score === S.best ? r : { score: S.best, rank: S.bestRank });
 }
 
@@ -74,7 +76,7 @@ export function beginPlay() {
   S.mode = 'playing';
   if (S.tut) return;                     // the tutorial runs the pad itself
   pad.setEnabled(true);
-  ui.banner(ui.t('go'), 'go');
+  ui.banner(t('go'), 'go');
 }
 
 export function pause() {
@@ -118,10 +120,10 @@ export function retryRun() { startGame(true); }
 export function showGameOver() {
   S.mode = 'over';
   const newBest = saveBest();
-  $('over-title').textContent = ui.t('overTitle');
+  $('over-title').textContent = t('overTitle');
   $('over-score').textContent = S.score.toLocaleString();
   $('over-newbest').hidden = !newBest;
-  $('btn-share').textContent = ui.t('share');
+  $('btn-share').textContent = t('share');
   $('st-banished').textContent = S.banished;
   $('st-combo').textContent = S.maxCombo;
   $('st-dist').textContent = `${Math.floor(S.distance)} m`;
@@ -129,18 +131,18 @@ export function showGameOver() {
   // rank and rating: this run's change and its curve
   const run = director.endRun();
   const delta = run.rating - run.start;
-  $('st-rank').textContent = ui.t('rankLine', { r: ui.t(director.rankKey), v: run.rating, d: `${delta >= 0 ? '+' : ''}${delta}` });
+  $('st-rank').textContent = t('rankLine', { r: t(director.rankKey), v: run.rating, d: `${delta >= 0 ? '+' : ''}${delta}` });
   ui.setRankCurve(run.history);
   // the ladder, and how close the next rank was — the reason to go again
   const progress = director.progress;
   ui.renderLadder($('over-ladder'), { reached: run.rank, progress, known: Math.max(S.bestRank, run.rank) + 1 });
-  const next = ui.t(`rank${run.rank + 1}`);
-  $('over-next').textContent = run.rank >= RANKS.length - 1 ? ui.t('topReached')
-    : progress >= 1 ? ui.t('oneTrial', { r: next })
-    : progress >= 0.6 ? ui.t('nearNext', { r: next })
-    : ui.t('nextRank', { r: next });
+  const next = t(`rank${run.rank + 1}`);
+  $('over-next').textContent = run.rank >= RANKS.length - 1 ? t('topReached')
+    : progress >= 1 ? t('oneTrial', { r: next })
+    : progress >= 0.6 ? t('nearNext', { r: next })
+    : t('nextRank', { r: next });
 
-  $('st-ai').textContent = ui.t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
+  $('st-ai').textContent = t('aiStat', { n: S.ai.reads, c: S.ai.fixed, u: S.ai.unclear });
   emit('runEnd', { score: S.score, distance: Math.floor(S.distance) });
   lastRun = { score: S.score, best: newBest, banished: S.banished, combo: S.maxCombo, distance: Math.floor(S.distance), rank: run.rank };
   ui.show('ov-over');

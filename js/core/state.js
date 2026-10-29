@@ -1,6 +1,6 @@
 // state.js — the shared state of the game. Every game module reads and writes the
 // same `S`, so there is one place to look up what is going on right now.
-import { store } from '../ui/ui.js';
+import { store } from './store.js';
 
 export const SPAWN_Z = -58;        // where yokai appear, far down the path
 export const HIT_Z = -0.6;         // where they reach the hero

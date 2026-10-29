@@ -5,11 +5,11 @@ import { createYokai } from '../scene/yokai.js';
 import { takeOni, releaseOni } from '../scene/oni.js';
 import { sfx, stopMusic } from '../ui/audio.js';
 import * as ui from '../ui/ui.js';
-import { S } from './state.js';
+import { S } from '../core/state.js';
 import { world, hero, fx } from './stage.js';
 import { removeEnemy } from './enemies.js';
 import { pad } from './handwriting.js';
-import { easeOut } from './helpers.js';
+import { easeOut } from '../core/math.js';
 
 const CAPTOR_SCALE = 1.45;
 // timeline: seconds (real time) since the last heart was lost
