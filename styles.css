@@ -745,27 +745,12 @@ body.ai-open #ai-panel { display: flex; }
   /* pop-ups on a phone: smaller, wrapped to the screen, and up in the sky above the
      torii, where the equations rarely are (and when they are, they're drawn on top) */
   .banner { top: 24%; font-size: clamp(28px, 9vw, 40px); white-space: normal; text-align: center; width: max-content; }
-  .banner.finisher { top: 28%; }
-  .banner .ev-title { font-size: clamp(28px, 9vw, 40px); }
-  .banner .ev-kicker { font-size: 11px; letter-spacing: 0.3em; }
-  .banner .ev-sub { font-size: 13px; max-width: 30ch; margin: 0 auto; }
-  .banner.skill { font-size: clamp(24px, 8vw, 34px); gap: 10px; }
-  .banner .fin-kanji { font-size: clamp(48px, 16vw, 72px); }
-  .banner .fin-sub { font-size: 12px; letter-spacing: 0.2em; }
   .banner.promo { gap: 10px; padding: 12px 16px; border-radius: 24px; text-align: left; }
   .banner.promo .stamp { flex: none; width: 48px; height: 48px; font-size: 30px; }
   .promo-title { font-size: clamp(22px, 7vw, 30px); }
   .promo-sub { font-size: 12.5px; }
   .popup { font-size: 26px; }
   .popup.big { font-size: 34px; }
-  .hint { top: calc(70px + var(--safe-t)); padding: 6px 10px 6px 6px; gap: 8px; }
-  .hint .stamp { width: 30px; height: 30px; font-size: 17px; }
-  .hint #hint-title { font-size: 12.5px; }
-  .hint #hint-text { font-size: 11.5px; }
-  .achievement-toast { gap: 8px; padding: 6px 12px 6px 6px; }
-  .achievement-toast .stamp { width: 26px; height: 26px; font-size: 15px; }
-  .achievement-toast small { font-size: 10px; }
-  .achievement-toast b { font-size: 12.5px; }
 }
 
 @media (max-height: 520px) and (min-aspect-ratio: 4/5) {
@@ -1234,3 +1219,24 @@ body[data-night="fox"] #vignette { background: radial-gradient(ellipse at 50% 45
 /* the bestiary: a yokai's trait under its description */
 .trait { display: flex; align-items: baseline; gap: 8px; color: #d9d0ff; }
 .trait .badge { flex: none; padding: 2px 6px 3px; border-radius: 5px; background: #3b2f86; color: #ece6ff; font: 800 11px/1 var(--font-display); letter-spacing: 0.04em; }
+
+/* phones: the night, skill and finisher banners, the hint card and the achievement
+   toast. These have to come after the rules they adjust (further up, at the same
+   specificity), or those win and the phone sizes never apply. */
+@media (max-aspect-ratio: 4/5) {
+  .banner.finisher { top: 28%; }
+  .banner .ev-title { font-size: clamp(28px, 9vw, 40px); }
+  .banner .ev-kicker { font-size: 11px; letter-spacing: 0.3em; }
+  .banner .ev-sub { font-size: 13px; max-width: 30ch; margin: 0 auto; }
+  .banner.skill { font-size: clamp(24px, 8vw, 34px); gap: 10px; }
+  .banner .fin-kanji { font-size: clamp(48px, 16vw, 72px); }
+  .banner .fin-sub { font-size: 12px; letter-spacing: 0.2em; }
+  .hint { top: calc(70px + var(--safe-t)); padding: 6px 10px 6px 6px; gap: 8px; }
+  .hint .stamp { width: 30px; height: 30px; font-size: 17px; }
+  .hint #hint-title { font-size: 12.5px; }
+  .hint #hint-text { font-size: 11.5px; }
+  .achievement-toast { gap: 8px; padding: 6px 12px 6px 6px; }
+  .achievement-toast .stamp { width: 26px; height: 26px; font-size: 15px; }
+  .achievement-toast small { font-size: 10px; }
+  .achievement-toast b { font-size: 12.5px; }
+}
