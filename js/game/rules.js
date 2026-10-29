@@ -5,7 +5,8 @@ import { showOverlay } from '../ui/overlays.js';
 import { rankSeal } from '../ui/ranks.js';
 import { RANKS } from '../difficulty/adaptive.js';
 import { MAX_HEARTS } from '../core/state.js';
-import { SKILLS, NIGHTS } from './powers.js';
+import { SKILLS } from './skills.js';
+import { NIGHTS } from './nights.js';
 import { $ } from '../core/dom.js';
 import { t } from '../core/i18n.js';
 

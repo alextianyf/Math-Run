@@ -27,7 +27,9 @@ import { startGame, retryRun, beginPlay, pause, resume, toTitle, showGameOver, s
 import { initCollection, refreshCollectionChip } from './game/collection.js';
 import { initShareCard } from './game/shareCard.js';
 import { initRules } from './game/rules.js';
-import { updatePowers, useSkill, charge, later, refreshSkillText } from './game/powers.js';
+import { updatePowers } from './game/powers.js';
+import { useSkill, charge, refreshSkillText } from './game/skills.js';
+import { later } from './core/schedule.js';
 import { $ } from './core/dom.js';
 import { applyI18n, getLang, setLang, t } from './core/i18n.js';
 import { smooth01 } from './core/math.js';

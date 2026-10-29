@@ -1,6 +1,7 @@
 // events.js — a tiny notice board. Game modules announce what just happened
-// ("banish", "promote", …) and anyone interested — the achievements — listens,
-// so the rules never need to know about the achievements at all.
+// ("banish", "promote", "sweep", …) and anyone interested listens: the achievements
+// hear about banishes, combat.js banishes what a skill sweeps away. So the module
+// that announces never needs to import the one that listens.
 const listeners = new Map();
 
 export function on(name, listener) {

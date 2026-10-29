@@ -12,7 +12,10 @@
    - `core/dom.js`（`$`、`restartAnimation`）、`core/math.js`（随机数、缓动）：取代 `game/helpers.js`
    - ESLint：`npm run lint`
 2. **拆 `ui/ui.js`** ✅：`hud.js`、`ranks.js`、`tags.js`、`popups.js`、`talisman.js`、`aiPanel.js`、`overlays.js`；`show()` 改名为 `showOverlay()`
-3. **拆 `game/powers.js`，解开循环依赖**：`nights.js`、`skills.js`、`hints.js`、`finisher.js`、`core/schedule.js`；`combat` 和 `powers` 改为通过 `events.js` 联系
+3. **拆 `game/powers.js`，解开循环依赖** ✅：`nights.js`、`skills.js`、`hints.js`、`finisher.js`、`core/schedule.js`；`powers.js` 只剩每帧推进和重置
+   - 技能（雷神）和终结技要扫掉妖怪时，发 `sweep` 通知，由 `combat.js` 收听处理，不再反过来引用 `combat.js`
+   - 狐狸之夜开始时，`nights.js` 发 `nightBegins`，`skills.js` 收听并充一点能
+   - 现在 `js/` 里没有任何互相引用的模块
 4. **拆 3D 造型**：`scene/yokai/` 每种妖怪一个文件；`oni.js`、`environment.js` 按部件拆
 5. **拆 CSS 和文字**：`css/` 按组件拆，手机端样式写在各自组件文件里；`strings.js` 拆成中英两个文件
 6. **语法简化**：按文件夹逐个清掉 lint 警告，然后把这些规则从警告改成错误

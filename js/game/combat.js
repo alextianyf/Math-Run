@@ -15,8 +15,10 @@ import { addScore, record, advance, promote, showRank } from './progress.js';
 import { measureTag, removeEnemy } from './enemies.js';
 import { pad } from './handwriting.js';
 import { beginCapture } from './capture.js';
-import { emit } from '../core/events.js';
-import { chargeKill, scoreMult, blockHit, finisher, later, SKILLS } from './powers.js';
+import { emit, on } from '../core/events.js';
+import { later } from '../core/schedule.js';
+import { chargeKill, scoreMult, blockHit, SKILLS } from './skills.js';
+import { finisher } from './finisher.js';
 import { t } from '../core/i18n.js';
 import { rand } from '../core/math.js';
 
@@ -228,7 +230,7 @@ function impact(e, n) {
 
 // banished by a skill or the finisher's shockwave rather than an answer: points,
 // but the problem never counts toward the rating. A boss is only knocked back.
-export function banishFree(e) {
+function banishFree(e) {
   if (!S.enemies.includes(e) || e.dying || e.swarm) return;
   const p = e.yokai.center(new THREE.Vector3());
   fx.emit(p, { count: 40, color: 0xffe28a, color2: e.yokai.info.color, bright: 2, speed: 6, life: 0.8, size: 0.3 });
@@ -249,6 +251,8 @@ export function banishFree(e) {
   if (e.tag) { setTagState(e.tag, 'hit'); removeTag(e.tag, 600); e.tag = null; }
   advance(1);
 }
+// skills.js and finisher.js announce each yokai they sweep away
+on('sweep', ({ enemy }) => banishFree(enemy));
 
 // a yokai got through to the hero: one heart (a failed rank trial too, never more)
 export function playerHit(e) {

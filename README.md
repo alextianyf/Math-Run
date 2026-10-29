@@ -227,7 +227,8 @@ This section provides a detailed overview of the project directory structure to 
 │   ├── main.js                 # Entry point: sets the stage, frame loop, buttons & keys
 │   ├── core/                   # Shared by everything else
 │   │   ├── state.js            # Shared game state (S) and core numbers
-│   │   ├── events.js           # A tiny event bus (game → achievements)
+│   │   ├── events.js           # A tiny event bus (modules announce, others listen)
+│   │   ├── schedule.js         # later(): do something a moment later, on the game clock
 │   │   ├── store.js            # Saved settings and records (localStorage)
 │   │   ├── i18n.js             # The language switch, t('key')
 │   │   ├── dom.js              # $(id), restartAnimation
@@ -237,7 +238,11 @@ This section provides a detailed overview of the project directory structure to 
 │   │   ├── enemies.js          # Yokai: spawning, moving, equation tags
 │   │   ├── handwriting.js      # Talisman pad → AI reading → decision
 │   │   ├── combat.js           # Casting talismans, hits, misses, damage, the hero's charge aura
-│   │   ├── powers.js           # Skills, the nights and their rules, the oni's finisher
+│   │   ├── powers.js           # Runs skills, nights and hints each frame; resets them
+│   │   ├── skills.js           # The skill seal: charging, the four skills, the effect chips
+│   │   ├── nights.js           # The nights, their rules and the change between them
+│   │   ├── hints.js            # The hint card for a yokai's trick
+│   │   ├── finisher.js         # The trial oni's finisher
 │   │   ├── progress.js         # Score, hearts, ranks, saved records
 │   │   ├── tutorial.js         # The opening tutorial
 │   │   ├── rules.js            # The in-game How to play

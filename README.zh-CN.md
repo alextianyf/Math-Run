@@ -225,7 +225,8 @@
 │   ├── main.js                 # 入口：搭建场景、每帧循环、按钮和按键
 │   ├── core/                   # 其他模块共用的基础
 │   │   ├── state.js            # 共享的游戏状态（S）和核心数值
-│   │   ├── events.js           # 小型事件总线（游戏 → 成就）
+│   │   ├── events.js           # 小型事件总线（模块发通知，其他模块收听）
+│   │   ├── schedule.js         # later()：按游戏时钟，稍后再做某件事
 │   │   ├── store.js            # 存档和设置（localStorage）
 │   │   ├── i18n.js             # 语言切换，t('key')
 │   │   ├── dom.js              # $(id)、restartAnimation
@@ -235,7 +236,11 @@
 │   │   ├── enemies.js          # 妖怪：生成、移动、算式牌
 │   │   ├── handwriting.js      # 符纸手写 → AI 识别 → 判断
 │   │   ├── combat.js           # 出符、命中、写错、受伤、主角的充能光环
-│   │   ├── powers.js           # 技能、夜晚及其规则、大鬼的终结技
+│   │   ├── powers.js           # 每帧推进技能、夜晚和提示；新一局时重置
+│   │   ├── skills.js           # 技能印：充能、四种技能、效果小标签
+│   │   ├── nights.js           # 各个夜晚、它们的规则和夜晚之间的切换
+│   │   ├── hints.js            # 妖怪特殊能力的提示卡
+│   │   ├── finisher.js         # 大鬼的终结技
 │   │   ├── progress.js         # 分数、生命、段位、存档纪录
 │   │   ├── tutorial.js         # 开场教程
 │   │   ├── rules.js            # 游戏内的玩法说明
