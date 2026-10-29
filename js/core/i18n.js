@@ -1,7 +1,10 @@
-// i18n.js — the language switch. The texts themselves are in ui/strings.js;
-// {name} in a text marks a value filled in at run time: t('best', { n: 3 }).
-import { STRINGS } from '../ui/strings.js';
+// i18n.js — the language switch. The texts themselves are in ui/strings/zh.js and
+// en.js; {name} in a text marks a value filled in at run time: t('best', { n: 3 }).
+import { zh } from '../ui/strings/zh.js';
+import { en } from '../ui/strings/en.js';
 import { store } from './store.js';
+
+const STRINGS = { zh, en };
 
 function defaultLang() {
   const browserLang = (navigator.language || 'en').toLowerCase();

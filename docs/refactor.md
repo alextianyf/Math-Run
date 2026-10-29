@@ -21,7 +21,12 @@
    - `scene/oni/`：`body.js`（用 VRM 塑造身体）、`head.js`、`props.js`（虎皮、狼牙棒、铁护腕），`index.js` 组装并负责动作
    - `scene/environment/`：`sky.js`、`ground.js`、`torii.js`、`lanterns.js`、`trees.js`、`particles.js`，`shared.js` 放滚动带的数值和工具
    - 代码是用脚本整段搬过去的，搬完逐行核对过：除了 import 和文件开头的说明，没有一行丢失或改动
-5. **拆 CSS 和文字**：`css/` 按组件拆，手机端样式写在各自组件文件里；`strings.js` 拆成中英两个文件
+5. **拆 CSS 和文字** ✅
+   - `styles.css` → `css/` 里 13 个文件（`base`、`stage`、`popups`、`hud`、`talisman`、`ai-panel`、`overlays`、`ranks`、`capture`、`tutorial`、`loader`、`collection`、`powers`），`index.html` 按原来的顺序逐个引入
+   - 手机端、矮横屏、减少动画的规则写在各自组件文件的末尾
+   - 验证方法：同一个页面、同一份 DOM，先用旧样式、再换成新样式，比较每个元素（含 ::before/::after）的全部计算样式；覆盖 5 种屏幕尺寸 × 是否减少动画 × 35 种状态
+   - 比较时发现一个旧 bug：手机端的提示卡、成就弹窗、夜晚/技能/终结技横幅的手机样式写在了它们的基础样式之前，一直没生效。先单独提交修复，再拆分，拆分前后零差异
+   - `strings.js` → `ui/strings/zh.js`、`en.js`；新增 `tests/strings.test.mjs`，检查两种语言的键名和 `{占位符}` 完全一致
 6. **语法简化**：按文件夹逐个清掉 lint 警告，然后把这些规则从警告改成错误
 
 ## 语法规则

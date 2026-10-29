@@ -1,0 +1,176 @@
+/* talisman.css — the dock and the talisman: writing, sending, hits and misses */
+
+#dock {
+  position: absolute;
+  right: calc(18px + var(--safe-r));
+  bottom: calc(18px + var(--safe-b));
+  display: flex; align-items: flex-end; gap: 12px;
+  z-index: 5;
+  transition: opacity 0.4s, transform 0.4s;
+}
+body:not(.in-game) #dock { opacity: 0; transform: translateY(30px); pointer-events: none; }
+
+.talisman {
+  position: relative;
+  width: clamp(190px, 18vw, 250px);
+  aspect-ratio: 3 / 4.1;
+  display: grid; grid-template-rows: auto 1fr auto;
+  padding: 14px 14px 10px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(97deg, rgba(160, 110, 20, 0.06) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, var(--paper), var(--paper-2));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(90, 50, 0, 0.35), inset 0 0 30px rgba(140, 80, 0, 0.25);
+  transform: rotate(-1.5deg);
+}
+.talisman::before, .talisman::after {
+  content: ""; position: absolute; pointer-events: none; border: 2px solid var(--vermilion-2); border-radius: 3px;
+}
+.talisman::before { inset: 7px; }
+.talisman::after { inset: 11px; border-width: 1px; opacity: 0.7; }
+.tal-head, .tal-foot {
+  font-family: var(--font-brush); color: var(--vermilion-2); text-align: center;
+  pointer-events: none; position: relative; z-index: 1;
+}
+.tal-head { font-size: 22px; letter-spacing: 0.3em; padding-left: 0.3em; line-height: 1.1; }
+.tal-foot { font-size: 12px; letter-spacing: 0.35em; opacity: 0.8; }
+/* sending: with a mouse the talisman's foot is the seal (or Space); on a touch screen a
+   big seal beside the talisman, and the foot is only ink. Dim until something is written. */
+#pad-send {
+  justify-self: center; display: flex; align-items: center; gap: 6px;
+  min-height: 26px; margin-top: 2px; padding: 3px 8px 3px calc(8px + 0.35em);
+  border: 1px solid transparent; border-radius: 4px; background: none;
+  cursor: pointer; transition: background 0.15s, color 0.15s, opacity 0.15s, transform 0.08s;
+  -webkit-tap-highlight-color: transparent;
+}
+#pad-send kbd { display: none; font: 700 9px/1 var(--font-ui); letter-spacing: 0; padding: 2px 4px; border-radius: 3px; border: 1px solid currentColor; opacity: 0.75; }
+.dock-side { display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+.send-big {
+  display: none; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  align-self: center; width: 76px; height: 76px; padding: 0;
+  border-radius: 16px; border: 2px solid rgba(216, 50, 42, 0.35);
+  background: rgba(60, 20, 30, 0.45); color: rgba(255, 220, 200, 0.4);
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.08s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.send-big b { font: 400 40px/1 var(--font-brush); }
+.send-big small { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; }
+@media (pointer: fine) {
+  #dock.inked #pad-send {
+    pointer-events: auto; opacity: 1; color: #fff3d6;
+    background: linear-gradient(180deg, #d8322a, #a8160f);
+    border-color: rgba(90, 10, 0, 0.5);
+    box-shadow: 0 2px 6px rgba(120, 20, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  #dock.inked #pad-send:active { transform: scale(0.93); }
+  #dock.teach.inked #pad-send { animation: sealPulse 1.1s ease-in-out infinite; }
+  #dock.inked #pad-send kbd { display: inline-block; }
+  #dock.inked #pad-send:hover { filter: brightness(1.12); }
+  /* the read countdown sits just above the seal */
+  #dock .pad-timer { bottom: 46px; }
+}
+@media (pointer: coarse) {
+  .send-big { display: flex; pointer-events: none; }
+  #dock.inked .send-big {
+    pointer-events: auto; color: #fff3d6; border-color: rgba(255, 200, 150, 0.5);
+    background: linear-gradient(180deg, #e0382e, #a8160f);
+    box-shadow: 0 6px 18px rgba(200, 40, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  #dock.inked .send-big:active { transform: scale(0.92); }
+  #dock.teach.inked .send-big { animation: sealPulse 1.1s ease-in-out infinite; }
+}
+@keyframes sealPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 6px rgba(120, 20, 0, 0.35), 0 0 0 0 rgba(255, 90, 50, 0.7); }
+  50% { transform: scale(1.08); box-shadow: 0 2px 6px rgba(120, 20, 0, 0.35), 0 0 0 10px rgba(255, 90, 50, 0); }
+}
+#pad { position: relative; z-index: 2; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+
+.guess {
+  position: absolute; z-index: 3; top: 12px; right: -14px;
+  min-width: 40px; height: 40px; padding: 0 8px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: rgba(20, 14, 46, 0.92);
+  border: 1px solid rgba(246, 201, 91, calc(0.25 + var(--conf, 0) * 0.75));
+  color: var(--gold);
+  font: 900 22px/1 var(--font-display);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  opacity: 0; transform: scale(0.7); transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+.guess::before { content: "AI"; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font: 800 9px/1 var(--font-ui); color: var(--dim); background: var(--night); padding: 2px 4px; border-radius: 4px; }
+.guess.show { opacity: 1; transform: scale(1); }
+
+/* submit countdown: fills after the pen lifts; writing again cancels it */
+.pad-timer {
+  position: absolute; z-index: 3; left: 24px; right: 24px; bottom: 30px; height: 4px;
+  border-radius: 2px; background: rgba(120, 60, 10, 0.18);
+  opacity: 0; transition: opacity 0.15s; pointer-events: none;
+}
+.pad-timer i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #d8322a, #f6c95b); }
+.pad-timer.run { opacity: 1; }
+.pad-timer.run i { animation: padWait var(--wait, 900ms) linear forwards; }
+@keyframes padWait { to { width: 100%; } }
+
+.pad-toast {
+  position: absolute; z-index: 4; left: 50%; bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 8px 14px; border-radius: 12px;
+  font-size: 14px; font-weight: 700;
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.25s;
+}
+.pad-toast { background: rgba(20, 14, 46, 0.92); border: 1px solid var(--line); color: var(--ink); }
+.pad-toast.warn { color: var(--warn); }
+.pad-toast.bad { color: var(--bad); }
+.pad-toast.show { opacity: 1; }
+
+.talisman.cast { animation: castFlash 0.45s ease-out; }
+/* a hit: the written digit glows gold and lifts off the paper */
+.ink-flare {
+  position: absolute; z-index: 3; pointer-events: none;
+  filter: drop-shadow(0 0 3px #ff9a1a) drop-shadow(0 0 10px #e8401a);
+  animation: inkFlare 0.45s ease-out forwards;
+}
+@keyframes inkFlare {
+  0% { opacity: 1; transform: none; }
+  35% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 0; transform: translateY(-18px) scale(1.14); }
+}
+.talisman.fizzle { animation: fizzle 0.6s ease-out; }
+.talisman.shake { animation: shake 0.4s ease-in-out; }
+@keyframes castFlash {
+  0% { box-shadow: 0 0 0 0 rgba(255, 210, 90, 0.9), 0 14px 40px rgba(0, 0, 0, 0.55); filter: brightness(1.4); }
+  100% { box-shadow: 0 0 0 28px rgba(255, 210, 90, 0), 0 14px 40px rgba(0, 0, 0, 0.55); filter: none; }
+}
+@keyframes fizzle { 0% { filter: sepia(1) brightness(0.6); } 100% { filter: none; } }
+@keyframes shake {
+  0%, 100% { transform: rotate(-1.5deg) translateX(0); }
+  25% { transform: rotate(-1.5deg) translateX(-8px); }
+  75% { transform: rotate(-1.5deg) translateX(8px); }
+}
+
+/* phones (portrait) */
+@media (max-aspect-ratio: 4/5) {
+  #dock {
+    position: relative; right: auto; bottom: auto;
+    grid-row: 2; grid-column: 1;
+    justify-content: center; align-items: center; gap: 10px;
+    height: clamp(250px, 38vh, 380px);
+    padding: 14px 12px calc(12px + var(--safe-b));
+    background: linear-gradient(180deg, #1b1440, var(--night-2));
+    border-top: 1px solid var(--line);
+  }
+  body:not(.in-game) #dock, body.cinematic #dock { height: 0; padding: 0; overflow: hidden; transform: none; border: 0; }
+  .talisman { width: auto; height: 100%; }
+  .dock-side { align-self: stretch; justify-content: center; }
+  body.ai-open .send-big { width: 100%; height: 52px; flex-direction: row; gap: 8px; }
+  body.ai-open .send-big b { font-size: 28px; }
+  .guess { right: -10px; }
+}
+
+/* short landscape screens */
+@media (max-height: 520px) and (min-aspect-ratio: 4/5) {
+  .talisman { width: clamp(150px, 30vh, 200px); }
+}

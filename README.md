@@ -222,7 +222,7 @@ This section provides a detailed overview of the project directory structure to 
 ```text
 .
 ├── index.html                  # The page: HUD, talisman, title / pause / game-over screens
-├── styles.css                  # All styling
+├── css/                        # Styling, one file per part (phone rules inside each); linked in order
 ├── js/
 │   ├── main.js                 # Entry point: sets the stage, frame loop, buttons & keys
 │   ├── core/                   # Shared by everything else
@@ -277,11 +277,11 @@ This section provides a detailed overview of the project directory structure to 
 │       ├── talisman.js         # The talisman's feedback: guess, read timer, short messages
 │       ├── aiPanel.js          # The "AI view" panel
 │       ├── overlays.js         # Showing and hiding the full-screen cards
-│       ├── strings.js          # All texts, Chinese and English
+│       ├── strings/            # All texts: zh.js and en.js, with the same keys
 │       ├── pad.js              # The talisman you write on
 │       ├── coach.js            # The tutorial's spotlight and speech bubble
 │       └── audio.js            # Synthesized sound effects and music
-├── tests/                      # `npm test`: problem generator & difficulty checks (Node 18+)
+├── tests/                      # `npm test`: problem generator, difficulty and text checks (Node 18+)
 ├── docs/
 │   ├── media/                  # README banner, badges and demo, link-preview card, training figures
 │   └── demo/                   # Scripts that rebuild the README media from the real game

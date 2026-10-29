@@ -1,0 +1,184 @@
+/* collection.css — pause, scroll cards, results, how to play, bestiary, achievement toast */
+
+/* the game-over card's share button */
+.btn.share { margin-top: 0; }
+/* paused: the problems are hidden (and replaced when the run goes on) */
+body.paused #labels { visibility: hidden; }
+.pause-note { margin: 0 0 4px; font-size: 12.5px; line-height: 1.5; color: var(--dim); text-align: center; }
+.collection-card {
+  width: min(460px, 100%); max-height: min(86vh, 760px); display: flex; flex-direction: column; gap: 12px; padding: 22px 22px 18px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+#ov-collection { z-index: 30; background: rgba(10, 6, 26, 0.6); }
+.collection-head { display: flex; align-items: center; justify-content: space-between; }
+.collection-head h2 { margin: 0; font: 700 26px/1.2 var(--font-accent); letter-spacing: 0.08em; }
+.collection-list { margin: 0; padding: 0 4px 0 0; list-style: none; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; }
+.collection-list li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.collection-list li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.collection-list li b { font-size: 14px; }
+.collection-list li p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--dim); }
+.collection-list li small { font-size: 11px; color: var(--dim); opacity: 0.8; }
+.collection-list .stamp { width: 34px; height: 34px; font-size: 19px; }
+.collection-list li.locked .stamp { background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.3); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.14); }
+.collection-list li.locked > div > b { color: var(--dim); }
+.collection-list small.progress { display: block; height: 4px; margin-top: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.collection-list small.progress i { display: block; height: 100%; background: linear-gradient(90deg, #b9781f, var(--gold)); }
+/* the screens opened from the title tiles hang like a scroll (kakejiku): a brocade
+   mounting — wider bands top and bottom — around a dark silk panel, turned wooden
+   rods with grain and gilt end caps; it unrolls downwards when it opens and rolls
+   back up when it closes (--roll: how much of it is still rolled up) */
+@property --roll { syntax: '<length-percentage>'; inherits: true; initial-value: 0%; }
+.card.scroll {
+  position: relative; border-radius: 3px;
+  border: solid transparent; border-width: 28px 12px 32px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 5px) padding-box,
+    radial-gradient(ellipse 120% 60% at 50% 0%, rgba(120, 100, 200, 0.12), transparent 70%) padding-box,
+    linear-gradient(180deg, #1d1642, #120d2c) padding-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Crect width='18' height='18' fill='%23301f55'/%3E%3Cpath d='M9 1.5 16.5 9 9 16.5 1.5 9Z' fill='none' stroke='%23d9a94a' stroke-opacity='.42'/%3E%3Ccircle cx='9' cy='9' r='1.6' fill='%23f0c870' fill-opacity='.55'/%3E%3Ccircle cx='0' cy='0' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='18' cy='0' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='0' cy='18' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3Ccircle cx='18' cy='18' r='1.1' fill='%23f0c870' fill-opacity='.4'/%3E%3C/svg%3E") border-box;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(246, 201, 91, 0.5),              /* a gilt line round the silk */
+    inset 0 12px 14px -10px rgba(0, 0, 0, 0.7),           /* the silk curls in under the rods */
+    inset 0 -12px 14px -10px rgba(0, 0, 0, 0.6);
+  /* measured on the padding box, like the bottom rod's offset, so the rod rides the edge */
+  clip-path: inset(-40px -40px calc(var(--roll) - 40px) -40px) padding-box;
+  animation: unroll 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* the rods: a turned cylinder (dark at the edges, a sheen along the top), wood grain,
+   and gilt caps with a collar */
+.scroll::before, .scroll::after {
+  content: ""; position: absolute; z-index: 5; left: -27px; right: -27px; height: 20px; border-radius: 10px; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 18%, rgba(255, 236, 200, 0.45) 30%, rgba(255, 255, 255, 0) 44%) 16px 0 / calc(100% - 32px) 100% no-repeat,
+    linear-gradient(180deg, #fff4c8, #f0c870 28%, #b07a2a 62%, #6a420e 85%, #c89848) 0 0 / 16px 100% no-repeat,
+    linear-gradient(180deg, #fff4c8, #f0c870 28%, #b07a2a 62%, #6a420e 85%, #c89848) 100% 0 / 16px 100% no-repeat,
+    linear-gradient(90deg, transparent 15px, rgba(40, 20, 4, 0.9) 15px 17px, transparent 17px calc(100% - 17px), rgba(40, 20, 4, 0.9) calc(100% - 17px) calc(100% - 15px), transparent calc(100% - 15px)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 6px, rgba(255, 210, 160, 0.07) 6px 8px, transparent 8px 15px),
+    linear-gradient(180deg, #2a1206 0%, #8a4e26 24%, #a8683a 34%, #6a3618 58%, #3a1a08 82%, #1a0a02 100%);
+  box-shadow: 0 7px 12px rgba(0, 0, 0, 0.55), 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.scroll::before { top: -34px; }
+.scroll::after { bottom: calc(var(--roll) - 38px); }
+.card.scroll.rolling-up { animation: rollUp 0.38s cubic-bezier(0.5, 0, 0.8, 0.4) both; }
+@keyframes unroll { from { --roll: 100%; } to { --roll: 0%; } }
+@keyframes rollUp { from { --roll: 0%; } to { --roll: 100%; } }
+@media (prefers-reduced-motion: reduce) { .card.scroll { animation: none; } }
+
+/* the result card (own or from a shared link): a talisman-paper card */
+#ov-card { z-index: 32; background: rgba(10, 6, 26, 0.7); }
+.share-panel { width: min(400px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 22px; text-align: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+.share-panel h2 { margin: 0; font: 700 22px/1.2 var(--font-accent); color: var(--gold); letter-spacing: 0.06em; }
+.share-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 18px 20px; border-radius: 8px;
+  background: repeating-linear-gradient(97deg, rgba(160, 110, 20, 0.06) 0 2px, transparent 2px 7px), linear-gradient(180deg, var(--paper), var(--paper-2));
+  color: #3a1608; box-shadow: inset 0 0 0 2px var(--vermilion-2), inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(179, 23, 15, 0.6), 0 12px 30px rgba(0, 0, 0, 0.45); }
+.sc-head { width: 100%; display: flex; justify-content: space-between; font: 700 11px/1 var(--font-ui); letter-spacing: 0.12em; color: var(--vermilion-2); }
+.sc-name { font: 700 18px/1.3 var(--font-accent); word-break: break-word; }
+.sc-score { font: 900 46px/1 var(--font-display); color: #b3170f; font-variant-numeric: tabular-nums; }
+.sc-stats { display: flex; gap: 16px; font-size: 12px; color: #6a3a1a; }
+.sc-stats span { display: flex; flex-direction: column; gap: 3px; }
+.sc-stats b { font: 800 18px/1 var(--font-ui); color: #3a1608; }
+.sc-rank { display: flex; align-items: center; gap: 8px; font: 700 15px/1 var(--font-accent); }
+.sc-rank .stamp { width: 28px; height: 28px; font-size: 16px; }
+.share-actions { display: flex; flex-direction: column; gap: 10px; }
+.share-actions .btn { width: 100%; }
+.share-name { padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); color: var(--ink); font: 600 15px/1.2 var(--font-ui); text-align: center; }
+.share-name:focus { outline: none; border-color: var(--gold); }
+/* How to play */
+#ov-rules { z-index: 31; background: rgba(10, 6, 26, 0.6); }
+.rules-body { overflow-y: auto; min-height: 0; flex: 1; padding-right: 4px; display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.rules-body section { padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.rules-body h3 { margin: 0 0 8px; font: 700 15px/1.2 var(--font-ui); color: var(--gold); }
+.rules-body p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--dim); }
+.rules-body ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.55; color: var(--ink); }
+.rules-body b { color: var(--gold); }
+.rules-ranks { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.rules-ranks li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+.rules-ranks li div { display: flex; flex-direction: column; gap: 2px; }
+.rules-ranks li b { font-size: 13px; color: var(--ink); }
+.rules-ranks li small { font-size: 12px; color: var(--gold); font-family: var(--font-display); }
+.rules-ranks .stamp { width: 26px; height: 26px; font-size: 15px; }
+.rules-skills { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.rules-skills li b { color: var(--sk); }
+.rules-skills li small { font: 600 11.5px/1.3 var(--font-ui); color: var(--dim); }
+.rules-skill {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(20, 14, 46, 0.92) 0 62%, var(--sk) 64%);
+  box-shadow: 0 0 10px var(--sk);
+  font: 900 15px/1 var(--font-display); color: var(--sk); text-shadow: 0 0 8px var(--sk);
+}
+/* a night: its sky with the moon in it (the same colours as scene/themes.js) */
+.rules-night {
+  flex: none; width: 30px; height: 30px; border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 44%, var(--moon) 0 var(--r, 22%), var(--glow) calc(var(--r, 22%) + 4%), transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.rules-night.n-night { --sky1: #140f38; --sky2: #2a2056; --moon: #ffffff; --glow: rgba(143, 134, 255, 0.6); }
+.rules-night.n-moon { --sky1: #0d2558; --sky2: #24407e; --moon: #ffdc8a; --glow: rgba(255, 200, 96, 0.6); --r: 30%; }
+.rules-night.n-fog { --sky1: #56527a; --sky2: #67638a; --moon: #d8d8e8; --glow: rgba(176, 170, 200, 0.6);
+  background:
+    linear-gradient(180deg, transparent 58%, rgba(232, 228, 244, 0.5) 60% 72%, transparent 74%, rgba(232, 228, 244, 0.35) 78% 88%, transparent 90%),
+    radial-gradient(circle at 50% 44%, var(--moon) 0 22%, var(--glow) 26%, transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2)); }
+.rules-night.n-parade { --sky1: #3a0a1c; --sky2: #5a1830; --moon: #ff4a2a; --glow: rgba(255, 58, 42, 0.65); }
+.rules-night.n-fox { --sky1: #06303c; --sky2: #0f4a54; --moon: #d0fff4; --glow: rgba(64, 224, 208, 0.6);
+  background:
+    radial-gradient(ellipse 9% 15% at 24% 80%, #7af0ff 0 60%, transparent 100%),
+    radial-gradient(ellipse 8% 13% at 76% 84%, #7af0ff 0 60%, transparent 100%),
+    radial-gradient(circle at 50% 44%, var(--moon) 0 22%, var(--glow) 26%, transparent 58%),
+    linear-gradient(180deg, var(--sky1), var(--sky2)); }
+/* a key cap, for the controls */
+.rules-key {
+  flex: none; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px;
+  border-radius: 7px; border: 1px solid rgba(246, 201, 91, 0.55); border-bottom-width: 3px;
+  background: linear-gradient(180deg, rgba(60, 46, 110, 0.95), rgba(26, 18, 56, 0.95));
+  font: 800 12px/1 var(--font-ui); color: var(--gold); letter-spacing: 0.04em;
+}
+/* the bestiary: the chosen yokai in 3D above the list */
+.bestiary-pane { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+.bestiary-pane[hidden] { display: none; }
+.bestiary-stage { position: relative; flex: none; height: clamp(170px, 28vh, 260px); border-radius: 14px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 85%, rgba(246, 201, 91, 0.18), transparent 60%), linear-gradient(180deg, #1c1544, #0f0b24); }
+#bestiary-view { width: 100%; height: 100%; display: block; }
+.bestiary-caption { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 700 14px/1.2 var(--font-ui); color: var(--gold); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7); pointer-events: none; }
+#bestiary-list li { cursor: pointer; }
+#bestiary-list li.selected { box-shadow: inset 0 0 0 1.5px var(--gold); }
+.transfer { font-size: 13px; color: var(--dim); }
+.transfer summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+.transfer p { margin: 8px 0; line-height: 1.5; }
+.transfer textarea { width: 100%; box-sizing: border-box; margin: 4px 0 6px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); color: var(--ink); font: 11px/1.4 ui-monospace, Consolas, monospace; resize: vertical; }
+.transfer .btn { width: auto; margin-bottom: 6px; }
+.transfer-msg { min-height: 1.2em; color: var(--gold); }
+/* the toast at the top when something is earned mid-game */
+.achievement-toast {
+  position: fixed; z-index: 40; top: calc(14px + var(--safe-t)); left: 50%;
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px;
+  /* left: 50% alone would cap it at half the screen and fold the name into a tall block */
+  width: max-content; max-width: calc(100vw - 24px - var(--safe-l) - var(--safe-r)); box-sizing: border-box;
+  border-radius: 999px; background: rgba(20, 14, 46, 0.92); border: 1.5px solid var(--gold);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -140%); opacity: 0; transition: transform 0.35s ease, opacity 0.35s ease; pointer-events: none;
+}
+.achievement-toast.show { transform: translate(-50%, 0); opacity: 1; }
+.achievement-toast .stamp { flex: none; width: 30px; height: 30px; font-size: 17px; }
+.achievement-toast span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.achievement-toast small { font-size: 11px; color: var(--gold); letter-spacing: 0.06em; }
+.achievement-toast b { font-size: 14px; line-height: 1.25; color: #fff; }
+/* mid-run it lives in the stage (ui.js), so the equations are drawn over it */
+#stage .achievement-toast { position: absolute; }
+/* the bestiary: a yokai's trait under its description */
+.trait { display: flex; align-items: baseline; gap: 8px; color: #d9d0ff; }
+.trait .badge { flex: none; padding: 2px 6px 3px; border-radius: 5px; background: #3b2f86; color: #ece6ff; font: 800 11px/1 var(--font-display); letter-spacing: 0.04em; }
+
+/* phones (portrait) */
+@media (max-aspect-ratio: 4/5) {
+  .achievement-toast { gap: 8px; padding: 6px 12px 6px 6px; }
+  .achievement-toast .stamp { width: 26px; height: 26px; font-size: 15px; }
+  .achievement-toast small { font-size: 10px; }
+  .achievement-toast b { font-size: 12.5px; }
+}

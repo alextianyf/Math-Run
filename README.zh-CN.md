@@ -220,7 +220,7 @@
 ```text
 .
 ├── index.html                  # 页面：HUD、符纸、首页 / 暂停 / 结算界面
-├── styles.css                  # 所有样式
+├── css/                        # 样式，每个部分一个文件（手机端样式写在各自文件里），按顺序引入
 ├── js/
 │   ├── main.js                 # 入口：搭建场景、每帧循环、按钮和按键
 │   ├── core/                   # 其他模块共用的基础
@@ -275,11 +275,11 @@
 │       ├── talisman.js         # 符纸的反馈：识别结果、读取计时、提示文字
 │       ├── aiPanel.js          # "AI 视角"面板
 │       ├── overlays.js         # 全屏卡片的显示和隐藏
-│       ├── strings.js          # 全部中英文文本
+│       ├── strings/            # 全部文本：zh.js 和 en.js，键名一一对应
 │       ├── pad.js              # 用来写字的符纸
 │       ├── coach.js            # 教程的聚光灯和对话框
 │       └── audio.js            # 合成的音效和音乐
-├── tests/                      # `npm test`：出题器与难度检查（Node 18+）
+├── tests/                      # `npm test`：出题器、难度和文本检查（Node 18+）
 ├── docs/
 │   ├── media/                  # README 横幅、徽章、演示动图、分享卡片、训练图表
 │   └── demo/                   # 从真实游戏重新生成 README 素材的脚本

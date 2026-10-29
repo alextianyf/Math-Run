@@ -1,0 +1,71 @@
+/* tutorial.css — the opening tutorial and the 3-2-1 countdown */
+
+.tut { position: fixed; inset: 0; z-index: 25; pointer-events: none; }
+body.paused .tut { display: none; }
+.tut-hole {
+  position: fixed; left: 50%; top: 45%; width: 0; height: 0;
+  border-radius: 16px;
+  box-shadow: 0 0 0 200vmax rgba(6, 4, 18, 0);
+  transition: left 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 0.45s, box-shadow 0.5s;
+}
+.tut.dim .tut-hole { box-shadow: 0 0 0 200vmax rgba(6, 4, 18, 0.7); }
+.tut-hole::after {
+  content: ""; position: absolute; inset: -7px;
+  border-radius: inherit; border: 2px solid var(--gold);
+  box-shadow: 0 0 18px rgba(246, 201, 91, 0.55);
+  opacity: 0; transition: opacity 0.3s;
+}
+.tut.target .tut-hole::after { opacity: 1; animation: holePulse 1.4s ease-in-out infinite; }
+@keyframes holePulse { 50% { transform: scale(1.05); opacity: 0.45; } }
+
+.tut-bubble {
+  position: fixed; left: 0; top: 0;
+  width: min(340px, calc(100vw - 28px));
+  padding: 14px 16px 14px;
+  pointer-events: auto;
+  color: var(--ink);
+  background: linear-gradient(180deg, #261c52, #17112f);
+  border: 1px solid rgba(246, 201, 91, 0.5);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.tut-bubble.pop { animation: tutPop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.tut-bubble.nudge #tut-text { animation: tutNudge 0.45s ease-in-out; color: #ffd38a; }
+@keyframes tutPop { from { opacity: 0; scale: 0.9; } }
+@keyframes tutNudge { 20%, 60% { translate: -6px 0; } 40%, 80% { translate: 6px 0; } }
+.tut-head { display: flex; align-items: center; gap: 8px; }
+.tut-head .crest { flex: none; width: 18px; height: 18px; color: #ff5a46; filter: drop-shadow(0 0 5px rgba(255, 80, 60, 0.6)); }
+.tut-head b { flex: 1; font: 700 18px/1.2 var(--font-accent); color: var(--gold); letter-spacing: 0.04em; }
+#tut-text { margin: 8px 0 12px; font-size: 14.5px; line-height: 1.6; }
+.tut-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.tut-actions:empty { display: none; }
+.btn.small { min-height: 40px; padding: 0 18px; font-size: 15px; }
+
+.tut-demo { position: fixed; pointer-events: none; overflow: visible; }
+#tut-demo-path {
+  fill: none; stroke: rgba(179, 23, 15, 0.42); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+}
+.tut-finger path { fill: #fffaf2; stroke: #1a1236; stroke-width: 1.2; stroke-linejoin: round; }
+.tut-finger circle { fill: rgba(246, 201, 91, 0); transition: fill 0.2s; }
+.tut-finger.press circle { fill: rgba(246, 201, 91, 0.45); }
+
+/* 3-2-1 countdown over the stage */
+.countdown {
+  position: absolute; left: 50%; top: 40%;
+  translate: -50% -50%;
+  font: 900 clamp(84px, 16vw, 168px)/1 var(--font-display);
+  color: #fff;
+  text-shadow: 0 6px 0 rgba(120, 20, 10, 0.85), 0 0 40px rgba(246, 201, 91, 0.6);
+  opacity: 0; pointer-events: none; z-index: 6;
+}
+.countdown.go { font: 700 clamp(56px, 10vw, 110px)/1 var(--font-accent); color: var(--gold); }
+.countdown.show { animation: cdPop 0.8s ease-out forwards; }
+@keyframes cdPop {
+  0% { opacity: 0; scale: 1.8; }
+  20% { opacity: 1; scale: 1; }
+  78% { opacity: 1; scale: 1; }
+  100% { opacity: 0; scale: 0.85; }
+}

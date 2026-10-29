@@ -5,7 +5,7 @@
   "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node tests/problems.test.mjs && node tests/director.test.mjs",
+    "test": "node tests/problems.test.mjs && node tests/director.test.mjs && node tests/strings.test.mjs",
     "lint": "eslint js",
     "media:hero": "node docs/demo/hero.cjs",
     "media:demo": "node docs/demo/record.cjs && python docs/demo/encode.py"

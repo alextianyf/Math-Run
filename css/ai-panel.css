@@ -1,0 +1,57 @@
+/* ai-panel.css — the "AI view" panel beside the talisman */
+
+/* ---------- AI panel ---------- */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+/* the AI view: a readout, not a second talisman. Like the skill seal across the
+   screen, a round piece over a dark HUD card: a sacred mirror (bronze rim) in
+   which the model's 28×28 view glows spirit-blue, and its reading under it */
+#ai-panel { display: none; width: 164px; flex-direction: column; align-items: center; pointer-events: none; }
+body.ai-open #ai-panel { display: flex; }
+.ai-mirror {
+  position: relative; z-index: 1; width: 78px; height: 78px; margin-bottom: -16px; border-radius: 50%;
+  padding: 5px;
+  background: conic-gradient(from 210deg, #8a5a22, #f0c870, #9a6a2a, #e8b85a, #7a4a18, #f0c870, #8a5a22);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 18px rgba(120, 220, 255, 0.25);
+}
+#ai-input {
+  display: block; width: 100%; height: 100%; border-radius: 50%;
+  image-rendering: pixelated;
+  background: #000;
+  box-shadow: inset 0 0 0 2px rgba(60, 30, 5, 0.8);
+  filter: sepia(1) hue-rotate(150deg) saturate(2.6) brightness(1.15);
+}
+.ai-card {
+  width: 100%; padding: 20px 10px 8px; border-radius: 10px;
+  background: rgba(12, 8, 30, 0.62);
+  font: 600 11px/1.2 var(--font-ui); color: var(--dim);
+}
+.ai-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+.ai-head > span:first-child { font: 800 12px/1 var(--font-ui); color: var(--ink); letter-spacing: 0.04em; }
+.ai-meta { font: 600 9px/1 var(--font-ui); color: rgba(255, 255, 255, 0.4); }
+.ai-top { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ai-top li { display: grid; grid-template-columns: 12px 1fr 30px; align-items: center; gap: 5px; }
+.ai-top b { color: var(--ink); font: 800 13px/1 var(--font-display); }
+.ai-top .bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.ai-top .bar i { display: block; height: 100%; background: rgba(255, 255, 255, 0.4); border-radius: 3px; transition: width 0.15s; }
+.ai-top .lead b { color: #8fe8ff; }
+.ai-top .lead .bar i { background: linear-gradient(90deg, #4fb8e8, #8fe8ff); }
+.ai-top em { font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+.ai-verdict { margin-top: 6px; min-height: 14px; font-size: 11.5px; font-weight: 800; color: var(--dim); }
+.ai-verdict.ok { color: var(--ok); }
+.ai-verdict.fix { color: var(--gold); }
+.ai-verdict.warn { color: var(--warn); }
+.ai-verdict.bad { color: var(--bad); }
+
+/* phones (portrait) */
+@media (max-aspect-ratio: 4/5) {
+  #ai-panel { width: 128px; }
+  .ai-mirror { width: 62px; height: 62px; padding: 4px; margin-bottom: -12px; }
+  .ai-card { padding: 15px 8px 6px; }
+  .ai-meta { display: none; }                 /* no room for the timing beside the title */
+}

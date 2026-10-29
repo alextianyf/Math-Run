@@ -68,7 +68,7 @@ function nextToast() {
   toastHome ??= el.parentNode;
   if (el.classList.contains('show') || !toasts.length) return;
   const [icon, label, name] = toasts.shift();
-  // mid-run it sits in the stage, under the equations (styles.css #labels); otherwise over everything
+  // mid-run it sits in the stage, under the equations (css/stage.css #labels); otherwise over everything
   const host = document.body.classList.contains('in-game') ? $('stage') : toastHome;
   if (el.parentNode !== host) host.appendChild(el);
   el.innerHTML = `<span class="stamp"><b>${icon}</b></span><span><small>${label}</small><b>${name}</b></span>`;

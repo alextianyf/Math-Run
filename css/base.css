@@ -1,0 +1,57 @@
+/* base.css — colours and fonts (:root), the page, the app grid */
+
+:root {
+  --night: #140f2e;
+  --night-2: #0d0a20;
+  --ink: #f7f2e7;
+  --dim: #b9b2d8;
+  --line: rgba(255, 255, 255, 0.14);
+  --panel: rgba(20, 14, 46, 0.78);
+  --vermilion: #d8322a;
+  --vermilion-2: #b3170f;
+  --gold: #f6c95b;
+  --paper: #f3d67c;
+  --paper-2: #e2b247;
+  --ok: #7be0a0;
+  --warn: #ffb547;
+  --bad: #ff6b6b;
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-brush: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", "Kaiti TC", serif;
+  --font-accent: var(--font-brush);   /* headings & banners: brush in Chinese, serif in English */
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+}
+
+html[lang="en"] { --font-accent: Georgia, "Times New Roman", serif; }
+
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+#app { position: fixed; inset: 0; display: grid; grid-template-rows: 1fr; }
+
+/* phones (portrait) */
+@media (max-aspect-ratio: 4/5) {
+  #app { grid-template-rows: 1fr auto; }
+  body:not(.in-game) #app { grid-template-rows: 1fr 0; }
+  body.cinematic #app { grid-template-rows: 1fr 0; }
+}
