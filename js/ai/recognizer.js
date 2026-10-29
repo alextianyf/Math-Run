@@ -2,7 +2,7 @@
 // talisman handwriting. Runs entirely in the browser — no server needed.
 //
 // The default model is a small CNN trained on MNIST plus MNIST digits redrawn with the
-// pad's pen (FingerMath: research/06_recognition.md): ~107k parameters, float16
+// pad's pen (FingerMath: reports/06_recognition.md): ~107k parameters, float16
 // weights, 223 KB, 96.9% on unseen synthetic writers (the MLP: 92.9%).
 // ?model=mlp brings back the original MNIST MLP (1.7 MB) for comparison.
 import { preprocessToMNIST } from './processing.js';
