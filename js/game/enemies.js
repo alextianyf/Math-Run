@@ -183,7 +183,7 @@ export function updateEnemies(dt, onReachHero) {
     if (e.trait === 'sway') root.position.x += Math.sin(e.age * 2.1 + e.phase) * 1.25 * (1 - 0.45 * near);
     if (!e.tag) continue;
     world.project(e.yokai.labelAnchor(tmp), scr);
-    shown.push({ e, x: scr.x, y: scr.y, scale: 0.62 + near * 0.55, visible: scr.visible, near });
+    shown.push({ e, x: scr.x, y: scr.y, scale: 0.8 + near * 0.35, visible: scr.visible, near });
   }
   placeTags(shown, dt, moving);
 }

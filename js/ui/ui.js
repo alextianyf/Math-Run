@@ -87,10 +87,15 @@ export function setRank(i, progress = 0, state = '') {
 
 // "Achievement unlocked": a small card at the top; several in a row wait their turn
 const toasts = [];
+let toastHome = null;
 function nextToast() {
   const el = $('achievement-toast');
+  toastHome ??= el.parentNode;
   if (el.classList.contains('show') || !toasts.length) return;
   const [icon, label, name] = toasts.shift();
+  // mid-run it sits in the stage, under the equations (styles.css #labels); otherwise over everything
+  const host = document.body.classList.contains('in-game') ? $('stage') : toastHome;
+  if (el.parentNode !== host) host.appendChild(el);
   el.innerHTML = `<span class="stamp"><b>${icon}</b></span><span><small>${label}</small><b>${name}</b></span>`;
   el.classList.add('show');
   setTimeout(() => { el.classList.remove('show'); setTimeout(nextToast, 400); }, 2600);
@@ -139,9 +144,13 @@ export function setCombo(n) {
 /* ===================== equation tags ===================== */
 // Unicode superscripts (2⁶) are tiny at a distance: render exponents as real <sup>
 const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+// and the font's ÷ reads as + once it's small: draw it with big dots well clear of the bar
+const DIV = '<span class="op-div" role="img" aria-label="÷"><svg viewBox="0 0 12 13" aria-hidden="true">'
+  + '<rect x="0" y="5.4" width="12" height="2.2" rx="1.1"/><circle cx="6" cy="1.9" r="1.9"/><circle cx="6" cy="11.1" r="1.9"/></svg></span>';
 function setEquation(el, text) {
   const safe = text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  el.innerHTML = safe.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `<sup>${[...m].map((c) => SUPS.indexOf(c)).join('')}</sup>`);
+  el.innerHTML = safe.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `<sup>${[...m].map((c) => SUPS.indexOf(c)).join('')}</sup>`)
+    .replace(/÷/g, DIV);
 }
 const tagLayer = () => $('labels');
 
